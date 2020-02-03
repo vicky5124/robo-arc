@@ -1,6 +1,6 @@
 [package]
 name = "discord_bot"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["nitsuga5124 <nitsuga5124@gmail.com>"]
 edition = "2018"
 
