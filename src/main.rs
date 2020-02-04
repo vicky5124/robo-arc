@@ -5,8 +5,9 @@
 ///
 /// This is lisenced with the WTFPL, aka you can do whatever the freak you want to with it.
 
-mod cogs; // Load the cogs module
-use cogs::booru::*; // Import everything from the cogs module.
+mod utils;
+mod commands; // Load the cogs module
+use commands::booru::*; // Import everything from the cogs module.
 
 use std::{
     env,
