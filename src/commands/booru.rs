@@ -1,7 +1,8 @@
+use crate::utils::basic_functions::capitalize_first;
+
 use serenity::{
     prelude::Context,
     model::channel::Message,
-    //http::AttachmentType,
     framework::standard::{
         Args,
         CommandResult,
@@ -9,32 +10,28 @@ use serenity::{
     },
 };
 use rand::Rng;
-//use std::path::Path;
 
 use reqwest;
+use quick_xml::de::from_str;
 use serde::{
     Deserialize,
     Serialize,
 };
 
-// defining the Data type to be used for the json serialized on the safebooru request.
-#[derive(Serialize, Deserialize)]
-struct Data {
-    image: String,
-    hash: String,
-    id: u32,
-    directory: String,
+// defining the Post type to be used for the xml deserialized on the Posts vector.
+#[derive(Serialize, Deserialize, PartialEq)]
+struct Post {
+    score: String, // i32
+    source: String,
     rating: String,
-    score: i32,
+    sample_url: String,
+    file_url: String,
 }
 
-/// Capitalizes the first letter of a str.
-pub fn capitalize_first(input: &str) -> String {
-    let mut c = input.chars();
-    match c.next() {
-        None => String::new(),
-        Some(first) => first.to_uppercase().collect::<String>() + c.as_str(),
-    }
+// defining the Posts vector to Deserialize the requested xml list.
+#[derive(Deserialize, PartialEq)]
+struct Posts {
+    post: Vec<Post>,
 }
 
 #[command]
@@ -93,32 +90,32 @@ pub fn safebooru(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRe
     let stringified_tags: String = tags.iter().map(|x| format!("{}%20", x)).collect();
     
     // requests the safebooru api with the specified tags.
-    let url = format!("https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&tags={}", stringified_tags);
+    let url = format!("https://safebooru.org/index.php?page=dapi&s=post&q=index&tags={}", stringified_tags);
     let resp = reqwest::blocking::get(&url)?
-        .json::<Vec<Data>>()?; // serializes the data into a vector with the Data struct type.
+        .text()?; // serializes the data into a vector with the Data struct type.
+    
+    let xml: Posts = from_str(&resp.to_owned()[..])?;
 
     // gets a random post from the vector.
-    let r = rand::thread_rng().gen_range(0, resp.len()); 
-    let choice = &resp[r];
+    let r = rand::thread_rng().gen_range(0, xml.post.len()); 
+    let choice = &xml.post[r];
 
     // define both url types.
-    let full_size = format!("https://safebooru.org//images/{}/{}", choice.directory, choice.image);
-    let mut sample_size = format!("https://safebooru.org//samples/{}/sample_{}", choice.directory, choice.image);
-
-    // check if the sample url is valid.
-    let sample_resp = reqwest::blocking::get(&sample_size)?
-        .text();
-    let status = sample_resp.unwrap();
-
-    if status.starts_with("<!DOCTYPE html PUBLIC") {
-        sample_size = full_size.clone();
+    let full_size = &choice.file_url;
+    let sample_size = &choice.sample_url;
+    
+    // Check if there's a source to get added to the fields.
+    let source_avail: bool;
+    if &choice.source == &String::from(""){
+        source_avail = false;
+    } else {
+        source_avail = true;
     }
-    
-    // There's no source field on json, this is just placeholding.
-    let source_avail = false;
-    let source = String::from("");
-    
-    let score = format!("{}", choice.score);
+    let source = &choice.source;
+    let source_md = format!("[Here]({})", source);
+
+    // Sets the score and rating for ease of uses
+    let score = &choice.score;
     let rating = capitalize_first(&choice.rating.to_owned()[..]);
 
     // Addes a source field to the embed if available.
@@ -127,7 +124,7 @@ pub fn safebooru(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRe
         ("Score", &score, true),
     ];
     if source_avail {
-        fields.push(("Source", &source, true));
+        fields.push(("Source", &source_md, true));
     }
 
     // https://github.com/serenity-rs/serenity/blob/current/examples/11_create_message_builder/src/main.rs
