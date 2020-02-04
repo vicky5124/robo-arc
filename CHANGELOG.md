@@ -1,3 +1,16 @@
+# 0.0.3
+
+### Commands
+- safebooru:
+  Moved from the json api to xml.
+
+### Modules
+- utils:
+  Implemented basic_functions module to have basic utility functions.
+
+- commands:
+  Renamed Cogs to Commands.
+
 # 0.0.2
 
 ### Commands

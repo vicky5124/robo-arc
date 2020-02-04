@@ -1,6 +1,6 @@
 [package]
 name = "discord_bot"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["nitsuga5124 <nitsuga5124@gmail.com>"]
 edition = "2018"
 
@@ -19,3 +19,6 @@ features = ["blocking", "json"]
 version = "1.0.104"
 features = ["derive"]
 
+[dependencies.quick-xml]
+version = "0.17.2"
+features = ["serialize"]
