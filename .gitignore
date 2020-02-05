@@ -1,2 +1,4 @@
 /target
 **/*.rs.bk
+tokens.toml
+.env
