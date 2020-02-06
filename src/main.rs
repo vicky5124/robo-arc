@@ -5,15 +5,19 @@
 ///
 /// This is lisenced with the WTFPL, aka you can do whatever the freak you want to with it.
 
-mod utils;
-mod commands; // Load the cogs module
-use commands::booru::*; // Import everything from the cogs module.
+mod utils; // Load the utils module
+mod commands; // Load the commands module
+use commands::booru::*; // Import everything from the booru module.
+use commands::osu::*; // Import everything from the osu module.
 
 use std::{
-    env,
     collections::HashSet,
+    io::prelude::*,
     sync::Arc,
+    fs::File,
 };
+
+use toml::Value;
 
 use serenity::{
     client::{
@@ -83,6 +87,11 @@ struct TheBasics;
 #[commands(test)]
 struct NSFW;
 
+#[group("osu!")]
+#[description = "All the osu! related commands"]
+#[commands(configure_osu)]
+struct Osu;
+
 // The Booru command group.
 // This group will contain every single command from every booru that gets implemented.
 // As you can see on the last line, the description also supports urk markdown.
@@ -146,7 +155,7 @@ impl EventHandler for Handler {
         );
     }
 
-    /// on_message even on d.py
+    /// on_message event on d.py
     /// This function triggers every time a message is sent.
     fn message(&self, ctx: Context, msg: Message) {
         // Ignores itself.
@@ -196,7 +205,7 @@ impl EventHandler for Handler {
         }
     }
 
-    /// on_raw_reaction_add on d.py
+    /// on_raw_reaction_add event on d.py
     /// This function triggers every time a reaction gets added to a message.
     fn reaction_add(&self, ctx: Context, add_reaction: Reaction) {
         // Ignores all reactions that come from the bot itself.
@@ -208,7 +217,7 @@ impl EventHandler for Handler {
             // Matches custom emojis.
             ReactionType::Custom{id, ..} => {
                 // If the emote is the GW version of slof, React back.
-                // This also shows a couple ways to do error handlig.
+                // This also shows a couple ways to do error handling.
                 if id.0 == 375459870524047361 {
                     let msg = ctx.http.as_ref().get_message(add_reaction.channel_id.0, add_reaction.message_id.0)
                         .expect("Error while obtaining message");
@@ -254,10 +263,18 @@ impl EventHandler for Handler {
 /// This main function is a little special, as it returns Result, which allows ? to be used for
 /// error handling.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Opens the tokens.toml file and reads it's content
+    let mut file = File::open("tokens.toml")?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+
+    // gets the discord token from tokens.toml
+    let tokens = contents.parse::<Value>().unwrap();
+    let bot_token = tokens["discord"].as_str().unwrap();
     // Defines a client with the token obtained from the DEV_DISCORD_TOKEN environmental variable.
     // This also starts up the Event Handler structure defined earlier.
     let mut client = Client::new(
-        &env::var("DEV_DISCORD_TOKEN")?,
+        bot_token,
         Handler)?;
 
     // Closure to define shard data.
@@ -321,6 +338,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .group(&THEBASICS_GROUP) // Load `The Basics` command group
         .group(&NSFW_GROUP) // Load `NSFW` command group
         .group(&BOORUS_GROUP) // Load `Boorus` command group
+        .group(&OSU_GROUP) // Load `osu!` command group
         .help(&MY_HELP) // Load the custom help.
     );
 
