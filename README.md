@@ -8,7 +8,7 @@ First, create an application [Here](https://discordapp.com/developers/applicatio
 \
 Go the thw newly created application and head over the `Bot` tab.
 \
-In here you create a bot and copy the token. This is what will be put on the Token Env var.
+In here you create a bot and copy the token. This is what will be put on the `discord` variable inside `tokens.toml`.
 \
 - You can also create the invite on the OAuth2 tab, Just select bot, the permissions you want the bot to have and copy the invite link.
 
