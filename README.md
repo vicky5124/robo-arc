@@ -12,14 +12,9 @@ In here you create a bot and copy the token. This is what will be put on the Tok
 \
 - You can also create the invite on the OAuth2 tab, Just select bot, the permissions you want the bot to have and copy the invite link.
 
-*nix:
+Any OS:
 ```bash
-export DEV_DISCORD_TOKEN="the bot token here" # it is recommended to put this inside ~/.profile so you don't have to run it every time you want to run the bot.
-cargo run
-```
-
-Windows
-```bash
-# Setup the Env Var, google this as idk how.
+# Rename tokens.toml.example to tokens.toml
+# Modify the file with the required data
 cargo run
 ```

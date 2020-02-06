@@ -1,0 +1,3 @@
+osu = "" # https://osu.ppy.sh/p/api/
+discord = "" 
+psql_password = ""
