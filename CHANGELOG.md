@@ -1,3 +1,17 @@
+# 0.0.4
+
+### Commands
+- configure_osu:
+  Added command && Implemented basic database and argument reading.
+
+### Dependencies
+- toml
+- postgres
+- updated serenity features to allow compilation on the Raspberry PI 3b
+
+### Data
+- Moved tokens from env_vars to tokens.toml
+
 # 0.0.3
 
 ### Commands
