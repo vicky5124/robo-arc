@@ -8,6 +8,7 @@ use serenity::{
     },
 };
 use postgres::{Client, NoTls};
+use regex::Regex;
 use toml::Value;
 use std::{
     fs::File,
@@ -41,7 +42,11 @@ pub fn get_database() -> Result<Client, Box<dyn std::error::Error>> {
     let tokens = contents.parse::<Value>().unwrap();
     let psql_password = tokens["psql_password"].as_str().unwrap();
 
-    let client = Client::connect(&format!("host=localhost user=postgres password={} dbname=arcbot", psql_password).to_owned()[..], NoTls)?;
+    let client = Client::connect(
+        &format!("host=localhost user=postgres password={} dbname=arcbot", psql_password)
+        .to_owned()[..],
+        NoTls
+    )?;
     Ok(client)
 }
 
@@ -53,7 +58,11 @@ fn get_osu_id(name: &String) -> Result<i32, Box<dyn std::error::Error>> {
     let tokens = contents.parse::<Value>().unwrap();
     let osu_key = tokens["osu"].as_str().unwrap();
 
-    let url = format!("https://osu.ppy.sh/api/get_user?k={}&u={}&type=string", osu_key, name);
+    let re = Regex::new("[^0-9A-Za-z///' ]").unwrap();
+    let mut sanitized_name = re.replace(name, "").into_owned();
+    sanitized_name = sanitized_name.replace(" ", "%20");
+
+    let url = format!("https://osu.ppy.sh/api/get_user?k={}&u={}&type=string", osu_key, sanitized_name);
     let resp = reqwest::blocking::get(&url)?
         .json::<Vec<OsuUser>>()?;
 
@@ -69,21 +78,21 @@ fn get_osu_id(name: &String) -> Result<i32, Box<dyn std::error::Error>> {
 fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
     let mut client = get_database()?;
     let author_id = msg.author.id.as_u64().clone() as i64;
-    let data = client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", &[&author_id])?;
+    let data = client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1",
+                            &[&author_id])?;
     let empty_data: bool;
 
-    let mut oud = OsuUserData::default();
-    //println!("{} {} {} {:?} {:?} {:?}", oud.osu_id, oud.name, oud.old_name, oud.mode, oud.pp, oud.short_recent);
+    let mut user_data = OsuUserData::default();
 
     if !data.is_empty() {
         empty_data = false;
         for row in data {
-            oud.osu_id = row.get(0);
-            oud.name = row.get(1);
-            oud.old_name = oud.name.clone();
-            oud.mode = row.get(3);
-            oud.pp = row.get(2);
-            oud.short_recent = row.get(4);
+            user_data.osu_id = row.get(0);
+            user_data.name = row.get(1);
+            user_data.old_name = user_data.name.clone();
+            user_data.mode = row.get(3);
+            user_data.pp = row.get(2);
+            user_data.short_recent = row.get(4);
         }
     } else {
         empty_data = true;
@@ -94,27 +103,34 @@ fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRe
 
         for arg in args {
             if arg.starts_with("pp=") {
-                let x: Vec<&str> = arg.split("=").collect();
-                oud.pp = if x[1] == "true" || x[1] == "1" || x[1] == "yes" || x[1] == "y" {Some(true)} else {Some(false)};
-            } else if arg.starts_with("short_recent=") || arg.starts_with("recent=") { 
-                let x: Vec<&str> = arg.split("=").collect();
-                oud.short_recent = if x[1] == "true" || x[1] == "1" || x[1] == "yes" || x[1] == "y" {Some(true)} else {Some(false)};
-            } else if arg.starts_with("mode=") { 
-                let x: Vec<&str> = arg.split("=").collect();
-                if x[1] == "0" || x[1] == "std" || x[1] == "standard" {
-                    oud.mode = Some(0);
-                } else if x[1] == "1" || x[1] == "taiko" {
-                    oud.mode = Some(1);
-                } else if x[1] == "2" || x[1] == "ctb" || x[1] == "catch" {
-                    oud.mode = Some(2);
-                } else if x[1] == "3" || x[1] == "mania" {
-                    oud.mode = Some(3);
+                let x: &str = arg.split("=").nth(1).unwrap();
+                user_data.pp = match x {
+                    "y" | "yes" | "true" | "1" => Some(true),
+                    _ => Some(false)
                 }
+
+            } else if arg.starts_with("short_recent=") || arg.starts_with("recent=") { 
+                let x: &str = arg.split("=").nth(1).unwrap();
+                user_data.short_recent = match x {
+                    "y" | "yes" | "true" | "1" => Some(true),
+                    _ => Some(false)
+                }
+
+            } else if arg.starts_with("mode=") { 
+                let x: &str = arg.split("=").nth(1).unwrap();
+                user_data.mode = match x {
+                    "0" | "std" | "standard" => Some(0),
+                    "1" | "taiko" => Some(1),
+                    "2" | "ctb" | "catch" => Some(2),
+                    "3" | "mania" => Some(3),
+                    _ => None
+                }
+
             } else {
                 if empty_data {
-                    oud.name += arg;
+                    user_data.name += arg;
                 } else {
-                    oud.name = if oud.name == oud.old_name {arg.to_string()} else {oud.name + " " + arg};
+                    user_data.name = if user_data.name == user_data.old_name {arg.to_string()} else {user_data.name + " " + arg};
                 }
             }
         }
@@ -122,21 +138,31 @@ fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRe
         if empty_data {
             msg.channel_id.say(&ctx, "send help!")?;
             return Ok(());
-        } else if !empty_data {
-            let current_conf = format!(
-                "Your current configuration:\n```User ID: '{}'\nUsername: '{}'\nMode ID: '{}'\nShow PP? '{}'\nShort recent? '{}'```",
-                oud.osu_id, oud.name, oud.mode.unwrap(), oud.pp.unwrap(), oud.short_recent.unwrap()
+        } else {
+            let current_conf = format!("
+Your current configuration:
+```User ID: '{}'
+Username: '{}'
+Mode ID: '{}'
+Show PP? '{}'
+Short recent? '{}'```",
+                user_data.osu_id, user_data.name, user_data.mode.unwrap(), user_data.pp.unwrap(), user_data.short_recent.unwrap()
             );
 
             msg.channel_id.say(&ctx, current_conf)?;
             return Ok(());
         }
     }
-    oud.osu_id = get_osu_id(&oud.name)?;
+    user_data.osu_id = get_osu_id(&user_data.name)?;
 
-    let current_conf = format!(
-        "Successfully changed your configuration to this:\n```User ID: '{}'\nUsername: '{}'\nMode ID: '{}'\nShow PP? '{}'\nShort recent? '{}'```",
-        oud.osu_id, oud.name, oud.mode.unwrap(), oud.pp.unwrap(), oud.short_recent.unwrap()
+    let current_conf = format!("
+Successfully changed your configuration to this:
+```User ID: '{}'
+Username: '{}'
+Mode ID: '{}'
+Show PP? '{}'
+Short recent? '{}'```",
+        user_data.osu_id, user_data.name, user_data.mode.unwrap(), user_data.pp.unwrap(), user_data.short_recent.unwrap()
     );
     msg.channel_id.say(&ctx, current_conf)?;
 
