@@ -1,0 +1,9 @@
+osu = "" # https://osu.ppy.sh/p/api/
+discord = "" 
+
+[psql]
+username = "postgres"
+password = ""
+database_name = "arcbot"
+host = "localhost" # the server ip
+port = "5432"
