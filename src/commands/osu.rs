@@ -1,3 +1,4 @@
+use crate::DatabaseConnection;
 use serenity::{
     prelude::Context,
     model::channel::Message,
@@ -7,7 +8,6 @@ use serenity::{
         macros::command,
     },
 };
-use postgres::{Client, NoTls};
 use regex::Regex;
 use toml::Value;
 use std::{
@@ -34,24 +34,8 @@ struct OsuUserData {
     short_recent: Option<bool>,
 }
 
-pub fn get_database() -> Result<Client, Box<dyn std::error::Error>> {
-    let mut file = File::open("tokens.toml")?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-    
-    let tokens = contents.parse::<Value>().unwrap();
-    let psql_password = tokens["psql_password"].as_str().unwrap();
-
-    let client = Client::connect(
-        &format!("host=localhost user=postgres password={} dbname=arcbot", psql_password)
-        .to_owned()[..],
-        NoTls
-    )?;
-    Ok(client)
-}
-
 fn get_osu_id(name: &String) -> Result<i32, Box<dyn std::error::Error>> {
-    let mut file = File::open("tokens.toml")?;
+    let mut file = File::open("config.toml")?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
     
@@ -76,7 +60,8 @@ fn get_osu_id(name: &String) -> Result<i32, Box<dyn std::error::Error>> {
 
 #[command]
 fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
-    let mut client = get_database()?;
+    let mut data = ctx.data.write();
+    let client = data.get_mut::<DatabaseConnection>().unwrap();
     let author_id = msg.author.id.as_u64().clone() as i64;
     let data = client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1",
                             &[&author_id])?;
@@ -164,19 +149,12 @@ Show PP? '{}'
 Short recent? '{}'```",
         user_data.osu_id, user_data.name, user_data.mode.unwrap(), user_data.pp.unwrap(), user_data.short_recent.unwrap()
     );
+    client.execute(
+        "UPDATE osu_user SET osu_id = $1, osu_username = $2, pp = $3, mode = $4, short_recent = $5 WHERE discord_id = $6",
+        &[&user_data.osu_id, &user_data.name, &user_data.pp.unwrap(), &user_data.mode.unwrap(), &user_data.short_recent.unwrap(), &author_id]
+    )?;
+
     msg.channel_id.say(&ctx, current_conf)?;
 
-
-    /*
-    let name = "Hello";
-    let data = None::<&[u8]>;
-
-    client.execute(
-        "INSERT INTO person (name, data) VALUES ($1, $2)",
-        &[&name, &data],
-    )?;
-    */
-
-    //msg.channel_id.say(&ctx, format!("{:?}", arguments))?;
     Ok(())
 }

@@ -9,6 +9,7 @@ mod utils; // Load the utils module
 mod commands; // Load the commands module
 use commands::booru::*; // Import everything from the booru module.
 use commands::osu::*; // Import everything from the osu module.
+use utils::database::get_database;
 
 use std::{
     collections::HashSet,
@@ -18,6 +19,7 @@ use std::{
 };
 
 use toml::Value;
+use postgres::Client as PgClient;
 
 use serenity::{
     client::{
@@ -66,9 +68,14 @@ use serenity::{
 
 
 struct ShardManagerContainer;
+struct DatabaseConnection;
 
 impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
+}
+
+impl TypeMapKey for DatabaseConnection {
+    type Value = PgClient;
 }
 
 
@@ -263,12 +270,12 @@ impl EventHandler for Handler {
 /// This main function is a little special, as it returns Result, which allows ? to be used for
 /// error handling.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Opens the tokens.toml file and reads it's content
-    let mut file = File::open("tokens.toml")?;
+    // Opens the config.toml file and reads it's content
+    let mut file = File::open("config.toml")?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
 
-    // gets the discord token from tokens.toml
+    // gets the discord token from config.toml
     let tokens = contents.parse::<Value>().unwrap();
     let bot_token = tokens["discord"].as_str().unwrap();
     // Defines a client with the token obtained from the DEV_DISCORD_TOKEN environmental variable.
@@ -281,7 +288,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Don't ask me how this works, as i don't know either, yet.
     {
         let mut data = client.data.write();
-        //data.insert::<CommandCounter>(HashMap::Default());
+        data.insert::<DatabaseConnection>(get_database()?);
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
     }
     
