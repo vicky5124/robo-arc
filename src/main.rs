@@ -69,6 +69,7 @@ use serenity::{
 
 struct ShardManagerContainer;
 struct DatabaseConnection;
+struct Tokens;
 
 impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
@@ -77,6 +78,11 @@ impl TypeMapKey for ShardManagerContainer {
 impl TypeMapKey for DatabaseConnection {
     type Value = PgClient;
 }
+
+impl TypeMapKey for Tokens {
+    type Value = String;
+}
+
 
 
 // The basic commands group is being defined here.
@@ -275,21 +281,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
 
-    // gets the discord token from config.toml
+    // gets the discord and osu api tokens from config.toml
     let tokens = contents.parse::<Value>().unwrap();
     let bot_token = tokens["discord"].as_str().unwrap();
-    // Defines a client with the token obtained from the DEV_DISCORD_TOKEN environmental variable.
+    let osu_key = tokens["osu"].as_str().unwrap();
+    // Defines a client with the token obtained from the config.toml file.
     // This also starts up the Event Handler structure defined earlier.
     let mut client = Client::new(
         bot_token,
         Handler)?;
 
-    // Closure to define shard data.
-    // Don't ask me how this works, as i don't know either, yet.
+    // Closure to define global data.
     {
         let mut data = client.data.write();
-        data.insert::<DatabaseConnection>(get_database()?);
-        data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
+        data.insert::<DatabaseConnection>(get_database()?); // Make the database connection global.
+        data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager)); // Make the shard manager global.
+        data.insert::<Tokens>(String::from(osu_key));
+
     }
     
     // Obtains and defines the owner/owners of the Bot Application
