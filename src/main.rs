@@ -22,6 +22,7 @@ use toml::Value;
 use postgres::Client as PgClient;
 
 use serenity::{
+    utils::Colour,
     client::{
         Client,
         bridge::gateway::{
@@ -102,7 +103,7 @@ struct NSFW;
 
 #[group("osu!")]
 #[description = "All the osu! related commands"]
-#[commands(configure_osu)]
+#[commands(configure_osu, recent)]
 struct Osu;
 
 // The Booru command group.
@@ -148,7 +149,10 @@ fn my_help(
     groups: &[&'static CommandGroup],
     owners: HashSet<UserId>
 ) -> CommandResult {
-    help_commands::with_embeds(ctx, msg, args, help_options, groups, owners)
+    let mut ho = help_options.clone();
+    ho.embed_error_colour = Colour::from_rgb(255, 30, 30);
+    ho.embed_success_colour= Colour::from_rgb(141, 91, 255);
+    help_commands::with_embeds(ctx, msg, args, &ho, groups, owners)
 }
 
 
@@ -297,8 +301,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         data.insert::<DatabaseConnection>(get_database()?); // Make the database connection global.
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager)); // Make the shard manager global.
         data.insert::<Tokens>(String::from(osu_key));
-
     }
+
+    &client.threadpool.set_num_threads(20);
     
     // Obtains and defines the owner/owners of the Bot Application
     // and the bot id. 
@@ -416,9 +421,11 @@ fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
 
 
 #[command]
+#[owners_only] // to only allow the owner of the bot to use this command
 #[min_args(3)] // Sets the minimum ammount of arguments the command requires to be ran. This is used to trigger the `NotEnoughArguments` error.
 // Testing command, please ignore.
 fn test(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+    std::thread::sleep(std::time::Duration::from_secs(50));
     let x = args.single::<String>()?;
     let y = args.single::<i32>()?;
     let z = args.single::<i32>()?;
