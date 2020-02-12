@@ -1,3 +1,17 @@
+# 0.0.5
+
+### Commands
+- recent:
+  Added recent command for osu!
+- test:
+  Made owner only.
+- help:
+  Updated embed colors.
+
+### Dependencies
+- bitflags
+- num-format
+
 # 0.0.4
 
 ### Commands
@@ -7,7 +21,7 @@
 ### Dependencies
 - toml
 - postgres
-- updated serenity features to allow compilation on the Raspberry PI 3b
+- updated serenity features to allow compilation on the Raspberry PI 3B.
 
 ### Data
 - Moved tokens from env_vars to tokens.toml
