@@ -3,6 +3,7 @@ use crate::{
     Tokens
 };
 use serenity::{
+    utils::Colour,
     prelude::Context,
     model::channel::Message,
     framework::standard::{
@@ -12,21 +13,179 @@ use serenity::{
     },
 };
 use regex::Regex;
-
+use num_format::{Locale, ToFormattedString};
 use reqwest;
 use serde::Deserialize;
 
+mod bitwhise_mods {
+    #![allow(non_upper_case_globals)]
+    use bitflags::bitflags;
+    
+    bitflags! {
+        pub struct LongMods: u32 {
+            const None           = 0;
+            const NoFail         = 1;
+            const Easy           = 2;
+            const TouchDevice    = 4;
+            const Hidden         = 8;
+            const HardRock       = 16;
+            const SuddenDeath    = 32;
+            const DoubleTime     = 64;
+            const Relax          = 128;
+            const HalfTime       = 256;
+            const Nightcore      = 512;
+            const Flashlight     = 1024;
+            const Autoplay       = 2048;
+            const SpunOut        = 4096;
+            const Relax2         = 8192;    // Autopilot
+            const Perfect        = 16384;
+            const Key4           = 32768;
+            const Key5           = 65536;
+            const Key6           = 131072;
+            const Key7           = 262144;
+            const Key8           = 524288;
+            const FadeIn         = 1048576;
+            const Random         = 2097152;
+            const Cinema         = 4194304;
+            const Target         = 8388608;
+            const Key9           = 16777216;
+            const KeyCoop        = 33554432;
+            const Key1           = 67108864;
+            const Key3           = 134217728;
+            const Key2           = 268435456;
+            const ScoreV2        = 536870912;
+            const Mirror         = 1073741824;
+        }
+    }
+    bitflags! {
+        pub struct ShortMods: u32 {
+            const NM = 0;
+            const NF = 1;
+            const EZ = 2;
+            const TD = 4;
+            const HD = 8;
+            const HR = 16;
+            const SD = 32;
+            const DT = 64;
+            const RX = 128;
+            const HT = 256;
+            const NC = 512;
+            const FL = 1024;
+            const AT = 2048;
+            const SO = 4096;
+            const AP = 8192;//Autopilot
+            const PF = 16384;
+            const K4 = 32768;
+            const K5 = 65536;
+            const K6 = 131072;
+            const K7 = 262144;
+            const K8 = 524288;
+            const FI = 1048576;
+            const RD = 2097152;
+            const CN = 4194304;
+            const TP = 8388608;
+            const K9 = 16777216;
+            const CO = 33554432;
+            const K1 = 67108864;
+            const K3 = 134217728;
+            const K2 = 268435456;
+            const V2 = 536870912;
+            const MR = 1073741824;
+        }
+    }
+}
 
 
 // JSON Structure of the osu! user API request.
-#[derive(Deserialize, PartialEq)]
-struct OsuUser {
+#[derive(Deserialize, PartialEq, Debug)]
+struct OsuUserData {
     user_id: String,
+    username: String,
+    join_date: String,
+    country: String,
+    count300: Option<String>,
+    count100: Option<String>,
+    count50: Option<String>,
+    playcount: Option<String>,
+    ranked_score: Option<String>,
+    total_score: Option<String>,
+    pp_rank: Option<String>,
+    level: Option<String>,
+    pp_raw: Option<String>,
+    accuracy: Option<String>,
+    count_rank_ss: Option<String>,
+    count_rank_ssh: Option<String>,
+    count_rank_s: Option<String>,
+    count_rank_sh: Option<String>,
+    count_rank_a: Option<String>,
+    total_seconds_played: Option<String>,
+    pp_country_rank: Option<String>,
+}
+
+// JSON Structure of the osu! user recent plays API request.
+#[derive(Deserialize, PartialEq, Debug)]
+struct OsuUserRecentData {
+    beatmap_id: String,
+    score: String,
+    maxcombo: String,
+    count50: String,
+    count100: String,
+    count300: String,
+    countmiss: String,
+    countkatu: String,
+    countgeki: String,
+    perfect: String,
+    enabled_mods: String,
+    user_id: String,
+    date: String,
+    rank: String,
+}
+
+// JSON Structure of the osu! beatmap API request.
+#[derive(Deserialize, PartialEq, Debug)]
+struct OsuBeatmapData {
+    approved: String,
+    submit_date: String,
+    approved_date: String,
+    last_update: String,
+    artist: String,
+    beatmap_id: String,
+    beatmapset_id: String,
+    bpm: String,
+    creator: String,
+    creator_id: String,
+    difficultyrating: String,
+    diff_aim: String,
+    diff_speed: String,
+    diff_size: String,
+    diff_overall: String,
+    diff_approach: String,
+    diff_drain: String,
+    hit_length: String,
+    source: String,
+    genre_id: String,
+    language_id: String,
+    title: String,
+    total_length: String,
+    version: String,
+    file_md5: String,
+    mode: String,
+    tags: String,
+    favourite_count: String,
+    rating: String,
+    playcount: String,
+    passcount: String,
+    count_normal: String,
+    count_slider: String,
+    count_spinner: String,
+    max_combo: String,
+    download_unavailable: String,
+    audio_unavailable: String,
 }
 
 // Data Structure of the data obtained on the database.
 #[derive(Default)] // Default is a trait that sets the default value for each type.
-struct OsuUserData {
+struct OsuUserDBData {
     osu_id: i32, // 0
     name: String, // String::new()
     old_name: String,
@@ -35,15 +194,44 @@ struct OsuUserData {
     short_recent: Option<bool>,
 }
 
-// This function simply calls the osu! api to get the id of the user from a username.
-fn get_osu_id(name: &String, osu_key: String) -> Result<i32, Box<dyn std::error::Error>> {
-    let re = Regex::new("[^0-9A-Za-z///' ]").unwrap();
-    let mut sanitized_name = re.replace(name, "").into_owned();
-    sanitized_name = sanitized_name.replace(" ", "%20");
+fn acc_math(_300: f32, _100: f32, _50: f32, _miss: f32) -> f32 {
+    let mix = _300  + _100  + _50  + _miss ;
 
-    let url = format!("https://osu.ppy.sh/api/get_user?k={}&u={}&type=string", osu_key, sanitized_name);
-    let resp = reqwest::blocking::get(&url)?
-        .json::<Vec<OsuUser>>()?;
+    let pcount50 = _50  / mix * (100.0 / 6.0);
+    let pcount100 = _100  / mix * (100.0 / 3.0);
+    let pcount300 = _300  / mix * 100.0;
+
+    let acc: f32 = pcount50 + pcount100 + pcount300;
+    acc
+}
+
+fn progress_math(count_normal: f32, count_slider: f32, count_spinner: f32, _300: f32, _100: f32, _50: f32, _miss: f32) -> f32 {
+    let all_the_things = count_normal + count_slider + count_spinner;
+    let everything = _300 + _100 + _50 + _miss;
+    let progress = everything / all_the_things * 100.0;
+    
+    progress
+}
+
+fn _get_mods_long(value: u32) -> String {
+    use bitwhise_mods::LongMods;
+
+    let mods = LongMods::from_bits_truncate(value);
+    format!("{:?}", mods)
+}
+
+fn get_mods_short(value: u32) -> String {
+    use bitwhise_mods::ShortMods;
+
+    let mods = ShortMods::from_bits_truncate(value);
+    format!("{:?}", mods)
+}
+
+
+
+// This function simply calls the osu! api to get the id of the user from a username.
+fn get_osu_id(name: &String, osu_key: &String) -> Result<i32, Box<dyn std::error::Error>> {
+    let resp = get_osu_user(&name, osu_key)?;
 
     if resp.len() != 0 {
         let id: i32 = resp[0].user_id.trim().parse()?;
@@ -53,15 +241,45 @@ fn get_osu_id(name: &String, osu_key: String) -> Result<i32, Box<dyn std::error:
     }
 }
 
+
+
+fn get_osu_user(name: &String, osu_key: &String) -> Result<Vec<OsuUserData>, Box<dyn std::error::Error>> {
+    let re = Regex::new("[^0-9A-Za-z///' ]").unwrap();
+    let mut sanitized_name = re.replace(name, "").into_owned();
+    sanitized_name = sanitized_name.replace(" ", "%20");
+
+    let url = format!("https://osu.ppy.sh/api/get_user?k={}&u={}&type=string", osu_key, sanitized_name);
+    let resp = reqwest::blocking::get(&url)?
+        .json::<Vec<OsuUserData>>()?;
+
+    Ok(resp)
+}
+
+fn get_osu_user_recent(user_id: i32, osu_key: &String) -> Result<Vec<OsuUserRecentData>, Box<dyn std::error::Error>> {
+    let url = format!("https://osu.ppy.sh/api/get_user_recent?k={}&u={}&type=id", osu_key, user_id);
+    let resp = reqwest::blocking::get(&url)?
+        .json::<Vec<OsuUserRecentData>>()?;
+    Ok(resp)
+}
+
+fn get_osu_beatmap(beatmap_id: &String, osu_key: &String) -> Result<Vec<OsuBeatmapData>, Box<dyn std::error::Error>> {
+    let url = format!("https://osu.ppy.sh/api/get_beatmaps?k={}&b={}", osu_key, beatmap_id);
+    let resp = reqwest::blocking::get(&url)?
+        .json::<Vec<OsuBeatmapData>>()?;
+    Ok(resp)
+}
+
+
+
 #[command]
 #[description = "Command to configure an osu! user for the bot to know about your prefferences.
 This supports various keyword parameters, this are:
-`pp=` To show or not show any pp related features for your account.
 `mode=` To set your osu! gamemode.
+`pp=` To show or not show any pp related features for your account.
 `short_recent=` To display the short version of the recent command with less information, but more cozy.
 
 - Everything else that is not keyworded will become your username.
-- Keyword arguments are not required, they will default to `true, std, true` respectively.
+- Keyword arguments are not required, they will default to `std, true, true` respectively.
 
 Example usages:
 `n!osuc Majorowsky`
@@ -83,7 +301,7 @@ fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRe
                             &[&author_id])?; // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
     let empty_data: bool;
 
-    let mut user_data = OsuUserData::default(); // generate a basic structure with the default values.
+    let mut user_data = OsuUserDBData::default(); // generate a basic structure with the default values.
 
     if !data.is_empty() { // if the data is not empty, aka if the user is on the database already
         empty_data = false;
@@ -169,7 +387,7 @@ Short recent? '{}'```",
         }
     }
     // calls the get_osu_id function to get the id of the user.
-    user_data.osu_id = get_osu_id(&user_data.name, osu_key)?;
+    user_data.osu_id = get_osu_id(&user_data.name, &osu_key)?;
 
     // applies the default values in case of being not specified.
     user_data.pp = match &user_data.pp {
@@ -216,6 +434,142 @@ Short recent? '{}'```",
     );
 
     msg.channel_id.say(&ctx, current_conf)?;
+
+    Ok(())
+}
+
+#[command]
+#[aliases("rs", "rc")]
+fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
+    let mut arg_user = String::from("");
+    if arguments.len() > 0 {
+        let args = arguments.raw_quoted().collect::<Vec<&str>>();
+        for i in args {
+            arg_user += i;
+        }
+    }
+
+    let client;
+    let osu_key;
+    {
+        let data = ctx.data.read(); // set inmutable global data.
+        osu_key = data.get::<Tokens>().unwrap().clone(); // get the osu! api token from the global data.
+    }
+    let mut data = ctx.data.write(); // set mutable global data.
+    client = data.get_mut::<DatabaseConnection>().unwrap(); // get the database connection from the global data.
+    let mut user_data = OsuUserDBData::default(); // generate a basic structure with the default values.
+    let data;
+
+    if arg_user == "" {
+        let author_id = msg.author.id.as_u64().clone() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
+        data = client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
+                                &[&author_id])?; // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
+        arg_user = msg.author.name.clone();
+
+
+    } else {
+        data = client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE osu_username = $1", // query the SQL to the database.
+                                &[&arg_user])?;
+
+    }
+
+    if !data.is_empty() { // if the data is not empty, aka if the user is on the database already
+        // Parses the database result into each of the pieces of data on the structure.
+        for row in data {
+            user_data.osu_id = row.get(0);
+            user_data.name = row.get(1);
+            user_data.mode = row.get(3);
+            user_data.pp = row.get(2);
+            user_data.short_recent = row.get(4);
+        }
+    } else {
+        if arg_user == "" {
+            msg.channel_id.say(&ctx, "It looks like you don't have a configured osu! username, consider configuring one with `n!osuc`")?;
+        }
+        user_data.name = arg_user;
+        user_data.mode = Some(0);
+        user_data.pp = Some(true);
+        user_data.short_recent = Some(true);
+    }
+
+    if user_data.osu_id == 0 {
+        let user_id = get_osu_id(&user_data.name, &osu_key)?;
+        if user_id == 0 {
+            msg.channel_id.say(&ctx, format!("Could not find any osu! user with the name of '{}'", user_data.name))?;
+            return Ok(());
+        } else {
+            user_data.osu_id = user_id;
+        }
+    }
+
+    let user_recent_raw = get_osu_user_recent(user_data.osu_id, &osu_key)?;
+
+    if user_recent_raw.len() < 1 {
+        msg.channel_id.say(&ctx, format!("The user '{}' has not played in the last 24 hours.", user_data.name))?;
+        return Ok(());
+    }
+
+    let user_recent = &user_recent_raw[0];
+    let user_raw = get_osu_user(&user_data.name, &osu_key)?;
+    let user = &user_raw[0];
+
+    let beatmap_raw = get_osu_beatmap(&user_recent.beatmap_id, &osu_key)?;
+    let beatmap = &beatmap_raw[0];
+
+    let accuracy = acc_math(user_recent.count300.parse()?, user_recent.count100.parse()?, user_recent.count50.parse()?, user_recent.countmiss.parse()?);
+
+    let progress: f32 = progress_math(beatmap.count_normal.parse()?, beatmap.count_slider.parse()?, beatmap.count_spinner.parse()?,
+    user_recent.count300.parse()?, user_recent.count100.parse()?, user_recent.count50.parse()?, user_recent.countmiss.parse()?);
+
+    let attempts: u8 = 0;
+    let mods: String = get_mods_short(user_recent.enabled_mods.parse()?);
+
+    let rating_url: String;
+
+    if user_recent.rank == "F" {
+        rating_url = String::from("https://5124.mywire.org/HDD/Downloads/BoneF.png");
+    } else {
+        rating_url = format!("https://s.ppy.sh/images/{}.png", user_recent.rank.to_uppercase());
+    }
+
+    msg.channel_id.send_message(&ctx, |m| { // say method doesn't work for the message builder.
+        m.embed( |e| {
+            e.color(Colour::new(user.user_id.parse().unwrap()));
+            e.title(format!("{} - {} [**{}**]\nby {}",
+                            beatmap.artist, beatmap.title, beatmap.version, beatmap.creator));
+            e.url(format!("https://osu.ppy.sh/b/{}", beatmap.beatmap_id));
+            e.description(format!("**{}** ┇ **x{} / {}**\n**{:.2}%** ┇ {} - {} - {} - {}\n Try #{} ━ Progress: {:.2}%",
+                                  user_recent.score.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en), user_recent.maxcombo, beatmap.max_combo, accuracy, user_recent.count300, user_recent.count100, user_recent.count50, user_recent.countmiss, attempts, progress));
+            e.timestamp(user_recent.date.clone());
+            e.thumbnail(format!("https://b.ppy.sh/thumb/{}l.jpg", beatmap.beatmapset_id));
+            e.author( |a| {
+                a.name(&user.username);
+                a.url(format!("https://osu.ppy.sh/u/{}", user.user_id));
+                a.icon_url(format!("https://a.ppy.sh/{}", user.user_id));
+
+                a
+            });
+            if user_data.pp == Some(true) {
+                e.footer(|f| {
+                    f.text(format!("PP | NEW_PP | {:.4}* | {}", beatmap.difficultyrating, mods));
+                    f.icon_url(&rating_url);
+
+                    f
+            });
+            } else {
+                e.footer(|f| {
+                    f.text(format!("{:.4}* | {}", beatmap.difficultyrating, mods));
+                    f.icon_url(&rating_url);
+
+                    f
+                });
+            }
+
+            e
+        });
+
+        m
+    })?;
 
     Ok(())
 }
