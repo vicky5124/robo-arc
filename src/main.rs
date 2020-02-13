@@ -16,13 +16,24 @@ use std::{
     io::prelude::*,
     sync::Arc,
     fs::File,
+    thread,
+    hash::{
+        Hash,
+        Hasher,
+    },
 };
 
 use toml::Value;
 use postgres::Client as PgClient;
 
+use hey_listen::sync::{
+    ParallelDispatcher as Dispatcher,
+    ParallelDispatcherRequest as DispatcherRequest
+};
+
 use serenity::{
     utils::Colour,
+    http::Http,
     client::{
         Client,
         bridge::gateway::{
@@ -43,12 +54,17 @@ use serenity::{
         Permissions,
         user::OnlineStatus,
         id::UserId,
+        prelude::{
+            MessageId,
+            ChannelId,
+        },
     },
     prelude::{
         EventHandler,
         Context,
         Mutex,
         TypeMapKey,
+        RwLock,
     },
     framework::standard::{
         Args,
@@ -84,13 +100,89 @@ impl TypeMapKey for Tokens {
     type Value = String;
 }
 
+#[derive(Clone)]
+enum DispatchEvent {
+    ReactEvent(MessageId, ReactionType, bool),
+}
+
+impl PartialEq for DispatchEvent {
+    fn eq(&self, other: &DispatchEvent) -> bool {
+        match (self, other) {
+            (DispatchEvent::ReactEvent(self_message_id, self_emoji, _),
+            DispatchEvent::ReactEvent(other_message_id, other_emoji, _)) => {
+                self_message_id == other_message_id &&
+                self_emoji == other_emoji
+            }
+        }
+    }
+}
+
+impl Eq for DispatchEvent {}
+
+impl Hash for DispatchEvent {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            DispatchEvent::ReactEvent(msg_id, user_id, _) => {
+                msg_id.hash(state);
+                user_id.hash(state);
+            }
+        }
+    }
+}
+
+
+struct DispatcherKey;
+impl TypeMapKey for DispatcherKey {
+    type Value = Arc<RwLock<Dispatcher<DispatchEvent>>>;
+}
+
+fn right_reaction_event(http: Arc<Http>, channel: ChannelId) ->
+    Box<dyn Fn(&DispatchEvent) -> Option<DispatcherRequest> + Send + Sync> {
+
+    Box::new(move |event| {
+        let mut kill = false;
+        if let DispatchEvent::ReactEvent(_, _, true) = event {
+            kill = true;
+        }
+
+        if kill {
+            Some(DispatcherRequest::StopListening)
+        } else {
+            if let Err(why) = channel.say(&http, "Right!") {
+                println!("Could not send message: {:?}", why);
+            };
+            None
+        }
+    })
+}
+
+fn left_reaction_event(http: Arc<Http>, channel: ChannelId) ->
+    Box<dyn Fn(&DispatchEvent) -> Option<DispatcherRequest> + Send + Sync> {
+
+    Box::new(move |event| {
+        let mut kill = false;
+        if let DispatchEvent::ReactEvent(_, _, true) = event {
+            kill = true;
+        }
+
+        if kill {
+            Some(DispatcherRequest::StopListening)
+        } else {
+            if let Err(why) = channel.say(&http, "Left!") {
+                println!("Could not send message: {:?}", why);
+            };
+            None
+        }
+    })
+}
+
 
 
 // The basic commands group is being defined here.
 // this group includes the commands ping and test, nothing really special.
 #[group("The Basics")]
 #[description = "All the basic commands that every bot should have."]
-#[commands(ping, test)]
+#[commands(ping, test, react)]
 struct TheBasics;
 
 // The NSFW command group.
@@ -163,13 +255,13 @@ impl EventHandler for Handler {
     /// on_ready event on d.py
     /// This function triggers when the bot is ready.
     fn ready(&self, ctx: Context, ready: Ready) {
-        println!("{} is ready to rock!", ready.user.name);
-        
         // Changes the presence of the bot to "Listening to C++ cry a Rusted death."
         ctx.set_presence(
             Some(Activity::listening("C++ cry a Rusted death.")),
             OnlineStatus::Online
         );
+
+        println!("{} is ready to rock!", ready.user.name);
     }
 
     /// on_message event on d.py
@@ -205,20 +297,6 @@ impl EventHandler for Handler {
             let _ = msg.author.direct_message(&ctx, |m| {
                 m.content(format!("My invite link: <{}>\nCurrently private only, while the bot is in developement.", url))
             });
-            
-            /*
-            // `dm` is a Message Type object
-            match dm {
-                Ok(_) => {
-                    let _ = msg.react(&ctx, '👌');
-                },
-                Err(why) => {
-                    println!("Err sending help: {:?}", why);
-
-                    let _ = msg.reply(&ctx, "There was an error DMing you help.");
-                },
-            };
-            */
         }
     }
 
@@ -229,6 +307,15 @@ impl EventHandler for Handler {
         if &add_reaction.user_id.0 == ctx.cache.read().user.id.as_u64() {
             return;
         }
+
+        let dispatcher = {
+            let mut context = ctx.data.write();
+            context.get_mut::<DispatcherKey>().expect("Expected Dispatcher.").clone()
+        };
+
+        dispatcher.write().dispatch_event(
+            &DispatchEvent::ReactEvent(add_reaction.message_id, add_reaction.emoji.clone(), false));
+
 
         match add_reaction.emoji {
             // Matches custom emojis.
@@ -301,6 +388,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         data.insert::<DatabaseConnection>(get_database()?); // Make the database connection global.
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager)); // Make the shard manager global.
         data.insert::<Tokens>(String::from(osu_key));
+
+        let mut dispatcher: Dispatcher<DispatchEvent> = Dispatcher::default();
+        dispatcher.num_threads(4).expect("Could not construct threadpool");
+
+        data.insert::<DispatcherKey>(Arc::new(RwLock::new(dispatcher)));
     }
 
     &client.threadpool.set_num_threads(20);
@@ -345,7 +437,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // This lambda/closure function executes every time a command finishes executing.
         // It's used here to handle errors that happen in the middle of the command.
         .after(|ctx, msg, _cmd_name, error| {
-            if let Err(why) = error {
+            if let Err(why) = &error {
+                println!("{:?}", &error);
                 let err = format!("{}", why.0);
                 let _ = msg.channel_id.say(&ctx, &err);
             }
@@ -434,6 +527,58 @@ fn test(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
     msg.channel_id.say(&ctx, format!("{} nice: {}", x, multiplied))?;
     let f = vec![123; 1000];
     msg.channel_id.say(&ctx, format!("{:?}", &f))?;
+
+    Ok(())
+}
+
+#[command]
+#[aliases("add")]
+fn react(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    let args = args.rest().to_string();
+
+    let dispatcher = {
+        let mut ctx = ctx.data.write();
+        ctx.get_mut::<DispatcherKey>().expect("Expected Dispatcher.").clone()
+    };
+
+    let http = ctx.http.clone();
+    let msg = msg.clone();
+
+    let bot_msg = msg.channel_id.say(&http, &args)?;
+    let http = http.clone();
+
+    let mut timeout = 0;
+
+    bot_msg.react(&ctx, "⬅️")?;
+    bot_msg.react(&ctx, "➡️")?;
+
+    let left = ReactionType::Unicode(String::from("⬅️"));
+    let right = ReactionType::Unicode(String::from("➡️"));
+
+    dispatcher.write()
+        .add_fn(
+            DispatchEvent::ReactEvent(bot_msg.id, left.clone(), false),
+            left_reaction_event(http.clone(), bot_msg.channel_id)
+        );
+    dispatcher.write()
+        .add_fn(
+            DispatchEvent::ReactEvent(bot_msg.id, right.clone(), false),
+            right_reaction_event(http.clone(), bot_msg.channel_id)
+        );
+
+    loop {
+        thread::sleep(std::time::Duration::from_secs(1));
+        timeout += 1;
+        if timeout == 500 {
+            break;
+        }
+    }
+    dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, left.clone(), true));
+    dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, right.clone(), true));
+
+    if msg.guild_id != None{
+        bot_msg.delete_reactions(&ctx)?;
+    };
 
     Ok(())
 }
