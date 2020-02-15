@@ -12,7 +12,10 @@ use commands::osu::*; // Import everything from the osu module.
 use utils::database::get_database;
 
 use std::{
-    collections::HashSet,
+    collections::{
+        HashSet,
+        HashMap,
+    },
     io::prelude::*,
     sync::Arc,
     fs::File,
@@ -65,6 +68,7 @@ use serenity::{
         Mutex,
         TypeMapKey,
         RwLock,
+        ShareMap,
     },
     framework::standard::{
         Args,
@@ -87,6 +91,7 @@ use serenity::{
 struct ShardManagerContainer;
 struct DatabaseConnection;
 struct Tokens;
+struct RecentIndex;
 
 impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
@@ -98,6 +103,10 @@ impl TypeMapKey for DatabaseConnection {
 
 impl TypeMapKey for Tokens {
     type Value = String;
+}
+
+impl TypeMapKey for RecentIndex {
+    type Value = HashMap<u64, i32>;
 }
 
 #[derive(Clone)]
@@ -136,7 +145,7 @@ impl TypeMapKey for DispatcherKey {
     type Value = Arc<RwLock<Dispatcher<DispatchEvent>>>;
 }
 
-fn right_reaction_event(http: Arc<Http>, channel: ChannelId) ->
+fn left_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>) ->
     Box<dyn Fn(&DispatchEvent) -> Option<DispatcherRequest> + Send + Sync> {
 
     Box::new(move |event| {
@@ -144,11 +153,28 @@ fn right_reaction_event(http: Arc<Http>, channel: ChannelId) ->
         if let DispatchEvent::ReactEvent(_, _, true) = event {
             kill = true;
         }
+        let msg_id = match event {
+            DispatchEvent::ReactEvent(m, _, _) => m.0,
+        };
+        let mut wdata = data.write();
+        let hm = wdata.get_mut::<RecentIndex>().unwrap();
+
+        let index = hm.entry(msg_id).or_insert(0);
+
+        let msg = match http.clone().get_message(channel.0, msg_id){
+            Err(why) => {
+                println!("Could not obtain message: {}", why);
+                return Some(DispatcherRequest::StopListening);
+            },
+            Ok(x) => x
+        };
 
         if kill {
+            hm.remove_entry(&msg_id);
             Some(DispatcherRequest::StopListening)
         } else {
-            if let Err(why) = channel.say(&http, "Right!") {
+            *index -= 1;
+            if let Err(why) = msg.clone().edit(http.clone(), |m| m.content(format!("{}", index))) {
                 println!("Could not send message: {:?}", why);
             };
             None
@@ -156,7 +182,7 @@ fn right_reaction_event(http: Arc<Http>, channel: ChannelId) ->
     })
 }
 
-fn left_reaction_event(http: Arc<Http>, channel: ChannelId) ->
+fn right_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>) ->
     Box<dyn Fn(&DispatchEvent) -> Option<DispatcherRequest> + Send + Sync> {
 
     Box::new(move |event| {
@@ -164,11 +190,28 @@ fn left_reaction_event(http: Arc<Http>, channel: ChannelId) ->
         if let DispatchEvent::ReactEvent(_, _, true) = event {
             kill = true;
         }
+        let msg_id = match event {
+            DispatchEvent::ReactEvent(m, _, _) => m.0,
+        };
+        let mut wdata = data.write();
+        let hm = wdata.get_mut::<RecentIndex>().unwrap();
+
+        let index = hm.entry(msg_id).or_insert(0);
+
+        let msg = match http.clone().get_message(channel.0, msg_id){
+            Err(why) => {
+                println!("Could not obtain message: {}", why);
+                return Some(DispatcherRequest::StopListening);
+            },
+            Ok(x) => x
+        };
 
         if kill {
+            hm.remove_entry(&msg_id);
             Some(DispatcherRequest::StopListening)
         } else {
-            if let Err(why) = channel.say(&http, "Left!") {
+            *index += 1;
+            if let Err(why) = msg.clone().edit(http.clone(), |m| m.content(format!("{}", index))) {
                 println!("Could not send message: {:?}", why);
             };
             None
@@ -300,6 +343,25 @@ impl EventHandler for Handler {
         }
     }
 
+    /// on_raw_reaction_remove event on d.py
+    /// This function triggers every time a reaction gets removed on a message.
+    fn reaction_remove(&self, ctx: Context, add_reaction: Reaction) {
+        // Ignores all reactions that come from the bot itself.
+        if &add_reaction.user_id.0 == ctx.cache.read().user.id.as_u64() {
+            return;
+        }
+        
+        // Triggers reaction events from the commands.
+        let dispatcher = {
+            let mut context = ctx.data.write();
+            context.get_mut::<DispatcherKey>().expect("Expected Dispatcher.").clone()
+        };
+
+        dispatcher.write().dispatch_event(
+            &DispatchEvent::ReactEvent(add_reaction.message_id, add_reaction.emoji.clone(), false));
+
+    }
+
     /// on_raw_reaction_add event on d.py
     /// This function triggers every time a reaction gets added to a message.
     fn reaction_add(&self, ctx: Context, add_reaction: Reaction) {
@@ -308,6 +370,7 @@ impl EventHandler for Handler {
             return;
         }
 
+        // Triggers reaction events from the commands.
         let dispatcher = {
             let mut context = ctx.data.write();
             context.get_mut::<DispatcherKey>().expect("Expected Dispatcher.").clone()
@@ -393,6 +456,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         dispatcher.num_threads(4).expect("Could not construct threadpool");
 
         data.insert::<DispatcherKey>(Arc::new(RwLock::new(dispatcher)));
+
+        data.insert::<RecentIndex>(HashMap::new());
     }
 
     &client.threadpool.set_num_threads(20);
@@ -413,7 +478,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // This is what allows for easier and faster commaands.
     client.with_framework(StandardFramework::new() // Create a new framework
         .configure(|c| c
-            .prefixes(vec![".", "n!", "]"]) // Add a list of prefixes to be used to invoke commands.
+            .prefixes(vec![".", "arc!"]) // Add a list of prefixes to be used to invoke commands.
             .on_mention(Some(bot_id)) // Add a bot mention as a prefix.
             .with_whitespace(true) // Allow a whitespace between the prefix and the command name.
             .owners(owners) // Defines the owners, this can be later used to make owner specific commands.
@@ -558,12 +623,12 @@ fn react(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     dispatcher.write()
         .add_fn(
             DispatchEvent::ReactEvent(bot_msg.id, left.clone(), false),
-            left_reaction_event(http.clone(), bot_msg.channel_id)
+            left_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone())
         );
     dispatcher.write()
         .add_fn(
             DispatchEvent::ReactEvent(bot_msg.id, right.clone(), false),
-            right_reaction_event(http.clone(), bot_msg.channel_id)
+            right_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone())
         );
 
     loop {
