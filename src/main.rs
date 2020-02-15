@@ -3,7 +3,7 @@
 /// this is indentional, as it helps me remember the concepts that rust provides, so they can be
 /// used in the future for whatever they could be needed.
 ///
-/// This is lisenced with the WTFPL, aka you can do whatever the freak you want to with it.
+/// This is lisenced with the copyleft license Mozilla Public License Version 2.0
 
 mod utils; // Load the utils module
 mod commands; // Load the commands module
@@ -82,7 +82,7 @@ impl TypeMapKey for ShardManagerContainer {
 }
 
 impl TypeMapKey for DatabaseConnection {
-    type Value = PgClient;
+    type Value = Arc<RwLock<PgClient>>;
 }
 
 impl TypeMapKey for Tokens {
@@ -321,7 +321,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Closure to define global data.
     {
         let mut data = client.data.write();
-        data.insert::<DatabaseConnection>(get_database()?); // Make the database connection global.
+        data.insert::<DatabaseConnection>(Arc::clone(&Arc::new(RwLock::new(get_database()?)))); // Make the database connection global.
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager)); // Make the shard manager global.
         data.insert::<Tokens>(String::from(osu_key));
 

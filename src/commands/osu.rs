@@ -85,7 +85,7 @@ impl TypeMapKey for DispatcherKey {
 
 
 
-fn left_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>) ->
+pub fn left_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>, _command: &str) ->
     Box<dyn Fn(&DispatchEvent) -> Option<DispatcherRequest> + Send + Sync> {
 
     Box::new(move |event| {
@@ -122,7 +122,7 @@ fn left_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<Sha
     })
 }
 
-fn right_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>) ->
+pub fn right_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>, _command: &str) ->
     Box<dyn Fn(&DispatchEvent) -> Option<DispatcherRequest> + Send + Sync> {
 
     Box::new(move |event| {
@@ -441,8 +441,11 @@ fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRe
     client = data.get_mut::<DatabaseConnection>().unwrap(); // get the database connection from the global data.
 
     let author_id = msg.author.id.as_u64().clone() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
-    let data = client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
-                            &[&author_id])?; // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
+    let data ={
+        let mut client = client.write();
+        client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
+                     &[&author_id])? // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
+    };
     let empty_data: bool;
 
     let mut user_data = OsuUserDBData::default(); // generate a basic structure with the default values.
@@ -549,17 +552,23 @@ Short recent? '{}'```",
 
     if empty_data {
         // inserts the data because the user is new.
-        client.execute(
-            "INSERT INTO osu_user (osu_id, osu_username, pp, mode, short_recent, discord_id) VALUES ($1, $2, $3, $4, $5, $6)",
-            &[&user_data.osu_id, &user_data.name, &user_data.pp.unwrap(), &user_data.mode.unwrap(), &user_data.short_recent.unwrap(), &author_id]
-        )?;
+        {
+            let mut client = client.write();
+            client.execute(
+                "INSERT INTO osu_user (osu_id, osu_username, pp, mode, short_recent, discord_id) VALUES ($1, $2, $3, $4, $5, $6)",
+                &[&user_data.osu_id, &user_data.name, &user_data.pp.unwrap(), &user_data.mode.unwrap(), &user_data.short_recent.unwrap(), &author_id]
+            )?;
+        }
 
     } else {
         // updates the database with the new user data.
-        client.execute(
-            "UPDATE osu_user SET osu_id = $1, osu_username = $2, pp = $3, mode = $4, short_recent = $5 WHERE discord_id = $6",
-            &[&user_data.osu_id, &user_data.name, &user_data.pp.unwrap(), &user_data.mode.unwrap(), &user_data.short_recent.unwrap(), &author_id]
-        )?;
+        {
+            let mut client = client.write();
+            client.execute(
+                "UPDATE osu_user SET osu_id = $1, osu_username = $2, pp = $3, mode = $4, short_recent = $5 WHERE discord_id = $6",
+                &[&user_data.osu_id, &user_data.name, &user_data.pp.unwrap(), &user_data.mode.unwrap(), &user_data.short_recent.unwrap(), &author_id]
+            )?;
+        }
     }
    
     // if the id obtained is 0, it means the user doesn't exist.
@@ -593,27 +602,46 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
         }
     }
 
-    let client;
-    let osu_key;
-    {
+    let osu_key = {
         let data = ctx.data.read(); // set inmutable global data.
-        osu_key = data.get::<Tokens>().unwrap().clone(); // get the osu! api token from the global data.
-    }
-    let mut data = ctx.data.write(); // set mutable global data.
-    client = data.get_mut::<DatabaseConnection>().unwrap(); // get the database connection from the global data.
+        data.get::<Tokens>().unwrap().clone() // get the osu! api token from the global data.
+    };
+
+    let client = {
+        let rdata = ctx.data.read();
+
+        let client = Arc::clone(rdata.get::<DatabaseConnection>().expect("no database connection found")); // get the database connection from the global data.
+        client
+    };
+
+    let dispatcher = {
+        let mut wdata = ctx.data.write();
+        wdata.get_mut::<DispatcherKey>().expect("Expected Dispatcher.").clone()
+    };
+
     let mut user_data = OsuUserDBData::default(); // generate a basic structure with the default values.
+
+
+
     let data;
 
     if arg_user == "" {
         let author_id = msg.author.id.as_u64().clone() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
-        data = client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
+        {
+            let mut client = client.write();
+            data = client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
                                 &[&author_id])?; // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
+
+        }
         arg_user = msg.author.name.clone();
 
 
     } else {
-        data = client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE osu_username = $1", // query the SQL to the database.
+        {
+            let mut client = client.write();
+            data = client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE osu_username = $1", // query the SQL to the database.
                                 &[&arg_user])?;
+        }
 
     }
 
@@ -676,7 +704,8 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
         rating_url = format!("https://s.ppy.sh/images/{}.png", user_recent.rank.to_uppercase());
     }
 
-    msg.channel_id.send_message(&ctx, |m| { // say method doesn't work for the message builder.
+    let bot_msg = msg.channel_id.send_message(&ctx, |m| { // say method doesn't work for the message builder.
+        m.content("ok");
         m.embed( |e| {
             e.color(Colour::new(user.user_id.parse().unwrap()));
             e.title(format!("{} - {} [**{}**]\nby {}",
@@ -715,9 +744,44 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
         m
     })?;
 
+    let http = ctx.http.clone();
+    let msg = msg.clone();
+
+    let mut timeout = 0;
+
+    bot_msg.react(&ctx, "⬅️")?;
+    bot_msg.react(&ctx, "➡️")?;
+
+    let left = ReactionType::Unicode(String::from("⬅️"));
+    let right = ReactionType::Unicode(String::from("➡️"));
+  
+    dispatcher.write()
+        .add_fn(
+            DispatchEvent::ReactEvent(bot_msg.id, left.clone(), false),
+            left_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent")
+        );
+    dispatcher.write()
+        .add_fn(
+            DispatchEvent::ReactEvent(bot_msg.id, right.clone(), false),
+            right_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent")
+        );
+
+    loop {
+        thread::sleep(std::time::Duration::from_secs(1));
+        timeout += 1;
+        if timeout == 20 {
+            break;
+        }
+    }
+    dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, left.clone(), true));
+    dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, right.clone(), true));
+
+    if msg.guild_id != None{
+        bot_msg.delete_reactions(&ctx)?;
+    };
+
     Ok(())
 }
-
 
 #[command]
 #[aliases("add")]
@@ -733,7 +797,6 @@ pub fn react(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let msg = msg.clone();
 
     let bot_msg = msg.channel_id.say(&http, &args)?;
-    let http = http.clone();
 
     let mut timeout = 0;
 
@@ -746,12 +809,12 @@ pub fn react(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     dispatcher.write()
         .add_fn(
             DispatchEvent::ReactEvent(bot_msg.id, left.clone(), false),
-            left_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone())
+            left_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent")
         );
     dispatcher.write()
         .add_fn(
             DispatchEvent::ReactEvent(bot_msg.id, right.clone(), false),
-            right_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone())
+            right_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent")
         );
 
     loop {
@@ -770,3 +833,4 @@ pub fn react(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 
     Ok(())
 }
+
