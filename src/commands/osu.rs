@@ -769,7 +769,7 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
     loop {
         thread::sleep(std::time::Duration::from_secs(1));
         timeout += 1;
-        if timeout == 20 {
+        if timeout == 500 {
             break;
         }
     }
