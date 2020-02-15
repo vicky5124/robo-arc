@@ -333,7 +333,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         data.insert::<RecentIndex>(HashMap::new());
     }
 
-    &client.threadpool.set_num_threads(20);
+    &client.threadpool.set_num_threads(8);
     
     // Obtains and defines the owner/owners of the Bot Application
     // and the bot id. 
