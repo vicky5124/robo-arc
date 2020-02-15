@@ -19,24 +19,15 @@ use std::{
     io::prelude::*,
     sync::Arc,
     fs::File,
-    thread,
-    hash::{
-        Hash,
-        Hasher,
-    },
 };
 
 use toml::Value;
 use postgres::Client as PgClient;
 
-use hey_listen::sync::{
-    ParallelDispatcher as Dispatcher,
-    ParallelDispatcherRequest as DispatcherRequest
-};
+use hey_listen::sync::ParallelDispatcher as Dispatcher;
 
 use serenity::{
     utils::Colour,
-    http::Http,
     client::{
         Client,
         bridge::gateway::{
@@ -57,10 +48,6 @@ use serenity::{
         Permissions,
         user::OnlineStatus,
         id::UserId,
-        prelude::{
-            MessageId,
-            ChannelId,
-        },
     },
     prelude::{
         EventHandler,
@@ -68,7 +55,6 @@ use serenity::{
         Mutex,
         TypeMapKey,
         RwLock,
-        ShareMap,
     },
     framework::standard::{
         Args,
@@ -85,8 +71,6 @@ use serenity::{
         },
     },
 };
-
-
 
 struct ShardManagerContainer;
 struct DatabaseConnection;
@@ -108,117 +92,6 @@ impl TypeMapKey for Tokens {
 impl TypeMapKey for RecentIndex {
     type Value = HashMap<u64, i32>;
 }
-
-#[derive(Clone)]
-enum DispatchEvent {
-    ReactEvent(MessageId, ReactionType, bool),
-}
-
-impl PartialEq for DispatchEvent {
-    fn eq(&self, other: &DispatchEvent) -> bool {
-        match (self, other) {
-            (DispatchEvent::ReactEvent(self_message_id, self_emoji, _),
-            DispatchEvent::ReactEvent(other_message_id, other_emoji, _)) => {
-                self_message_id == other_message_id &&
-                self_emoji == other_emoji
-            }
-        }
-    }
-}
-
-impl Eq for DispatchEvent {}
-
-impl Hash for DispatchEvent {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        match self {
-            DispatchEvent::ReactEvent(msg_id, user_id, _) => {
-                msg_id.hash(state);
-                user_id.hash(state);
-            }
-        }
-    }
-}
-
-
-struct DispatcherKey;
-impl TypeMapKey for DispatcherKey {
-    type Value = Arc<RwLock<Dispatcher<DispatchEvent>>>;
-}
-
-fn left_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>) ->
-    Box<dyn Fn(&DispatchEvent) -> Option<DispatcherRequest> + Send + Sync> {
-
-    Box::new(move |event| {
-        let mut kill = false;
-        if let DispatchEvent::ReactEvent(_, _, true) = event {
-            kill = true;
-        }
-        let msg_id = match event {
-            DispatchEvent::ReactEvent(m, _, _) => m.0,
-        };
-        let mut wdata = data.write();
-        let hm = wdata.get_mut::<RecentIndex>().unwrap();
-
-        let index = hm.entry(msg_id).or_insert(0);
-
-        let msg = match http.clone().get_message(channel.0, msg_id){
-            Err(why) => {
-                println!("Could not obtain message: {}", why);
-                return Some(DispatcherRequest::StopListening);
-            },
-            Ok(x) => x
-        };
-
-        if kill {
-            hm.remove_entry(&msg_id);
-            Some(DispatcherRequest::StopListening)
-        } else {
-            *index -= 1;
-            if let Err(why) = msg.clone().edit(http.clone(), |m| m.content(format!("{}", index))) {
-                println!("Could not send message: {:?}", why);
-            };
-            None
-        }
-    })
-}
-
-fn right_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>) ->
-    Box<dyn Fn(&DispatchEvent) -> Option<DispatcherRequest> + Send + Sync> {
-
-    Box::new(move |event| {
-        let mut kill = false;
-        if let DispatchEvent::ReactEvent(_, _, true) = event {
-            kill = true;
-        }
-        let msg_id = match event {
-            DispatchEvent::ReactEvent(m, _, _) => m.0,
-        };
-        let mut wdata = data.write();
-        let hm = wdata.get_mut::<RecentIndex>().unwrap();
-
-        let index = hm.entry(msg_id).or_insert(0);
-
-        let msg = match http.clone().get_message(channel.0, msg_id){
-            Err(why) => {
-                println!("Could not obtain message: {}", why);
-                return Some(DispatcherRequest::StopListening);
-            },
-            Ok(x) => x
-        };
-
-        if kill {
-            hm.remove_entry(&msg_id);
-            Some(DispatcherRequest::StopListening)
-        } else {
-            *index += 1;
-            if let Err(why) = msg.clone().edit(http.clone(), |m| m.content(format!("{}", index))) {
-                println!("Could not send message: {:?}", why);
-            };
-            None
-        }
-    })
-}
-
 
 
 // The basic commands group is being defined here.
@@ -592,58 +465,6 @@ fn test(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
     msg.channel_id.say(&ctx, format!("{} nice: {}", x, multiplied))?;
     let f = vec![123; 1000];
     msg.channel_id.say(&ctx, format!("{:?}", &f))?;
-
-    Ok(())
-}
-
-#[command]
-#[aliases("add")]
-fn react(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    let args = args.rest().to_string();
-
-    let dispatcher = {
-        let mut ctx = ctx.data.write();
-        ctx.get_mut::<DispatcherKey>().expect("Expected Dispatcher.").clone()
-    };
-
-    let http = ctx.http.clone();
-    let msg = msg.clone();
-
-    let bot_msg = msg.channel_id.say(&http, &args)?;
-    let http = http.clone();
-
-    let mut timeout = 0;
-
-    bot_msg.react(&ctx, "⬅️")?;
-    bot_msg.react(&ctx, "➡️")?;
-
-    let left = ReactionType::Unicode(String::from("⬅️"));
-    let right = ReactionType::Unicode(String::from("➡️"));
-
-    dispatcher.write()
-        .add_fn(
-            DispatchEvent::ReactEvent(bot_msg.id, left.clone(), false),
-            left_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone())
-        );
-    dispatcher.write()
-        .add_fn(
-            DispatchEvent::ReactEvent(bot_msg.id, right.clone(), false),
-            right_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone())
-        );
-
-    loop {
-        thread::sleep(std::time::Duration::from_secs(1));
-        timeout += 1;
-        if timeout == 500 {
-            break;
-        }
-    }
-    dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, left.clone(), true));
-    dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, right.clone(), true));
-
-    if msg.guild_id != None{
-        bot_msg.delete_reactions(&ctx)?;
-    };
 
     Ok(())
 }

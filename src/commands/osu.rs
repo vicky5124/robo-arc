@@ -1,21 +1,165 @@
 use crate::{
     DatabaseConnection,
-    Tokens
+    Tokens,
+    RecentIndex,
 };
 use serenity::{
+    http::Http,
     utils::Colour,
-    prelude::Context,
-    model::channel::Message,
+    prelude::{
+        Context,
+        TypeMapKey,
+        RwLock,
+        ShareMap,
+    },
+    model::{
+        channel::{
+            Message,
+            ReactionType,
+        },
+        prelude:: {
+            MessageId,
+            ChannelId,
+        },
+    },
     framework::standard::{
         Args,
         CommandResult,
         macros::command,
     },
 };
+use hey_listen::sync::{
+    ParallelDispatcher as Dispatcher,
+    ParallelDispatcherRequest as DispatcherRequest
+};
+use std::{
+    thread,
+    sync::Arc,
+    hash::{
+        Hash,
+        Hasher,
+    },
+};
 use regex::Regex;
 use num_format::{Locale, ToFormattedString};
 use reqwest;
 use serde::Deserialize;
+
+
+
+#[derive(Clone)]
+pub enum DispatchEvent {
+    ReactEvent(MessageId, ReactionType, bool),
+}
+
+impl PartialEq for DispatchEvent {
+    fn eq(&self, other: &DispatchEvent) -> bool {
+        match (self, other) {
+            (DispatchEvent::ReactEvent(self_message_id, self_emoji, _),
+            DispatchEvent::ReactEvent(other_message_id, other_emoji, _)) => {
+                self_message_id == other_message_id &&
+                self_emoji == other_emoji
+            }
+        }
+    }
+}
+
+impl Eq for DispatchEvent {}
+
+impl Hash for DispatchEvent {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            DispatchEvent::ReactEvent(msg_id, user_id, _) => {
+                msg_id.hash(state);
+                user_id.hash(state);
+            }
+        }
+    }
+}
+
+
+pub struct DispatcherKey;
+impl TypeMapKey for DispatcherKey {
+    type Value = Arc<RwLock<Dispatcher<DispatchEvent>>>;
+}
+
+
+
+fn left_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>) ->
+    Box<dyn Fn(&DispatchEvent) -> Option<DispatcherRequest> + Send + Sync> {
+
+    Box::new(move |event| {
+        let mut kill = false;
+        if let DispatchEvent::ReactEvent(_, _, true) = event {
+            kill = true;
+        }
+        let msg_id = match event {
+            DispatchEvent::ReactEvent(m, _, _) => m.0,
+        };
+        let mut wdata = data.write();
+        let hm = wdata.get_mut::<RecentIndex>().unwrap();
+
+        let index = hm.entry(msg_id).or_insert(0);
+
+        let msg = match http.clone().get_message(channel.0, msg_id){
+            Err(why) => {
+                println!("Could not obtain message: {}", why);
+                return Some(DispatcherRequest::StopListening);
+            },
+            Ok(x) => x
+        };
+
+        if kill {
+            hm.remove_entry(&msg_id);
+            Some(DispatcherRequest::StopListening)
+        } else {
+            *index -= 1;
+            if let Err(why) = msg.clone().edit(http.clone(), |m| m.content(format!("{}", index))) {
+                println!("Could not send message: {:?}", why);
+            };
+            None
+        }
+    })
+}
+
+fn right_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>) ->
+    Box<dyn Fn(&DispatchEvent) -> Option<DispatcherRequest> + Send + Sync> {
+
+    Box::new(move |event| {
+        let mut kill = false;
+        if let DispatchEvent::ReactEvent(_, _, true) = event {
+            kill = true;
+        }
+        let msg_id = match event {
+            DispatchEvent::ReactEvent(m, _, _) => m.0,
+        };
+        let mut wdata = data.write();
+        let hm = wdata.get_mut::<RecentIndex>().unwrap();
+
+        let index = hm.entry(msg_id).or_insert(0);
+
+        let msg = match http.clone().get_message(channel.0, msg_id){
+            Err(why) => {
+                println!("Could not obtain message: {}", why);
+                return Some(DispatcherRequest::StopListening);
+            },
+            Ok(x) => x
+        };
+
+        if kill {
+            hm.remove_entry(&msg_id);
+            Some(DispatcherRequest::StopListening)
+        } else {
+            *index += 1;
+            if let Err(why) = msg.clone().edit(http.clone(), |m| m.content(format!("{}", index))) {
+                println!("Could not send message: {:?}", why);
+            };
+            None
+        }
+    })
+}
+
+
 
 mod bitwhise_mods {
     #![allow(non_upper_case_globals)]
@@ -570,6 +714,59 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
 
         m
     })?;
+
+    Ok(())
+}
+
+
+#[command]
+#[aliases("add")]
+pub fn react(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    let args = args.rest().to_string();
+
+    let dispatcher = {
+        let mut ctx = ctx.data.write();
+        ctx.get_mut::<DispatcherKey>().expect("Expected Dispatcher.").clone()
+    };
+
+    let http = ctx.http.clone();
+    let msg = msg.clone();
+
+    let bot_msg = msg.channel_id.say(&http, &args)?;
+    let http = http.clone();
+
+    let mut timeout = 0;
+
+    bot_msg.react(&ctx, "⬅️")?;
+    bot_msg.react(&ctx, "➡️")?;
+
+    let left = ReactionType::Unicode(String::from("⬅️"));
+    let right = ReactionType::Unicode(String::from("➡️"));
+
+    dispatcher.write()
+        .add_fn(
+            DispatchEvent::ReactEvent(bot_msg.id, left.clone(), false),
+            left_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone())
+        );
+    dispatcher.write()
+        .add_fn(
+            DispatchEvent::ReactEvent(bot_msg.id, right.clone(), false),
+            right_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone())
+        );
+
+    loop {
+        thread::sleep(std::time::Duration::from_secs(1));
+        timeout += 1;
+        if timeout == 500 {
+            break;
+        }
+    }
+    dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, left.clone(), true));
+    dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, right.clone(), true));
+
+    if msg.guild_id != None{
+        bot_msg.delete_reactions(&ctx)?;
+    };
 
     Ok(())
 }
