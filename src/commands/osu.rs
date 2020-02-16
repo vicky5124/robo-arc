@@ -388,8 +388,8 @@ fn get_osu_id(name: &String, osu_key: &String) -> Result<i32, Box<dyn std::error
 
 
 fn get_osu_user(name: &String, osu_key: &String) -> Result<Vec<OsuUserData>, Box<dyn std::error::Error>> {
-    let re = Regex::new("[^0-9A-Za-z///' ]").unwrap();
-    let mut sanitized_name = re.replace(name, "").into_owned();
+    let re = Regex::new("[^0-9A-Za-z\\[\\]'_ ]").unwrap();
+    let mut sanitized_name = re.replace_all(name, "").into_owned();
     sanitized_name = sanitized_name.replace(" ", "%20");
 
     let url = format!("https://osu.ppy.sh/api/get_user?k={}&u={}&type=string", osu_key, sanitized_name);
@@ -598,7 +598,7 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
     if arguments.len() > 0 {
         let args = arguments.raw_quoted().collect::<Vec<&str>>();
         for i in args {
-            arg_user += i;
+            arg_user += &format!("{} ", i).to_owned()[..];
         }
     }
 
