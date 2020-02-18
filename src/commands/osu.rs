@@ -875,4 +875,3 @@ pub fn react(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 
     Ok(())
 }
-

@@ -1,3 +1,13 @@
+# 0.0.6
+
+### Commands
+- recent:
+  Paginated recent command, took a while monkaS
+  \
+  Added a description for the help command.
+- configure_osu
+  Moved description from decorator to docstring.
+
 # 0.0.5
 
 ### Commands
