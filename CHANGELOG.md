@@ -1,3 +1,15 @@
+# 0.0.7
+
+### Structure
+- commands/meta.rs:
+  New file.
+
+### Commands
+- Ping / Test:
+  Moved to new meta.rs file.
+- Source / Invite:
+  New commands. One to get the gitlab link to the bot, the other to get the bot invite link.
+
 # 0.0.6
 
 ### Commands
