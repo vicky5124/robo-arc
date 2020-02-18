@@ -1,3 +1,5 @@
+/// This is the file containing all the osu! related commands.
+
 use crate::{
     DatabaseConnection,
     Tokens,
@@ -40,8 +42,11 @@ use std::{
         Hasher,
     },
 };
+use num_format::{
+    Locale,
+    ToFormattedString,
+};
 use regex::Regex;
-use num_format::{Locale, ToFormattedString};
 use reqwest;
 use serde::Deserialize;
 
@@ -85,7 +90,7 @@ impl TypeMapKey for DispatcherKey {
 
 
 
-pub fn left_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>, _command: &str) ->
+pub fn left_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>, _command: &str, event_data: EventData) ->
     Box<dyn Fn(&DispatchEvent) -> Option<DispatcherRequest> + Send + Sync> {
 
     Box::new(move |event| {
@@ -114,15 +119,13 @@ pub fn left_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock
             Some(DispatcherRequest::StopListening)
         } else {
             *index -= 1;
-            if let Err(why) = msg.clone().edit(http.clone(), |m| m.content(format!("{}", index))) {
-                println!("Could not send message: {:?}", why);
-            };
+            let _ = short_recent_builder(http.clone(), &event_data, msg.clone(), *index);
             None
         }
     })
 }
 
-pub fn right_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>, _command: &str) ->
+pub fn right_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>, _command: &str, event_data: EventData) ->
     Box<dyn Fn(&DispatchEvent) -> Option<DispatcherRequest> + Send + Sync> {
 
     Box::new(move |event| {
@@ -151,12 +154,10 @@ pub fn right_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLoc
             Some(DispatcherRequest::StopListening)
         } else {
             *index += 1;
-            if let Err(why) = msg.clone().edit(http.clone(), |m| m.content(format!("{}", index))) {
-                println!("Could not send message: {:?}", why);
-            };
+            let _ = short_recent_builder(http.clone(), &event_data, msg.clone(), *index);
             None
         }
-    })
+   })
 }
 
 
@@ -267,7 +268,7 @@ struct OsuUserData {
 }
 
 // JSON Structure of the osu! user recent plays API request.
-#[derive(Deserialize, PartialEq, Debug)]
+#[derive(Deserialize, PartialEq, Debug, Clone)]
 struct OsuUserRecentData {
     beatmap_id: String,
     score: String,
@@ -328,7 +329,7 @@ struct OsuBeatmapData {
 }
 
 // Data Structure of the data obtained on the database.
-#[derive(Default)] // Default is a trait that sets the default value for each type.
+#[derive(Default, Clone)] // Default is a trait that sets the default value for each type.
 struct OsuUserDBData {
     osu_id: i32, // 0
     name: String, // String::new()
@@ -336,6 +337,13 @@ struct OsuUserDBData {
     mode: Option<i32>, // None
     pp: Option<bool>,
     short_recent: Option<bool>,
+}
+
+#[derive(Default, Clone)]
+pub struct EventData {
+    user_db_data: Option<OsuUserDBData>,
+    user_recent_raw: Option<Vec<OsuUserRecentData>>,
+    osu_key: Option<String>,
 }
 
 fn acc_math(_300: f32, _100: f32, _50: f32, _miss: f32) -> f32 {
@@ -413,24 +421,95 @@ fn get_osu_beatmap(beatmap_id: &String, osu_key: &String) -> Result<Vec<OsuBeatm
     Ok(resp)
 }
 
+fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: Message, index: usize) -> Result<(), Box<dyn std::error::Error>> {
+    let user_data = event_data.user_db_data.as_ref().unwrap();
+    let user_recent_raw = event_data.user_recent_raw.as_ref().unwrap();
+    let osu_key = event_data.osu_key.as_ref().unwrap();
+
+    let user_recent = &user_recent_raw[index];
+    let user_raw = get_osu_user(&user_data.name, &osu_key)?;
+    let user = &user_raw[0];
+
+    let beatmap_raw = get_osu_beatmap(&user_recent.beatmap_id, &osu_key)?;
+    let beatmap = &beatmap_raw[0];
+
+    let accuracy = acc_math(user_recent.count300.parse()?, user_recent.count100.parse()?, user_recent.count50.parse()?, user_recent.countmiss.parse()?);
+
+    let progress: f32 = progress_math(beatmap.count_normal.parse()?, beatmap.count_slider.parse()?, beatmap.count_spinner.parse()?,
+    user_recent.count300.parse()?, user_recent.count100.parse()?, user_recent.count50.parse()?, user_recent.countmiss.parse()?);
+
+    let attempts = index;
+    let mods: String = get_mods_short(user_recent.enabled_mods.parse()?);
+
+    let rating_url: String;
+
+    if user_recent.rank == "F" {
+        rating_url = String::from("https://5124.mywire.org/HDD/Downloads/BoneF.png");
+    } else {
+        rating_url = format!("https://s.ppy.sh/images/{}.png", user_recent.rank.to_uppercase());
+    }
+
+    bot_msg.clone().edit(http.clone(), |m| { // say method doesn't work for the message builder.
+        m.content("");
+        m.embed( |e| {
+            e.color(Colour::new(user.user_id.parse().unwrap()));
+            e.title(format!("{} - {} [**{}**]\nby {}",
+                            beatmap.artist, beatmap.title, beatmap.version, beatmap.creator));
+            e.url(format!("https://osu.ppy.sh/b/{}", beatmap.beatmap_id));
+            e.description(format!("**{}** ┇ **x{} / {}**\n**{:.2}%** ┇ {} - {} - {} - {}\n Recent #{} ━ Progress: {:.2}%",
+                                  user_recent.score.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en), user_recent.maxcombo, beatmap.max_combo, accuracy, user_recent.count300, user_recent.count100, user_recent.count50, user_recent.countmiss, attempts, progress));
+            e.timestamp(user_recent.date.clone());
+            e.thumbnail(format!("https://b.ppy.sh/thumb/{}l.jpg", beatmap.beatmapset_id));
+            e.author( |a| {
+                a.name(&user.username);
+                a.url(format!("https://osu.ppy.sh/u/{}", user.user_id));
+                a.icon_url(format!("https://a.ppy.sh/{}", user.user_id));
+
+                a
+            });
+            if user_data.pp == Some(true) {
+                e.footer(|f| {
+                    f.text(format!("PP | NEW_PP | {:.4}* | {}", beatmap.difficultyrating, mods));
+                    f.icon_url(&rating_url);
+
+                    f
+            });
+            } else {
+                e.footer(|f| {
+                    f.text(format!("{:.4}* | {}", beatmap.difficultyrating, mods));
+                    f.icon_url(&rating_url);
+
+                    f
+                });
+            }
+
+            e
+        });
+
+        m
+    })?;
+    Ok(())
+}
 
 
+
+/// Command to configure an osu! user for the bot to know about your prefferences.
+/// This supports various keyword parameters, this are:
+/// `mode=` To set your osu! gamemode.
+/// `pp=` To show or not show any pp related features for your account.
+/// `short_recent=` To display the short version of the recent command with less information, but more cozy.
+/// 
+/// - Everything else that is not keyworded will become your username.
+/// - Keyword arguments are not required, they will default to `std, true, true` respectively.
+/// 
+/// Example usages:
+/// `n!osuc Majorowsky`
+/// `n!osuc nitsuga5124 pp=false short_recent=yes`
+/// `n!osuc [ Frost ] mode=mania pp=yes recent=false`
 #[command]
-#[description = "Command to configure an osu! user for the bot to know about your prefferences.
-This supports various keyword parameters, this are:
-`mode=` To set your osu! gamemode.
-`pp=` To show or not show any pp related features for your account.
-`short_recent=` To display the short version of the recent command with less information, but more cozy.
-
-- Everything else that is not keyworded will become your username.
-- Keyword arguments are not required, they will default to `std, true, true` respectively.
-
-Example usages:
-`n!osuc Majorowsky`
-`n!osuc nitsuga5124 pp=false short_recent=yes`
-`n!osuc [ Frost ] mode=mania pp=yes recent=false`"]
 #[aliases("osuc", "config_osu", "configosu", "configureosu", "configo", "setosu", "osuset", "set_osu", "osu_set")]
 fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
+
     let client;
     let osu_key;
     {
@@ -591,6 +670,19 @@ Short recent? '{}'```",
     Ok(())
 }
 
+/// Command to show the most recent osu! play.
+/// - Due to api limits, this will only work on maps with leaderboard.
+/// - This command is able to show failed plays, and show the % of the progress on the map. 
+///
+/// To use this command, first configure your osu! profile with `.osuc`
+/// Affected parameters for configuration:
+/// - Mode: To specify the gamemode the play was on.
+/// - PP: To know if the bot should display the PP stadistics of the play.
+/// - Short Recent: To display the short version of recent instead of the long one.
+/// (Currently only short exists.)
+///
+/// You can also invoke the command specifying a username.
+/// Ex: `.recent [ Frost ]`
 #[command]
 #[aliases("rs", "rc")]
 fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
@@ -600,6 +692,7 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
         for i in args {
             arg_user += &format!("{} ", i).to_owned()[..];
         }
+        arg_user.pop();
     }
 
     let osu_key = {
@@ -620,8 +713,6 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
     };
 
     let mut user_data = OsuUserDBData::default(); // generate a basic structure with the default values.
-
-
 
     let data;
 
@@ -673,79 +764,28 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
             user_data.osu_id = user_id;
         }
     }
+    let bot_msg = msg.channel_id.say(&ctx, format!("Obtaining **{}** recent data", user_data.name))?;
 
     let user_recent_raw = get_osu_user_recent(user_data.osu_id, &osu_key)?;
 
     if user_recent_raw.len() < 1 {
-        msg.channel_id.say(&ctx, format!("The user '{}' has not played in the last 24 hours.", user_data.name))?;
+        bot_msg.clone().edit(&ctx, |m| {
+            m.content(format!("The user **{}** has not played in the last 24 hours.", user_data.name));
+            m
+        })?;
         return Ok(());
     }
 
-    let user_recent = &user_recent_raw[0];
-    let user_raw = get_osu_user(&user_data.name, &osu_key)?;
-    let user = &user_raw[0];
-
-    let beatmap_raw = get_osu_beatmap(&user_recent.beatmap_id, &osu_key)?;
-    let beatmap = &beatmap_raw[0];
-
-    let accuracy = acc_math(user_recent.count300.parse()?, user_recent.count100.parse()?, user_recent.count50.parse()?, user_recent.countmiss.parse()?);
-
-    let progress: f32 = progress_math(beatmap.count_normal.parse()?, beatmap.count_slider.parse()?, beatmap.count_spinner.parse()?,
-    user_recent.count300.parse()?, user_recent.count100.parse()?, user_recent.count50.parse()?, user_recent.countmiss.parse()?);
-
-    let attempts: u8 = 0;
-    let mods: String = get_mods_short(user_recent.enabled_mods.parse()?);
-
-    let rating_url: String;
-
-    if user_recent.rank == "F" {
-        rating_url = String::from("https://5124.mywire.org/HDD/Downloads/BoneF.png");
-    } else {
-        rating_url = format!("https://s.ppy.sh/images/{}.png", user_recent.rank.to_uppercase());
-    }
-
-    let bot_msg = msg.channel_id.send_message(&ctx, |m| { // say method doesn't work for the message builder.
-        m.content("ok");
-        m.embed( |e| {
-            e.color(Colour::new(user.user_id.parse().unwrap()));
-            e.title(format!("{} - {} [**{}**]\nby {}",
-                            beatmap.artist, beatmap.title, beatmap.version, beatmap.creator));
-            e.url(format!("https://osu.ppy.sh/b/{}", beatmap.beatmap_id));
-            e.description(format!("**{}** ┇ **x{} / {}**\n**{:.2}%** ┇ {} - {} - {} - {}\n Try #{} ━ Progress: {:.2}%",
-                                  user_recent.score.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en), user_recent.maxcombo, beatmap.max_combo, accuracy, user_recent.count300, user_recent.count100, user_recent.count50, user_recent.countmiss, attempts, progress));
-            e.timestamp(user_recent.date.clone());
-            e.thumbnail(format!("https://b.ppy.sh/thumb/{}l.jpg", beatmap.beatmapset_id));
-            e.author( |a| {
-                a.name(&user.username);
-                a.url(format!("https://osu.ppy.sh/u/{}", user.user_id));
-                a.icon_url(format!("https://a.ppy.sh/{}", user.user_id));
-
-                a
-            });
-            if user_data.pp == Some(true) {
-                e.footer(|f| {
-                    f.text(format!("PP | NEW_PP | {:.4}* | {}", beatmap.difficultyrating, mods));
-                    f.icon_url(&rating_url);
-
-                    f
-            });
-            } else {
-                e.footer(|f| {
-                    f.text(format!("{:.4}* | {}", beatmap.difficultyrating, mods));
-                    f.icon_url(&rating_url);
-
-                    f
-                });
-            }
-
-            e
-        });
-
-        m
-    })?;
-
     let http = ctx.http.clone();
     let msg = msg.clone();
+
+    let mut event_data = EventData::default();
+    event_data.user_db_data = Some(user_data);
+    event_data.user_recent_raw = Some(user_recent_raw);
+    event_data.osu_key = Some(osu_key);
+
+
+    short_recent_builder(http.clone(), &event_data, bot_msg.clone(), 0)?;
 
     let mut timeout = 0;
 
@@ -758,12 +798,12 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
     dispatcher.write()
         .add_fn(
             DispatchEvent::ReactEvent(bot_msg.id, left.clone(), false),
-            left_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent")
+            left_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent", event_data.clone())
         );
     dispatcher.write()
         .add_fn(
             DispatchEvent::ReactEvent(bot_msg.id, right.clone(), false),
-            right_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent")
+            right_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent", event_data.clone())
         );
 
     loop {
@@ -806,15 +846,17 @@ pub fn react(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let left = ReactionType::Unicode(String::from("⬅️"));
     let right = ReactionType::Unicode(String::from("➡️"));
 
+    let event_data = EventData::default();
+
     dispatcher.write()
         .add_fn(
             DispatchEvent::ReactEvent(bot_msg.id, left.clone(), false),
-            left_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent")
+            left_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent", event_data.clone())
         );
     dispatcher.write()
         .add_fn(
             DispatchEvent::ReactEvent(bot_msg.id, right.clone(), false),
-            right_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent")
+            right_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent", event_data.clone())
         );
 
     loop {

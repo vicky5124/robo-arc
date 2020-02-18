@@ -90,7 +90,7 @@ impl TypeMapKey for Tokens {
 }
 
 impl TypeMapKey for RecentIndex {
-    type Value = HashMap<u64, i32>;
+    type Value = HashMap<u64, usize>;
 }
 
 
@@ -406,7 +406,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[command] // Sets up a command
 #[aliases("pong", "latency")] // Sets up aliases to that command.
-#[description = "Sends the latency of the bot to the shards."] // Sets a description to be used for the help command.
+#[description = "Sends the latency of the bot to the shards."] // Sets a description to be used for the help command. You can also use docstrings.
 
 // All command functions must take a Context and Message type parameters.
 // Optionally they may also take an Args type parameter for command arguments.
