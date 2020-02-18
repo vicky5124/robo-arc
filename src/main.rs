@@ -9,6 +9,7 @@ mod utils; // Load the utils module
 mod commands; // Load the commands module
 use commands::booru::*; // Import everything from the booru module.
 use commands::osu::*; // Import everything from the osu module.
+use commands::meta::*; // Import everything from the meta module.
 use utils::database::get_database;
 
 use std::{
@@ -30,10 +31,7 @@ use serenity::{
     utils::Colour,
     client::{
         Client,
-        bridge::gateway::{
-            ShardId,
-            ShardManager,
-        },
+        bridge::gateway::ShardManager,
     },
     model::{
         channel::{
@@ -45,7 +43,6 @@ use serenity::{
             Ready,
             Activity,
         },
-        Permissions,
         user::OnlineStatus,
         id::UserId,
     },
@@ -65,7 +62,6 @@ use serenity::{
         help_commands,
         StandardFramework,
         macros::{
-            command,
             group,
             help,
         },
@@ -95,11 +91,11 @@ impl TypeMapKey for RecentIndex {
 
 
 // The basic commands group is being defined here.
-// this group includes the commands ping and test, nothing really special.
-#[group("The Basics")]
+// this group includes the commands that basically every bot has, nothing really special.
+#[group("Meta")]
 #[description = "All the basic commands that every bot should have."]
-#[commands(ping, test, react)]
-struct TheBasics;
+#[commands(ping, test, react, invite, source)]
+struct Meta;
 
 // The NSFW command group.
 // the list of commands will get added later, as soon as the commands get made.
@@ -196,24 +192,11 @@ impl EventHandler for Handler {
         // This is an alternative way to make commands that doesn't involve the Command Framework.
         // this is not recommended as it would block the event thread, which Framework Commands
         // don't do.
-        // This command just sends an invite of the bot witout permissions.
-        if msg.content == ".invite" {
-            // Creates the invite link for the bot without permissions.
-            // Error handling in rust is so nice.
-            let url = match ctx.cache.read().user.invite_url(&ctx, Permissions::empty()) {
-                Ok(v) => v,
-                Err(why) => {
-                    println!("Error creating invite url: {:?}", why);
-
-                    return; // Prematurely finish the function.
-                },
-            };
-            
-            // Sends a DM to the author of the message with the invite link.
-            let _ = msg.author.direct_message(&ctx, |m| {
-                m.content(format!("My invite link: <{}>\nCurrently private only, while the bot is in developement.", url))
-            });
-        }
+        // This command just an example command made this way.
+        //
+        //if msg.content == ".hello" {
+        //  msg.channel_id.say("Hello!")
+        //}
     }
 
     /// on_raw_reaction_remove event on d.py
@@ -386,7 +369,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unrecognised_command(|_, _, unknown_command_name| {
             println!("Could not find command named '{}'", unknown_command_name);
         })
-        .group(&THEBASICS_GROUP) // Load `The Basics` command group
+        .group(&META_GROUP) // Load `Meta` command group
         .group(&NSFW_GROUP) // Load `NSFW` command group
         .group(&BOORUS_GROUP) // Load `Boorus` command group
         .group(&OSU_GROUP) // Load `osu!` command group
@@ -398,73 +381,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Err(why) = client.start() {
         println!("An error occurred while running the client: {:?}", why);
     }
-
-    Ok(())
-}
-
-
-
-#[command] // Sets up a command
-#[aliases("pong", "latency")] // Sets up aliases to that command.
-#[description = "Sends the latency of the bot to the shards."] // Sets a description to be used for the help command. You can also use docstrings.
-
-// All command functions must take a Context and Message type parameters.
-// Optionally they may also take an Args type parameter for command arguments.
-// They must also return CommandResult.
-fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
-    // The shard manager is an interface for mutating, stopping, restarting, and
-    // retrieving information about shards.
-    let data = ctx.data.read();
-    let shard_manager = match data.get::<ShardManagerContainer>() {
-        Some(v) => v,
-        None => {
-            let _ = msg.reply(&ctx, "There was a problem getting the shard manager");
-
-            return Ok(());
-        },
-    };
-
-    let manager = shard_manager.lock();
-    let runners = manager.runners.lock();
-
-    // Shards are backed by a "shard runner" responsible for processing events
-    // over the shard, so we'll get the information about the shard runner for
-    // the shard this command was sent over.
-    let runner = match runners.get(&ShardId(ctx.shard_id)) {
-        Some(runner) => runner,
-        None => {
-            let _ = msg.reply(&ctx,  "No shard found");
-
-            return Ok(());
-        },
-    };
-   
-    let latency;
-    match runner.latency {
-        Some(ms) => latency = format!("{:?}", ms),
-        _ => latency = String::new(),
-    }
-    msg.reply(&ctx, format!("Pong! {}", latency))?;
-
-    Ok(())
-}
-
-
-
-#[command]
-#[owners_only] // to only allow the owner of the bot to use this command
-#[min_args(3)] // Sets the minimum ammount of arguments the command requires to be ran. This is used to trigger the `NotEnoughArguments` error.
-// Testing command, please ignore.
-fn test(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
-    std::thread::sleep(std::time::Duration::from_secs(50));
-    let x = args.single::<String>()?;
-    let y = args.single::<i32>()?;
-    let z = args.single::<i32>()?;
-    
-    let multiplied = y * z;
-    msg.channel_id.say(&ctx, format!("{} nice: {}", x, multiplied))?;
-    let f = vec![123; 1000];
-    msg.channel_id.say(&ctx, format!("{:?}", &f))?;
 
     Ok(())
 }
