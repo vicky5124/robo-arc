@@ -134,6 +134,7 @@ fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
 #[min_args(3)] // Sets the minimum ammount of arguments the command requires to be ran. This is used to trigger the `NotEnoughArguments` error.
 // Testing command, please ignore.
 fn test(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+    source(&mut ctx.clone(), &msg.clone(), args.clone())?;
     std::thread::sleep(std::time::Duration::from_secs(50));
     let x = args.single::<String>()?;
     let y = args.single::<i32>()?;
@@ -147,6 +148,7 @@ fn test(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
     Ok(())
 }
 
+/// Sends the source code url to the bot.
 #[command]
 fn source(ctx: &mut Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(&ctx, "<https://gitlab.com/nitsuga5124/robo-arc/>")?;
