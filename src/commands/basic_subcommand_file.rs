@@ -9,7 +9,7 @@ use serenity::{
 };
 
 #[command]
-fn basic_command(ctx: &mut Contextm, msg: Messagem, args: Args) -> CommandResult {
-    msg.channel_id.say(&ctx, args.0);
+fn basic_command(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
+    msg.channel_id.say(&ctx, "Hello World!");
     Ok(())
 }
