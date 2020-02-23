@@ -824,6 +824,7 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
 }
 
 #[command]
+#[owners_only]
 #[aliases("add")]
 pub fn react(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let args = args.rest().to_string();
