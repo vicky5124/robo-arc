@@ -10,6 +10,7 @@ mod commands; // Load the commands module
 use commands::booru::*; // Import everything from the booru module.
 use commands::osu::*; // Import everything from the osu module.
 use commands::meta::*; // Import everything from the meta module.
+use commands::image_manipulation::*; // Import everything from the image manipulation module.
 use utils::database::get_database;
 
 use std::{
@@ -44,7 +45,10 @@ use serenity::{
             Activity,
         },
         user::OnlineStatus,
-        id::UserId,
+        id::{
+            UserId,
+            //GuildId,
+        },
     },
     prelude::{
         EventHandler,
@@ -123,6 +127,11 @@ Available parameters:\n\
 Inspired by -GN's WaifuBot ([source](https://github.com/isakvik/waifubot/))"]
 #[commands(safebooru)]
 struct Boorus;
+
+#[group("Image Manipulation")]
+#[description = "All the image manipulaiton based commands."]
+#[commands(pride)]
+struct ImageManipulation;
 
 // This is a custom help command.
 // Each line has the explaination that is required.
@@ -337,6 +346,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .prefixes(vec![".", "arc!"]) // Add a list of prefixes to be used to invoke commands.
             .on_mention(Some(bot_id)) // Add a bot mention as a prefix.
             .with_whitespace(true) // Allow a whitespace between the prefix and the command name.
+            //.dynamic_prefixes({
+            //    let vec = [",,,", ",,,,"];
+            //    let mut index = 0;
+
+            //    let x = |_ctx: &mut Context, msg: &Message| {
+            //        if msg.is_private() {
+            //            return Some(",".to_owned());
+            //        } else {
+            //            let guild_id = msg.guild_id.unwrap_or(GuildId(0));
+            //            if guild_id.0 == 182892283111276544 {
+            //                let indexed = vec[0];
+            //                let pick = Some(indexed.to_owned());
+            //                index += 1;
+            //                return pick;
+            //        }
+            //    } 
+            //    return Some(",,".to_owned());
+            //    };
+            //    vec![x]
+            //})
             .owners(owners) // Defines the owners, this can be later used to make owner specific commands.
         )
 
@@ -373,9 +402,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .group(&NSFW_GROUP) // Load `NSFW` command group
         .group(&BOORUS_GROUP) // Load `Boorus` command group
         .group(&OSU_GROUP) // Load `osu!` command group
+        .group(&IMAGEMANIPULATION_GROUP) // Load `image manipulaiton` command group
         .help(&MY_HELP) // Load the custom help.
     );
-
 
     // start listening for events by starting a single shard
     if let Err(why) = client.start() {
