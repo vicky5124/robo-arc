@@ -1,3 +1,16 @@
+# 0.0.8
+
+### Commands
+- pride:
+  Added a basic grayscaling command, named pride for future use.
+
+### Dependencies
+- image
+
+### Structure
+- commands/image_manipulation.rs:
+  New file.
+
 # 0.0.7
 
 ### Structure
