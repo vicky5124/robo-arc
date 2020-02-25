@@ -22,7 +22,7 @@ Go the thw newly created application and head over the `Bot` tab.
 \
 In here you create a bot and copy the token. This is what will be put on the `discord` variable inside `config.toml`.
 \
-- You can also create the invite link for the bot on the OAuth2 tab; Just select bot, the permissions you want the bot to have and copy the invite link.
+> You can also create the invite link for the bot on the OAuth2 tab; Just select bot, the permissions you want the bot to have and copy the invite link.
 
 
 + __**PostgreSQL Database**__:
