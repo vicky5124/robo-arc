@@ -34,7 +34,7 @@ fn grayscale(image_vec: &Vec<u8>) -> Result<Vec<u8>, Box<dyn std::error::Error>>
     }
 
     // Save the image as “fractal.png”, the format is deduced from the path
-    imgbuf.save("grayscale.png")?;
+    // imgbuf.save("grayscale.png")?;
     let mut gray_bytes = Vec::new();
     image::DynamicImage::ImageRgb8(imgbuf)
         .write_to(&mut gray_bytes, image::ImageOutputFormat::Jpeg(9))?;
