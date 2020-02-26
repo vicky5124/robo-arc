@@ -8,6 +8,7 @@
 mod utils; // Load the utils module
 mod commands; // Load the commands module
 use commands::booru::*; // Import everything from the booru module.
+use commands::sankaku::*; // Import everything from the sankaku booru module.
 use commands::osu::*; // Import everything from the osu module.
 use commands::meta::*; // Import everything from the meta module.
 use commands::image_manipulation::*; // Import everything from the image manipulation module.
@@ -101,13 +102,12 @@ impl TypeMapKey for RecentIndex {
 #[commands(ping, test, react, invite, source)]
 struct Meta;
 
-// The NSFW command group.
-// the list of commands will get added later, as soon as the commands get made.
-// this commands will eventually only work on DM or NSFW Channels with a custom check.
-#[group("NSFW")]
+// The SankakuComplex command group.
+// This group will contain commands for the variants Chan and Idol of the sankaku boorus.
+#[group("Sankaku")]
 #[description = "All the NSFW/BSFW related commands."]
-#[commands(test)]
-struct NSFW;
+#[commands(idol)]
+struct Sankaku;
 
 #[group("osu!")]
 #[description = "All the osu! related commands"]
@@ -399,7 +399,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Could not find command named '{}'", unknown_command_name);
         })
         .group(&META_GROUP) // Load `Meta` command group
-        .group(&NSFW_GROUP) // Load `NSFW` command group
+        .group(&SANKAKU_GROUP) // Load `SankakuComplex` command group
         .group(&BOORUS_GROUP) // Load `Boorus` command group
         .group(&OSU_GROUP) // Load `osu!` command group
         .group(&IMAGEMANIPULATION_GROUP) // Load `image manipulaiton` command group

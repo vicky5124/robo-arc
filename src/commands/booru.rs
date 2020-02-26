@@ -143,3 +143,89 @@ pub fn safebooru(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRe
 
     Ok(())
 }
+
+/*
+https://iapi.sankakucomplex.com/post/index.json?page=1&limit=1&tags=rating:safe
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  1285  100  1285    0     0   2177      0 --:--:-- --:--:-- --:--:--  2174
+[
+  {
+    "width": 800,
+    "in_visible_pool": false,
+    "rating": "s",
+    "preview_url": "//is.sankakucomplex.com/data/preview/63/7d/637d297b733e47d380bb64b8fce6aa02.jpg",
+    "file_size": 138180,
+    "is_favorited": false,
+    "status": "active",
+    "sample_url": "//is.sankakucomplex.com/data/63/7d/637d297b733e47d380bb64b8fce6aa02.jpg?e=1582748303&m=_QJX0YETnpwk79PoeIl6Zg",
+    "has_comments": true,
+    "md5": "637d297b733e47d380bb64b8fce6aa02",
+    "vote_count": 1,
+    "change": 1099856,
+    "recommended_posts": 0,
+    "sample_width": 800,
+    "source": "http://www.aliexpress.com/item/32999078659.html",
+    "author": "just_juan",
+    "created_at": {
+      "n": 930537000,
+      "json_class": "Time",
+      "s": 1582656945
+    },
+    "has_notes": false,
+    "height": 800,
+    "parent_id": null,
+    "sample_height": 800,
+    "preview_width": 150,
+    "tags": [
+      {
+        "type": 0,
+        "count": 272382,
+        "name": "cosplay",
+        "id": 5
+      },
+      {
+        "type": 0,
+        "count": 5387,
+        "name": "2girls",
+        "id": 6532
+      },
+      {
+        "type": 0,
+        "count": 96,
+        "name": "model",
+        "id": 7994
+      },
+      {
+        "type": 8,
+        "count": 2451,
+        "name": "1:1_aspect_ratio",
+        "id": 26191
+      },
+      {
+        "type": 3,
+        "count": 1,
+        "name": "citrus",
+        "id": 44659
+      },
+      {
+        "type": 4,
+        "count": 1,
+        "name": "aihara_yuzu",
+        "id": 44660
+      },
+      {
+        "type": 4,
+        "count": 1,
+        "name": "aihara_mei",
+        "id": 44661
+      }
+    ],
+    "has_children": false,
+    "fav_count": 13,
+    "id": 734768,
+    "preview_height": 150,
+    "file_url": "//is.sankakucomplex.com/data/63/7d/637d297b733e47d380bb64b8fce6aa02.jpg?e=1582748303&m=_QJX0YETnpwk79PoeIl6Zg",
+    "total_score": 5
+  }
+] */
