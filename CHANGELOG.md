@@ -1,3 +1,10 @@
+# 0.0.9
+
+### Commands
+- idol:
+  Added a basic api call to the IdolComplex api.
+  TODO: Custom tags and flags.
+
 # 0.0.8
 
 ### Commands
