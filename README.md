@@ -25,9 +25,9 @@ In here you create a bot and copy the token. This is what will be put on the `di
 \
 > You can also create the invite link for the bot on the OAuth2 tab; Just select bot, the permissions you want the bot to have and copy the invite link.
 
-# __**Other tokens**__:
++ __**Other tokens**__:
 
-- osu!
+- __osu!__
 \
     Obtain the token [HERE](https://osu.ppy.sh/p/api/)
 \
@@ -35,7 +35,7 @@ In here you create a bot and copy the token. This is what will be put on the `di
 \
     NOTE: Do not create more than 1 account in the case of already having one, it's a banable offence.
 
-- Sankaku
+- __Sankaku__
 \
     Create an account [HERE](https://idol.sankakucomplex.com/user/signup)
 \
