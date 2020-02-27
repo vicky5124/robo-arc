@@ -1,3 +1,15 @@
+# 0.0.10
+
+### Commands
+- idol:
+  Added tag support.
+  Added flag support.
+  Added basic tag filter.
+
+### Documentation
+- README.md:
+  Updated configuration needed.
+
 # 0.0.9
 
 ### Commands

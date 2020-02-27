@@ -11,6 +11,7 @@ This bot is made using [serenity.rs](https://github.com/serenity-rs/serenity/), 
 git clone git@gitlab.com:nitsuga5124/robo-arc.git # Over SSH
 git clone https://gitlab.com/nitsuga5124/robo-arc.git # Over HTTPS
 
+cd robo-arc
 mv config.toml.example config.toml
 ```
 
@@ -23,6 +24,24 @@ Go the thw newly created application and head over the `Bot` tab.
 In here you create a bot and copy the token. This is what will be put on the `discord` variable inside `config.toml`.
 \
 > You can also create the invite link for the bot on the OAuth2 tab; Just select bot, the permissions you want the bot to have and copy the invite link.
+
+# __**Other tokens**__:
+
+- osu!
+\
+    Obtain the token [HERE](https://osu.ppy.sh/p/api/)
+\
+    NOTE: You will need to create an account if you do not already have one.
+\
+    NOTE: Do not create more than 1 account in the case of already having one, it's a banable offence.
+
+- Sankaku
+\
+    Create an account [HERE](https://idol.sankakucomplex.com/user/signup)
+\
+    Obtain the "passhash" from the location [THIS](https://forum.sankakucomplex.com/t/channel-api-for-discord-integration/2204/7) image shows.
+\
+    NOTE: The image shows the Chrome Dev Tools (f12), On firefox the tab is called "Storage", same key.
 
 
 + __**PostgreSQL Database**__:
