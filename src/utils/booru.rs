@@ -34,11 +34,22 @@ pub fn obtain_tags_safe(raw_args: Args) -> Vec<String> {
     tags.iter().map(|x| x.to_string()).collect()
 }
 
-pub fn illegal_check(tags: &mut Vec<String>) -> Vec<String> {
-    let banlist = vec!["loli", "lolicon", "shota", "shotacon", "swastika", "gore", "guro", "smoking", "underage", "underaged", "jailbait"];
+pub fn illegal_check_unsafe(tags: &mut Vec<String>) -> Vec<String> {
+    let banlist = vec!["loli", "lolicon", "shota", "shotacon", "swastika", "gore", "guro", "smoking", "underage", "underaged", "jailbait", "extreme_content", "extremely_large_filesize"];
     let mut new_tags = Vec::new();
     for tag in tags{
-        if !banlist.contains(&&tag[..]) {
+        if !banlist.contains(&tag.as_str()) {
+            new_tags.push(tag.to_owned());
+        }
+    }
+    new_tags
+}
+
+pub fn illegal_check_safe(tags: &mut Vec<String>) -> Vec<String> {
+    let banlist = vec!["swastika", "gore", "guro", "smoking", "jailbait", "extreme_content", "extremely_large_filesize", "pussy", "dick", "nude", "partial_nude"];
+    let mut new_tags = Vec::new();
+    for tag in tags{
+        if !banlist.contains(&tag.as_str()) {
             new_tags.push(tag.to_owned());
         }
     }

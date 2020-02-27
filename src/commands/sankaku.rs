@@ -58,14 +58,15 @@ fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         dm_channel = false;
     }
 
-    let mut raw_tags = {
+    let raw_tags = {
         if channel.is_nsfw() || dm_channel {
-            booru::obtain_tags_unsafe(args)
+            let mut raw_tags = booru::obtain_tags_unsafe(args);
+            booru::illegal_check_unsafe(&mut raw_tags)
         } else {
-            booru::obtain_tags_safe(args)
+            let mut raw_tags = booru::obtain_tags_safe(args);
+            booru::illegal_check_safe(&mut raw_tags)
         }
     };
-    raw_tags = booru::illegal_check(&mut raw_tags);
 
     let tags = raw_tags.iter().map(|x| format!("{}%20", x)).collect::<String>();
 
