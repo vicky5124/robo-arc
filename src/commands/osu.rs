@@ -511,11 +511,12 @@ fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: Messag
 fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
 
     let client;
-    let osu_key;
-    {
+    let osu_key = {
         let data = ctx.data.read(); // set inmutable global data.
-        osu_key = data.get::<Tokens>().unwrap().clone(); // get the osu! api token from the global data.
-    }
+        let tokens = data.get::<Tokens>().unwrap().clone(); // get the tokens from the global data.
+        tokens["osu"].as_str().unwrap().to_string()
+    };
+
     let mut data = ctx.data.write(); // set mutable global data.
     client = data.get_mut::<DatabaseConnection>().unwrap(); // get the database connection from the global data.
 
@@ -697,7 +698,8 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
 
     let osu_key = {
         let data = ctx.data.read(); // set inmutable global data.
-        data.get::<Tokens>().unwrap().clone() // get the osu! api token from the global data.
+        let tokens = data.get::<Tokens>().unwrap().clone(); // get the tokens from the global data.
+        tokens["osu"].as_str().unwrap().to_string()
     };
 
     let client = {

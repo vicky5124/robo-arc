@@ -87,7 +87,7 @@ impl TypeMapKey for DatabaseConnection {
 }
 
 impl TypeMapKey for Tokens {
-    type Value = String;
+    type Value = Value;
 }
 
 impl TypeMapKey for RecentIndex {
@@ -303,7 +303,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // gets the discord and osu api tokens from config.toml
     let tokens = contents.parse::<Value>().unwrap();
     let bot_token = tokens["discord"].as_str().unwrap();
-    let osu_key = tokens["osu"].as_str().unwrap();
     // Defines a client with the token obtained from the config.toml file.
     // This also starts up the Event Handler structure defined earlier.
     let mut client = Client::new(
@@ -315,7 +314,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut data = client.data.write();
         data.insert::<DatabaseConnection>(Arc::clone(&Arc::new(RwLock::new(get_database()?)))); // Make the database connection global.
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager)); // Make the shard manager global.
-        data.insert::<Tokens>(String::from(osu_key));
+        data.insert::<Tokens>(tokens);
 
         let mut dispatcher: Dispatcher<DispatchEvent> = Dispatcher::default();
         dispatcher.num_threads(4).expect("Could not construct threadpool");

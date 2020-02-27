@@ -1,5 +1,13 @@
-use std::borrow::Cow;
-use std::io::Read;
+use crate::{
+    utils::booru,
+    Tokens,
+};
+
+use std::{
+    borrow::Cow,
+    io::Read,
+};
+
 use serenity::{
     prelude::Context,
     model::channel::Message,
@@ -22,6 +30,7 @@ use reqwest::{
 struct IdolData {
     rating: String,
     sample_url: String,
+    file_url: String,
     source: String,
     md5: String,
     file_size: i32,
@@ -30,20 +39,53 @@ struct IdolData {
 }
 
 #[command]
-fn idol(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
+fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    let (login, pass) = {
+        let data = ctx.data.read(); // set inmutable global data.
+        let tokens = data.get::<Tokens>().unwrap(); 
+
+        let login = tokens["sankaku"]["idol_login"].as_str().unwrap().to_owned();
+        let pass = tokens["sankaku"]["idol_passhash"].as_str().unwrap().to_owned();
+        (login, pass)
+    };
+
+    let channel = &ctx.http.get_channel(msg.channel_id.0)?; // Gets the channel object to be used for the nsfw check.
+    // Checks if the command was invoked on a DM
+    let dm_channel: bool;
+    if msg.guild_id == None {
+        dm_channel = true;
+    } else {
+        dm_channel = false;
+    }
+
+    let mut raw_tags = {
+        if channel.is_nsfw() || dm_channel {
+            booru::obtain_tags_unsafe(args)
+        } else {
+            booru::obtain_tags_safe(args)
+        }
+    };
+    raw_tags = booru::illegal_check(&mut raw_tags);
+
+    let tags = raw_tags.iter().map(|x| format!("{}%20", x)).collect::<String>();
+
     let reqwest = ReqwestClient::new();
     let mut headers = HeaderMap::new();
 
     headers.insert(ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8".parse().unwrap());
     headers.insert(USER_AGENT, "Mozilla/5.0 (X11; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0".parse().unwrap());
 
-    let tags = "rating:safe";
-    let url = format!("https://iapi.sankakucomplex.com/post/index.json?page=1&limit=50&tags={}", tags);
+    let url = format!("https://iapi.sankakucomplex.com/post/index.json?page=1&limit=50&tags={}&login={}&password_hash={}", tags, login, pass);
 
     let resp = reqwest.get(&url)
         .headers(headers.clone())
         .send()?
         .json::<Vec::<IdolData>>()?;
+
+    if resp.len() == 0 {
+        msg.channel_id.say(&ctx, "No posts match the provided tags.")?;
+        return Ok(());
+    }
 
     let choice;
     {
@@ -55,7 +97,7 @@ fn idol(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
             if &x.file_size < &8000000 {
                 choice = x;
                 break;
-            } else if &y > &resp.len() {
+            } else if &y > &(&resp.len()*2) {
                 msg.channel_id.say(&ctx, "All the content matching the requested tags is too big to be sent.")?;
                 return Ok(());
             }
@@ -63,6 +105,7 @@ fn idol(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
     };
 
     let sample_url = &format!("https:{}", &choice.sample_url).to_owned()[..];
+    let file_url = &format!("https:{}", &choice.file_url).to_owned()[..];
     let mut resp = reqwest.get(sample_url)
         .headers(headers.clone())
         .send()?;
@@ -70,9 +113,9 @@ fn idol(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
     let mut buf: Vec<u8> = vec![];
     &resp.read_to_end(&mut buf)?;
 
-    let sample_tagless = &choice.sample_url.split("?").nth(0).unwrap();
-    let sample_split = sample_tagless.split("/").collect::<Vec<&str>>();
-    let filename = sample_split.get(6).unwrap();
+    let fullsize_tagless = &choice.file_url.split("?").nth(0).unwrap();
+    let fullsize_split = fullsize_tagless.split("/").collect::<Vec<&str>>();
+    let filename = fullsize_split.get(6).unwrap();
 
     let attachment = AttachmentType::Bytes {
         data: Cow::from(&buf),
@@ -94,7 +137,7 @@ fn idol(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
     ];
 
     let source_md = format!("[Here]({})", &choice.source);
-    if &choice.source == &"".to_string() {
+    if &choice.source != &"".to_string() {
         &fields.push(("Source", &source_md, true));
     }
 
@@ -104,6 +147,7 @@ fn idol(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
         m.embed(|e| {
             e.image(format!("attachment://{}", filename));
             e.title("Original Post");
+            e.description(format!("[Sample]({}) | [Full Size]({})", &sample_url, &file_url));
             e.url(format!("https://idol.sankakucomplex.com/post/show/{}/", &choice.id));
             e.fields(fields);
             e

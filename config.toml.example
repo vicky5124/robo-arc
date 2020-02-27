@@ -7,3 +7,7 @@ password = ""
 database_name = "arcbot"
 host = "localhost" # the server ip
 port = "5432"
+
+[sankaku]
+idol_login = ""
+idol_passhash = "" # https://forum.sankakucomplex.com/t/channel-api-for-discord-integration/2204/7
