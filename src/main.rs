@@ -76,6 +76,7 @@ use serenity::{
 struct ShardManagerContainer;
 struct DatabaseConnection;
 struct Tokens;
+struct AnnoyedChannels;
 struct RecentIndex;
 
 impl TypeMapKey for ShardManagerContainer {
@@ -90,6 +91,10 @@ impl TypeMapKey for Tokens {
     type Value = Value;
 }
 
+impl TypeMapKey for AnnoyedChannels {
+    type Value = HashSet<u64>;
+}
+
 impl TypeMapKey for RecentIndex {
     type Value = HashMap<u64, usize>;
 }
@@ -99,7 +104,7 @@ impl TypeMapKey for RecentIndex {
 // this group includes the commands that basically every bot has, nothing really special.
 #[group("Meta")]
 #[description = "All the basic commands that every bot should have."]
-#[commands(ping, test, react, invite, source)]
+#[commands(ping, test, react, invite, source, toggle_annoy)]
 struct Meta;
 
 // The SankakuComplex command group.
@@ -192,10 +197,17 @@ impl EventHandler for Handler {
         if &msg.author.id.0 == ctx.cache.read().user.id.as_u64() {
             return;
         }
-        // This is gonna be annoying lol
-        if msg.content == "no u" {
-            let _ = msg.reply(&ctx, "no u"); // reply pings the user
-            //let _ = msg.channel_id.say(&ctx, "no u"); // say just send the message
+
+        let data_read = ctx.data.read();
+        let annoyed_channels = data_read.get::<AnnoyedChannels>();
+
+        if annoyed_channels.as_ref().map(|set| set.contains(&msg.channel_id.0)).unwrap_or(false) {
+            if msg.content == "no u" {
+                let _ = msg.reply(&ctx, "no u"); // reply pings the user
+            } else if msg.content == "ayy" {
+                let _ = msg.channel_id.say(&ctx, "lmao"); // say just send the message
+
+            }
         }
 
         // This is an alternative way to make commands that doesn't involve the Command Framework.
@@ -244,6 +256,13 @@ impl EventHandler for Handler {
         dispatcher.write().dispatch_event(
             &DispatchEvent::ReactEvent(add_reaction.message_id, add_reaction.emoji.clone(), false));
 
+        let msg = ctx.http.as_ref().get_message(add_reaction.channel_id.0, add_reaction.message_id.0)
+            .expect("Error while obtaining message");
+
+        let data_read = ctx.data.read();
+        let annoyed_channels = data_read.get::<AnnoyedChannels>();
+
+        let annoy = if annoyed_channels.as_ref().unwrap().contains(&msg.channel_id.0) {true} else {false};
 
         match add_reaction.emoji {
             // Matches custom emojis.
@@ -251,33 +270,33 @@ impl EventHandler for Handler {
                 // If the emote is the GW version of slof, React back.
                 // This also shows a couple ways to do error handling.
                 if id.0 == 375459870524047361 {
-                    let msg = ctx.http.as_ref().get_message(add_reaction.channel_id.0, add_reaction.message_id.0)
-                        .expect("Error while obtaining message");
-
                     let reaction = msg.react(&ctx, add_reaction.emoji);
                     if let Err(why) = reaction {
                         eprintln!("There was an error adding a reaction: {}", why)
                     }
-
-                    let _ = msg.channel_id.say(&ctx, format!("<@{}>: qt", add_reaction.user_id.0));
+                    if annoy {
+                        let _ = msg.channel_id.say(&ctx, format!("<@{}>: qt", add_reaction.user_id.0));
+                    }
                 }
             },
             // Matches unicode emojis.
             ReactionType::Unicode(s) => {
-                // This will not be kept here for long, as i see it being very annoying eventually.
-                if s == "🤔" {
-                    let msg = ctx.http.as_ref().get_message(add_reaction.channel_id.0, add_reaction.message_id.0)
-                        .expect("Error while obtaining message");
-                    let _ = msg.channel_id.say(&ctx, format!("<@{}>: What ya thinking so much about",
-                                                             add_reaction.user_id.0));
-                // This makes every message sent by the bot get deleted if 🚫 is on the reactions.
-                // aka If you react with 🚫 on any message sent by the bot, it will get deleted.
-                // This is helpful for antispam and anti illegal content measures.
-                } else if s == "🚫" {
-                    let msg = ctx.http.as_ref().get_message(add_reaction.channel_id.0, add_reaction.message_id.0)
-                        .expect("Error while obtaining message");
-                    if msg.author.id == ctx.cache.read().user.id {
-                        let _ = msg.delete(&ctx);
+                if annoy {
+                    // This will not be kept here for long, as i see it being very annoying eventually.
+                    if s == "🤔" {
+                        let _ = msg.channel_id.say(&ctx, format!("<@{}>: What ya thinking so much about",
+                                                                 add_reaction.user_id.0));
+                    }
+                } else {
+                    // This makes every message sent by the bot get deleted if 🚫 is on the reactions.
+                    // aka If you react with 🚫 on any message sent by the bot, it will get deleted.
+                    // This is helpful for antispam and anti illegal content measures.
+                    if s == "🚫" {
+                        let msg = ctx.http.as_ref().get_message(add_reaction.channel_id.0, add_reaction.message_id.0)
+                            .expect("Error while obtaining message");
+                        if msg.author.id == ctx.cache.read().user.id {
+                            let _ = msg.delete(&ctx);
+                        }
                     }
                 }
             },
@@ -318,10 +337,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let mut dispatcher: Dispatcher<DispatchEvent> = Dispatcher::default();
         dispatcher.num_threads(4).expect("Could not construct threadpool");
-
         data.insert::<DispatcherKey>(Arc::new(RwLock::new(dispatcher)));
-
         data.insert::<RecentIndex>(HashMap::new());
+
+        {
+            let db_client = Arc::clone(data.get::<DatabaseConnection>().expect("no database connection found"));
+            let raw_annoyed_channels = {
+                let mut db_client = db_client.write();
+                db_client.query("SELECT channel_id from annoyed_channels", &[])?
+            };
+            let mut annoyed_channels = HashSet::new();
+            
+            for row in raw_annoyed_channels {
+                annoyed_channels.insert(row.get::<_, i64>(0) as u64);
+            }
+
+            data.insert::<AnnoyedChannels>(annoyed_channels);
+        }
     }
 
     &client.threadpool.set_num_threads(8);
