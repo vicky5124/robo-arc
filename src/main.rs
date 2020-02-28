@@ -256,7 +256,7 @@ impl EventHandler for Handler {
 
                     let reaction = msg.react(&ctx, add_reaction.emoji);
                     if let Err(why) = reaction {
-                        println!("There was an error adding a reaction: {}", why)
+                        eprintln!("There was an error adding a reaction: {}", why)
                     }
 
                     let _ = msg.channel_id.say(&ctx, format!("<@{}>: qt", add_reaction.user_id.0));
@@ -370,7 +370,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // This is for errors that happen before command execution.
         .on_dispatch_error(|ctx, msg, error| {
-            println!("{:?}", error);
+            eprintln!("{:?}", error);
             match error {
                 // Notify the user if the reason of the command failing to execute was because of
                 // inssufficient arguments.
@@ -379,7 +379,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     let _ = msg.channel_id.say(&ctx, s);
                 },
-                _ => println!("Unhandled dispatch error."),
+                _ => eprintln!("Unhandled dispatch error."),
             }
         })
         
@@ -387,7 +387,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // It's used here to handle errors that happen in the middle of the command.
         .after(|ctx, msg, _cmd_name, error| {
             if let Err(why) = &error {
-                println!("{:?}", &error);
+                eprintln!("{:?}", &error);
                 let err = format!("{}", why.0);
                 let _ = msg.channel_id.say(&ctx, &err);
             }
@@ -395,7 +395,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Small error event that triggers when a command doesn't exist.
         .unrecognised_command(|_, _, unknown_command_name| {
-            println!("Could not find command named '{}'", unknown_command_name);
+            eprintln!("Could not find command named '{}'", unknown_command_name);
         })
         .group(&META_GROUP) // Load `Meta` command group
         .group(&SANKAKU_GROUP) // Load `SankakuComplex` command group
@@ -407,7 +407,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // start listening for events by starting a single shard
     if let Err(why) = client.start() {
-        println!("An error occurred while running the client: {:?}", why);
+        eprintln!("An error occurred while running the client: {:?}", why);
     }
 
     Ok(())
