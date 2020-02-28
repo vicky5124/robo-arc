@@ -1,3 +1,14 @@
+# 0.0.11
+
+### Commands
+- toggle_annoy:
+  Added a command to toggle the annoying features of the bot on the invoked channel.
+  Made the annoying features of the bot optional per channel.
+
+### Database
+- annoyed_channels table:
+  New table.
+
 # 0.0.10
 
 ### Commands

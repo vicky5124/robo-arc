@@ -62,6 +62,12 @@ CREATE TABLE public.osu_user (
     CONSTRAINT osu_user_pkey PRIMARY KEY (discord_id)
 )
 ```
+```sql
+CREATE TABLE public.annoyed_channels (
+    channel_id bigint NOT NULL,
+    CONSTRAINT annoyed_channels_pkey PRIMARY KEY (channel_id)
+)
+```
 
 ### __**Running the bot**__
 
