@@ -4,6 +4,8 @@ use crate::{
     DatabaseConnection,
     Tokens,
     RecentIndex,
+    MY_HELP,
+    OSU_GROUP,
 };
 use serenity::{
     http::Http,
@@ -26,6 +28,7 @@ use serenity::{
     },
     framework::standard::{
         Args,
+        Delimiter,
         CommandResult,
         macros::command,
     },
@@ -37,6 +40,7 @@ use hey_listen::sync::{
 use std::{
     thread,
     sync::Arc,
+    collections::HashSet,
     hash::{
         Hash,
         Hasher,
@@ -595,7 +599,8 @@ fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRe
     } else {
         if empty_data {
             // sends the help of the command
-            msg.channel_id.say(&ctx, "send help!")?;
+            let a = Args::new("configure_osu", &[Delimiter::Single(' ')]);
+            (MY_HELP.fun)(&mut ctx.clone(), &msg, a, &MY_HELP.options, &[&OSU_GROUP], HashSet::new())?;
             return Ok(());
         } else {
             // gets the current configuration of the user
