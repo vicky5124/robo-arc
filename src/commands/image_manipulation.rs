@@ -23,7 +23,8 @@ fn grayscale(image_vec: &Vec<u8>) -> Result<Vec<u8>, Box<dyn std::error::Error>>
     // Iterate over the coordinates and pixels of the image
     // This makes the grading.
     for (_, _, pixel) in imgbuf.enumerate_pixels_mut() {
-
+        // Algorythm to transform RGB into black and white.
+        // https://en.wikipedia.org/wiki/YIQ
         let r = (pixel.0[0] as f32 * 0.299 as f32).abs() as u8;
         let g = (pixel.0[1] as f32 * 0.587 as f32).abs() as u8;
         let b = (pixel.0[2] as f32 * 0.114 as f32).abs() as u8;
@@ -79,6 +80,8 @@ fn pride(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
         return Ok(());
     }
 
+    // Uploads the grayscaled image bytes as an attachment
+    // this is necessary to do as im never saving the image, just have the bytes as a vector.
     let grayscaled_bytes = grayscale(&bytes)?;
     let attachment = AttachmentType::Bytes {
         data: Cow::from(grayscaled_bytes),

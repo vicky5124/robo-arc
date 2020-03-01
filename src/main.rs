@@ -7,31 +7,37 @@
 
 mod utils; // Load the utils module
 mod commands; // Load the commands module
+
 use commands::booru::*; // Import everything from the booru module.
 use commands::sankaku::*; // Import everything from the sankaku booru module.
 use commands::osu::*; // Import everything from the osu module.
 use commands::meta::*; // Import everything from the meta module.
 use commands::image_manipulation::*; // Import everything from the image manipulation module.
-use utils::database::get_database;
-use utils::basic_functions::capitalize_first;
+use commands::fun::*; // Import everything from the fun module.
+use utils::database::get_database; // Obtain the get_database function from the utilities.
+use utils::basic_functions::capitalize_first; // Obtain the capitalize_first function from the utilities.
 
 use std::{
     collections::{
-        HashSet,
-        HashMap,
+        HashSet, // Low cost indexable lists
+        HashMap, // Basically python dicts
     },
-    io::prelude::*,
-    sync::Arc,
+    // For saving / reading files
     fs::File,
+    io::prelude::*,
+    // For having refferences between threads
+    sync::Arc,
 };
 
-use toml::Value;
-use postgres::Client as PgClient;
-use serde_json;
-use serde::Deserialize;
+use postgres::Client as PgClient; // PostgreSQL client
+use toml::Value; // To parse the data of .toml files
+use serde_json; // To parse the data of .json files
+use serde::Deserialize; // To deserialize data into structures
 
+// A synchronous, parallel event dispatcher, used for reactions on specific messages.
 use hey_listen::sync::ParallelDispatcher as Dispatcher;
 
+// Serenity! what make's the bot function. Discord API wrapper.
 use serenity::{
     utils::Colour,
     client::{
@@ -77,18 +83,24 @@ use serenity::{
     },
 };
 
+// Defining a structure to deserialize "boorus.json" into
+// Debug is so it can be formatted with {:?}
+// Default is so the values can be defaulted.
+// Clone is so it can be cloned. (`Booru.clone()`)
 #[derive(Debug, Deserialize, Default, Clone)]
 pub struct Booru {
-    names: Vec<String>,
-    url: String,
-    typ: u8,
+    names: Vec<String>, // Default Vec<String>[String::new()]
+    url: String, // String::new()
+    typ: u8, // 0
 }
 
+// Because "boorus.json" is a list of values.
 #[derive(Debug, Deserialize)]
 struct BooruRaw {
     boorus: Vec<Booru>,
 }
 
+// Defining the structures to be used for global data
 struct ShardManagerContainer;
 struct DatabaseConnection;
 struct Tokens;
@@ -97,11 +109,14 @@ struct RecentIndex;
 struct BooruList;
 struct BooruCommands;
 
+// Implementing a type for each structure
 impl TypeMapKey for ShardManagerContainer {
+    // Mutex allows for the refference to be mutated
     type Value = Arc<Mutex<ShardManager>>;
 }
 
 impl TypeMapKey for DatabaseConnection {
+    // RwLock (aka Read Write Lock) makes the data only modifyable by 1 thread at a time
     type Value = Arc<RwLock<PgClient>>;
 }
 
@@ -135,12 +150,14 @@ impl TypeMapKey for BooruCommands {
 struct Meta;
 
 // The SankakuComplex command group.
-// This group will contain commands for the variants Chan and Idol of the sankaku boorus.
+// This group contains commands for the variants Chan and Idol of the sankaku boorus.
 #[group("Sankaku")]
 #[description = "All the NSFW/BSFW related commands."]
 #[commands(idol)]
 struct Sankaku;
 
+// The osu! command group.
+// This group contains all the osu! related commands.
 #[group("osu!")]
 #[description = "All the osu! related commands"]
 #[commands(configure_osu, recent)]
@@ -148,22 +165,32 @@ struct Osu;
 
 // The Booru command group.
 // This group will contain every single command from every booru that gets implemented.
-// As you can see on the last line, the description also supports urk markdown.
+// As you can see on the last line, the description also supports url markdown.
 #[group("All Boorus")]
 #[description = "All the booru related commands.\n\
-Available parameters:\n\
-`-x` Explicit\n\
-`-q` Questionable\n\
-`-n` Non Safe (Random between E or Q)\n\
-`-r` Any Rating\n\n\
+Available parameters:
+`-x` Explicit
+`-q` Questionable
+`-s` Safe
+`-n` Non Safe (Random between E or Q)
+
 Inspired by -GN's WaifuBot ([source](https://github.com/isakvik/waifubot/))"]
 #[commands(booru_command)]
 struct AllBoorus;
 
+// The Image Manipulation command group.
+// This group contains all the commands that manipulate images.
 #[group("Image Manipulation")]
 #[description = "All the image manipulaiton based commands."]
 #[commands(pride)]
 struct ImageManipulation;
+
+// The FUN command group.
+// Where all the random commands go into lol
+#[group("Fun")]
+#[description = "All the random and fun commands."]
+#[commands(qr)]
+struct Fun;
 
 // This is a custom help command.
 // Each line has the explaination that is required.
@@ -224,21 +251,34 @@ impl EventHandler for Handler {
         if &msg.author.id.0 == ctx.cache.read().user.id.as_u64() {
             return;
         }
+
+        // Read the global data
         let data_read = ctx.data.read();
 
-        let guild_prefix = [".", "arc!"];
+        let guild_prefix = [".", "arc!"]; // Change this with the specific guild prefixes when dynamic prefixes gets implemented.
+        // Get the list of booru commands and the data of the json.
         let commands = data_read.get::<BooruCommands>();
         let boorus = data_read.get::<BooruList>().unwrap();
 
+        // iterate over the guild prefixes
         for prefix in &guild_prefix {
+            // if the message content starts with a prefix of the guild
             if msg.content.starts_with(prefix) {
+                // remove the prefix from the message content
                 let command = msg.content.replacen(prefix, "", 1);
+                // split the message words into a Vector
                 let words = command.split(" ").collect::<Vec<&str>>();
-                let command_name = &words.get(0).unwrap().to_string();
+                // get the first item of the Vector, aka the command name.
+                // and everything after it.
+                let (command_name, parameters) = &words.split_first().unwrap();
 
+                // if the command invoked is on the list of booru commands
+                // (obtained from "global" data)
                 if commands.as_ref().unwrap().contains(command_name){
                     let booru: Booru = {
+                        // Get the Booru default values
                         let mut x = Booru::default();
+                        // Set X to the data on the json matching the command invoked
                         for b in boorus {
                             if b.names.contains(command_name) {
                                 x = b.clone();
@@ -246,35 +286,33 @@ impl EventHandler for Handler {
                         }
                         x
                     };
-                    let (_, parameters) = &words.split_first().unwrap();
+                    // transform the parameters into a string
                     let mut parameters_str = parameters.iter().map(|word| format!(" {}", word)).collect::<String>();
+                    // if there are parameters
                     if parameters_str != "".to_string() {
+                        // remove the first space on the string, created by the previous function
                         parameters_str = parameters_str.chars().next().map(|c| &parameters_str[c.len_utf8()..]).unwrap().to_string();
                     }
+                    // Create an Args delimiting the string with a space (' ')
                     let params = Args::new(&parameters_str, &[Delimiter::Single(' ')]);
+
+                    // Call the booru function with the obtained data
                     if let Err(why) = get_booru(&mut ctx.clone(), &msg.clone(), &booru, params) {
+                        // Handle any error that may occur.
                         let _ = msg.channel_id.say(&ctx, format!("There was an error executing the command: {}", capitalize_first(&why.to_string())));
                     };
                 }
             }
         }
 
-
-
-        //for booru in boorus {
-        //    for booru_name in &booru.names {
-        //        let command = format!("{}{}", prefix, booru_name);
-        //        let message_start: Vec<&str> = msg.content.split(" ").collect();
-        //        if &message_start.get(0).unwrap().to_string() == &command {
-        //            println!("{}", msg.content);
-        //        }
-        //    }
-        //}
-
+        // Get the list of channels where the bot is allowed to be annoying
         let annoyed_channels = data_read.get::<AnnoyedChannels>();
+        // if the channel the message was sent on is on the list
         if annoyed_channels.as_ref().map(|set| set.contains(&msg.channel_id.0)).unwrap_or(false) {
+            // NO U
             if msg.content == "no u" {
                 let _ = msg.reply(&ctx, "no u"); // reply pings the user
+            // AYY LMAO
             } else if msg.content == "ayy" {
                 let _ = msg.channel_id.say(&ctx, "lmao"); // say just send the message
 
@@ -327,12 +365,15 @@ impl EventHandler for Handler {
         dispatcher.write().dispatch_event(
             &DispatchEvent::ReactEvent(add_reaction.message_id, add_reaction.emoji.clone(), false));
 
+        // gets the message the reaction happened on
         let msg = ctx.http.as_ref().get_message(add_reaction.channel_id.0, add_reaction.message_id.0)
             .expect("Error while obtaining message");
 
+        // Obtain the "global" data in read mode
         let data_read = ctx.data.read();
-        let annoyed_channels = data_read.get::<AnnoyedChannels>();
 
+        // Check if the channel is on the list of channels that can be annoyed
+        let annoyed_channels = data_read.get::<AnnoyedChannels>();
         let annoy = if annoyed_channels.as_ref().unwrap().contains(&msg.channel_id.0) {true} else {false};
 
         match add_reaction.emoji {
@@ -524,6 +565,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .group(&SANKAKU_GROUP) // Load `SankakuComplex` command group
         .group(&ALLBOORUS_GROUP) // Load `Boorus` command group
         .group(&OSU_GROUP) // Load `osu!` command group
+        .group(&FUN_GROUP) // Load `Fun` command group
         .group(&IMAGEMANIPULATION_GROUP) // Load `image manipulaiton` command group
         .help(&MY_HELP) // Load the custom help.
     );

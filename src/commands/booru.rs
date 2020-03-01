@@ -144,8 +144,42 @@ pub fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) ->
 }
 
 #[command]
-#[aliases("picture", "pic", "booru")]
-#[description = "Sends a random picture from the first page of the specified tags on safebooru."]
+#[aliases("picture", "pic", "booru", "boorus")]
+#[description = "Sends a random picture from the first page of the booru selected with the specific tags.
+Usage: `(prefix)booru_name tag tag tag`
+
+```
+.idol feet -x stockings
+.e621 paws
+.yandere -x
+.r32
+```
+
+The currently available boorus are:
+__Working:__
+`e621` - Largest Furry booru.
+`FurryBooru` - Second largest Furry booru.
+`Rule34` - If it exist, there's porn of it.
+`SafeBooru` - Safe only booru.
+`GelBooru` - One of the most popular boorus.
+`KonaChan` - Quality Moderated, Girls only booru.
+`YandeRe` - Quality Moderated booru.
+`RealBooru` - Very large IRL booru.
+`Idol` - Largest IRL booru, very asian based.
+
+__Broken:__
+`Chan` - Largest, most popular booru.
+`DanBooru` - Very popular booru, limited to only 2 tags.
+`HypnoBooru` - A booru that hosts all sorts of hypno based content.
+`Behoimi` - IRL, Mostly cosplays booru.
+
+Available parameters:
+`-x` Explicit
+`-q` Questionable
+`-s` Safe. 
+`-n` Non Safe (Random between E or Q)
+
+Inspired by -GN's [WaifuBot](https://github.com/isakvik/waifubot/)"]
 pub fn booru_command(_ctx: &mut Context, _msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }

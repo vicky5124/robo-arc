@@ -7,6 +7,7 @@ use crate::{
     MY_HELP,
     OSU_GROUP,
 };
+
 use serenity::{
     http::Http,
     utils::Colour,
@@ -33,10 +34,13 @@ use serenity::{
         macros::command,
     },
 };
+
+// Used for the reaction events happening on the reaction command.
 use hey_listen::sync::{
     ParallelDispatcher as Dispatcher,
     ParallelDispatcherRequest as DispatcherRequest
 };
+
 use std::{
     thread,
     sync::Arc,
@@ -46,24 +50,30 @@ use std::{
         Hasher,
     },
 };
+
+// Used to format the numbers on the embeds.
 use num_format::{
     Locale,
     ToFormattedString,
 };
+
 use regex::Regex;
 use reqwest;
 use serde::Deserialize;
 
 
-
+// Defining the function that will be used to check if the isolated event should be triggered or
+// not
 #[derive(Clone)]
 pub enum DispatchEvent {
     ReactEvent(MessageId, ReactionType, bool),
 }
 
+// Checks for equality between a reaction obtained and the stored data.
 impl PartialEq for DispatchEvent {
     fn eq(&self, other: &DispatchEvent) -> bool {
         match (self, other) {
+            // Checks if the reaction happened on a stored message_id anad emoji
             (DispatchEvent::ReactEvent(self_message_id, self_emoji, _),
             DispatchEvent::ReactEvent(other_message_id, other_emoji, _)) => {
                 self_message_id == other_message_id &&
@@ -73,8 +83,11 @@ impl PartialEq for DispatchEvent {
     }
 }
 
+// Required to be able to implement PartialEq
 impl Eq for DispatchEvent {}
 
+// IDK
+// Likely just used for extra validation.
 impl Hash for DispatchEvent {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
@@ -86,30 +99,37 @@ impl Hash for DispatchEvent {
     }
 }
 
-
 pub struct DispatcherKey;
 impl TypeMapKey for DispatcherKey {
     type Value = Arc<RwLock<Dispatcher<DispatchEvent>>>;
 }
 
 
-
+// Function that triggers when a right reaction was recieved
 pub fn left_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>, _command: &str, event_data: EventData) ->
     Box<dyn Fn(&DispatchEvent) -> Option<DispatcherRequest> + Send + Sync> {
 
     Box::new(move |event| {
+        // Allow the event to die if it was requested so
         let mut kill = false;
         if let DispatchEvent::ReactEvent(_, _, true) = event {
             kill = true;
         }
+
+        // Obtain the message ID from the event function
         let msg_id = match event {
             DispatchEvent::ReactEvent(m, _, _) => m.0,
         };
+
+        // Obtain the "global" data in write mode
         let mut wdata = data.write();
+
+        // Increase the index of the data.
         let hm = wdata.get_mut::<RecentIndex>().unwrap();
-
         let index = hm.entry(msg_id).or_insert(0);
-
+        
+        // Obtain the message object
+        // But kill the event if the message was not able to be obtained
         let msg = match http.clone().get_message(channel.0, msg_id){
             Err(why) => {
                 println!("Could not obtain message: {}", why);
@@ -118,9 +138,11 @@ pub fn left_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock
             Ok(x) => x
         };
 
+        // Kill the event if said so
         if kill {
             hm.remove_entry(&msg_id);
             Some(DispatcherRequest::StopListening)
+        // Else, edit the message with updated data (increased vector index)
         } else {
             *index -= 1;
             let _ = short_recent_builder(http.clone(), &event_data, msg.clone(), *index);
@@ -129,6 +151,9 @@ pub fn left_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock
     })
 }
 
+// Function that triggers when a left reaction was recieved
+// Uncommented as it's the same as the Right reaction event, just decreasing the index instead of
+// increasing it.
 pub fn right_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>, _command: &str, event_data: EventData) ->
     Box<dyn Fn(&DispatchEvent) -> Option<DispatcherRequest> + Send + Sync> {
 
@@ -165,7 +190,11 @@ pub fn right_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLoc
 }
 
 
-
+// This is a map to convert the bitwhise number obtained from the api
+// To the mods it represents.
+// With the short and long versions of the mod names.
+//
+// This is a module so it can make the compiler not complain about the naming of the constants.
 mod bitwhise_mods {
     #![allow(non_upper_case_globals)]
     use bitflags::bitflags;
@@ -343,6 +372,7 @@ struct OsuUserDBData {
     short_recent: Option<bool>,
 }
 
+// Centralized data, to be used for the events.
 #[derive(Default, Clone)]
 pub struct EventData {
     user_db_data: Option<OsuUserDBData>,
@@ -350,6 +380,7 @@ pub struct EventData {
     osu_key: Option<String>,
 }
 
+// Calculates the accuracy % from the number of 300's 100's 50's and misses.
 fn acc_math(_300: f32, _100: f32, _50: f32, _miss: f32) -> f32 {
     let mix = _300  + _100  + _50  + _miss ;
 
@@ -361,6 +392,7 @@ fn acc_math(_300: f32, _100: f32, _50: f32, _miss: f32) -> f32 {
     acc
 }
 
+// Calculates the progress on the map with the number of notes hit over the number of notes the map has.
 fn progress_math(count_normal: f32, count_slider: f32, count_spinner: f32, _300: f32, _100: f32, _50: f32, _miss: f32) -> f32 {
     let all_the_things = count_normal + count_slider + count_spinner;
     let everything = _300 + _100 + _50 + _miss;
@@ -369,6 +401,7 @@ fn progress_math(count_normal: f32, count_slider: f32, count_spinner: f32, _300:
     progress
 }
 
+// Obtains the long named version of the mods
 fn _get_mods_long(value: u32) -> String {
     use bitwhise_mods::LongMods;
 
@@ -376,6 +409,7 @@ fn _get_mods_long(value: u32) -> String {
     format!("{:?}", mods)
 }
 
+// Obtains the short named version of the mods
 fn get_mods_short(value: u32) -> String {
     use bitwhise_mods::ShortMods;
 
@@ -398,7 +432,7 @@ fn get_osu_id(name: &String, osu_key: &String) -> Result<i32, Box<dyn std::error
 }
 
 
-
+// Requests to the api the user data
 fn get_osu_user(name: &String, osu_key: &String) -> Result<Vec<OsuUserData>, Box<dyn std::error::Error>> {
     let re = Regex::new("[^0-9A-Za-z\\[\\]'_ ]").unwrap();
     let mut sanitized_name = re.replace_all(name, "").into_owned();
@@ -411,6 +445,7 @@ fn get_osu_user(name: &String, osu_key: &String) -> Result<Vec<OsuUserData>, Box
     Ok(resp)
 }
 
+// Requests to the api the recent plays of a user
 fn get_osu_user_recent(user_id: i32, osu_key: &String) -> Result<Vec<OsuUserRecentData>, Box<dyn std::error::Error>> {
     let url = format!("https://osu.ppy.sh/api/get_user_recent?k={}&u={}&type=id", osu_key, user_id);
     let resp = reqwest::blocking::get(&url)?
@@ -418,6 +453,7 @@ fn get_osu_user_recent(user_id: i32, osu_key: &String) -> Result<Vec<OsuUserRece
     Ok(resp)
 }
 
+// Requests to the api the data of a beatmap
 fn get_osu_beatmap(beatmap_id: &String, osu_key: &String) -> Result<Vec<OsuBeatmapData>, Box<dyn std::error::Error>> {
     let url = format!("https://osu.ppy.sh/api/get_beatmaps?k={}&b={}", osu_key, beatmap_id);
     let resp = reqwest::blocking::get(&url)?
@@ -425,6 +461,7 @@ fn get_osu_beatmap(beatmap_id: &String, osu_key: &String) -> Result<Vec<OsuBeatm
     Ok(resp)
 }
 
+// Builds the short version of the recent embed and edits the specified message with it.
 fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: Message, index: usize) -> Result<(), Box<dyn std::error::Error>> {
     let user_data = event_data.user_db_data.as_ref().unwrap();
     let user_recent_raw = event_data.user_recent_raw.as_ref().unwrap();
@@ -701,12 +738,14 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
         arg_user.pop();
     }
 
+    // Obtains the osu! api key from the "global" data
     let osu_key = {
         let data = ctx.data.read(); // set inmutable global data.
         let tokens = data.get::<Tokens>().unwrap().clone(); // get the tokens from the global data.
         tokens["osu"].as_str().unwrap().to_string()
     };
-
+    
+    // Obtain the client connection from the "global" data.
     let client = {
         let rdata = ctx.data.read();
 
@@ -714,6 +753,8 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
         client
     };
 
+    // Obtain the event dispatcher from the global data
+    // to be used for the left and right reaction events.
     let dispatcher = {
         let mut wdata = ctx.data.write();
         wdata.get_mut::<DispatcherKey>().expect("Expected Dispatcher.").clone()
@@ -783,25 +824,30 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
         return Ok(());
     }
 
+    // Clone the http cache from content
+    // Clone the message
     let http = ctx.http.clone();
     let msg = msg.clone();
 
+    // Group all the needed data to EventData
     let mut event_data = EventData::default();
     event_data.user_db_data = Some(user_data);
     event_data.user_recent_raw = Some(user_recent_raw);
     event_data.osu_key = Some(osu_key);
 
-
+    // Build the initial recent embed
     short_recent_builder(http.clone(), &event_data, bot_msg.clone(), 0)?;
 
     let mut timeout = 0;
 
+    // Add left and right reactions, to make the life easier for the user using the event.
     bot_msg.react(&ctx, "⬅️")?;
     bot_msg.react(&ctx, "➡️")?;
 
     let left = ReactionType::Unicode(String::from("⬅️"));
     let right = ReactionType::Unicode(String::from("➡️"));
-  
+ 
+    // Start the left and right events
     dispatcher.write()
         .add_fn(
             DispatchEvent::ReactEvent(bot_msg.id, left.clone(), false),
@@ -812,7 +858,8 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
             DispatchEvent::ReactEvent(bot_msg.id, right.clone(), false),
             right_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent", event_data.clone())
         );
-
+    
+    // Finish the events after a timeout.
     loop {
         thread::sleep(std::time::Duration::from_secs(1));
         timeout += 1;
@@ -823,8 +870,9 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
     dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, left.clone(), true));
     dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, right.clone(), true));
 
+    // Clear the reactions of the message if the message was not sent on a DM
     if msg.guild_id != None{
-        bot_msg.delete_reactions(&ctx)?;
+        let _ = bot_msg.delete_reactions(&ctx);
     };
 
     Ok(())
