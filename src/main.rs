@@ -13,6 +13,7 @@ use commands::osu::*; // Import everything from the osu module.
 use commands::meta::*; // Import everything from the meta module.
 use commands::image_manipulation::*; // Import everything from the image manipulation module.
 use utils::database::get_database;
+use utils::basic_functions::capitalize_first;
 
 use std::{
     collections::{
@@ -26,6 +27,8 @@ use std::{
 
 use toml::Value;
 use postgres::Client as PgClient;
+use serde_json;
+use serde::Deserialize;
 
 use hey_listen::sync::ParallelDispatcher as Dispatcher;
 
@@ -60,6 +63,7 @@ use serenity::{
     },
     framework::standard::{
         Args,
+        Delimiter,
         CommandResult,
         CommandGroup,
         DispatchError,
@@ -73,11 +77,25 @@ use serenity::{
     },
 };
 
+#[derive(Debug, Deserialize, Default, Clone)]
+pub struct Booru {
+    names: Vec<String>,
+    url: String,
+    typ: u8,
+}
+
+#[derive(Debug, Deserialize)]
+struct BooruRaw {
+    boorus: Vec<Booru>,
+}
+
 struct ShardManagerContainer;
 struct DatabaseConnection;
 struct Tokens;
 struct AnnoyedChannels;
 struct RecentIndex;
+struct BooruList;
+struct BooruCommands;
 
 impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
@@ -98,6 +116,15 @@ impl TypeMapKey for AnnoyedChannels {
 impl TypeMapKey for RecentIndex {
     type Value = HashMap<u64, usize>;
 }
+
+impl TypeMapKey for BooruList {
+    type Value = Vec<Booru>; 
+}
+
+impl TypeMapKey for BooruCommands {
+    type Value = HashSet<String>; 
+}
+
 
 
 // The basic commands group is being defined here.
@@ -122,7 +149,7 @@ struct Osu;
 // The Booru command group.
 // This group will contain every single command from every booru that gets implemented.
 // As you can see on the last line, the description also supports urk markdown.
-#[group("Boorus")]
+#[group("All Boorus")]
 #[description = "All the booru related commands.\n\
 Available parameters:\n\
 `-x` Explicit\n\
@@ -130,8 +157,8 @@ Available parameters:\n\
 `-n` Non Safe (Random between E or Q)\n\
 `-r` Any Rating\n\n\
 Inspired by -GN's WaifuBot ([source](https://github.com/isakvik/waifubot/))"]
-#[commands(safebooru)]
-struct Boorus;
+#[commands(booru_command)]
+struct AllBoorus;
 
 #[group("Image Manipulation")]
 #[description = "All the image manipulaiton based commands."]
@@ -143,8 +170,8 @@ struct ImageManipulation;
 #[help]
 // This is the basic help message
 // We use \ at the end of the line to easily allow for newlines visually on the code.
-#[individual_command_tip = "Hello!\n\
-If youd like to get extra information about a specific command, just pass it as an argument.\n\
+#[individual_command_tip = "Hello!
+If youd like to get extra information about a specific command, just pass it as an argument.
 You can also react with 🚫 on any message sent by the bot to delete it.\n"]
 // This is the text that gets displayed when a given parameter was not found for information.
 #[command_not_found_text = "Could not find: `{}`."]
@@ -197,10 +224,54 @@ impl EventHandler for Handler {
         if &msg.author.id.0 == ctx.cache.read().user.id.as_u64() {
             return;
         }
-
         let data_read = ctx.data.read();
-        let annoyed_channels = data_read.get::<AnnoyedChannels>();
 
+        let guild_prefix = [".", "arc!"];
+        let commands = data_read.get::<BooruCommands>();
+        let boorus = data_read.get::<BooruList>().unwrap();
+
+        for prefix in &guild_prefix {
+            if msg.content.starts_with(prefix) {
+                let command = msg.content.replacen(prefix, "", 1);
+                let words = command.split(" ").collect::<Vec<&str>>();
+                let command_name = &words.get(0).unwrap().to_string();
+
+                if commands.as_ref().unwrap().contains(command_name){
+                    let booru: Booru = {
+                        let mut x = Booru::default();
+                        for b in boorus {
+                            if b.names.contains(command_name) {
+                                x = b.clone();
+                            }
+                        }
+                        x
+                    };
+                    let (_, parameters) = &words.split_first().unwrap();
+                    let mut parameters_str = parameters.iter().map(|word| format!(" {}", word)).collect::<String>();
+                    if parameters_str != "".to_string() {
+                        parameters_str = parameters_str.chars().next().map(|c| &parameters_str[c.len_utf8()..]).unwrap().to_string();
+                    }
+                    let params = Args::new(&parameters_str, &[Delimiter::Single(' ')]);
+                    if let Err(why) = get_booru(&mut ctx.clone(), &msg.clone(), &booru, params) {
+                        let _ = msg.channel_id.say(&ctx, format!("There was an error executing the command: {}", capitalize_first(&why.to_string())));
+                    };
+                }
+            }
+        }
+
+
+
+        //for booru in boorus {
+        //    for booru_name in &booru.names {
+        //        let command = format!("{}{}", prefix, booru_name);
+        //        let message_start: Vec<&str> = msg.content.split(" ").collect();
+        //        if &message_start.get(0).unwrap().to_string() == &command {
+        //            println!("{}", msg.content);
+        //        }
+        //    }
+        //}
+
+        let annoyed_channels = data_read.get::<AnnoyedChannels>();
         if annoyed_channels.as_ref().map(|set| set.contains(&msg.channel_id.0)).unwrap_or(false) {
             if msg.content == "no u" {
                 let _ = msg.reply(&ctx, "no u"); // reply pings the user
@@ -338,7 +409,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut dispatcher: Dispatcher<DispatchEvent> = Dispatcher::default();
         dispatcher.num_threads(4).expect("Could not construct threadpool");
         data.insert::<DispatcherKey>(Arc::new(RwLock::new(dispatcher)));
-        data.insert::<RecentIndex>(HashMap::new());
+
+        {
+            let mut file = File::open("boorus.json").unwrap();
+            let mut raw_data = String::new();
+            file.read_to_string(&mut raw_data).unwrap();
+
+            let boorus: BooruRaw = serde_json::from_str(&raw_data.as_str())
+                .expect("JSON was not well-formatted");
+
+            let mut all_names = HashSet::new();
+
+            for boorus_list in boorus.boorus.iter() {
+                for booru in boorus_list.names.iter() {
+                    all_names.insert(booru.to_owned());
+                }
+            }
+
+            data.insert::<BooruList>(boorus.boorus);
+            data.insert::<BooruCommands>(all_names);
+        }
 
         {
             let db_client = Arc::clone(data.get::<DatabaseConnection>().expect("no database connection found"));
@@ -426,12 +516,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
 
         // Small error event that triggers when a command doesn't exist.
-        .unrecognised_command(|_, _, unknown_command_name| {
-            eprintln!("Could not find command named '{}'", unknown_command_name);
-        })
+        //.unrecognised_command(|_, _, unknown_command_name| {
+        //    eprintln!("Could not find command named '{}'", unknown_command_name);
+        //})
+
         .group(&META_GROUP) // Load `Meta` command group
         .group(&SANKAKU_GROUP) // Load `SankakuComplex` command group
-        .group(&BOORUS_GROUP) // Load `Boorus` command group
+        .group(&ALLBOORUS_GROUP) // Load `Boorus` command group
         .group(&OSU_GROUP) // Load `osu!` command group
         .group(&IMAGEMANIPULATION_GROUP) // Load `image manipulaiton` command group
         .help(&MY_HELP) // Load the custom help.

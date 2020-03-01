@@ -1,0 +1,59 @@
+{
+    "boorus" : [
+        {
+            "names" : ["e621", "e6", "621", "furry", "yiff"],
+            "url" : "e621.net",
+            "typ" : 2
+        },
+        {
+            "names" : ["furrybooru", "furryb","fur"],
+            "url" : "furry.booru.org",
+            "typ" : 1
+        },
+        {
+            "names" : ["realbooru", "rb", "rbooru", "realb"],
+            "url" : "realbooru.com",
+            "typ" : 1
+        },
+        {
+            "names" : ["safebooru", "safeb", "sbooru", "safe", "sb"],
+            "url" : "safebooru.org",
+            "typ" : 1
+        },
+        {
+            "names" : ["gelbooru", "gelb", "gbooru", "gb"],
+            "url" : "gelbooru.com",
+            "typ" : 1
+        },
+        {
+            "names" : ["rule34", "r34", "34", "xxx"],
+            "url" : "rule34.xxx",
+            "typ" : 1
+        },
+        {
+            "names" : ["konachan", "kc", "konac", "kchan"],
+            "url" : "konachan.com",
+            "typ" : 2
+        },
+        {
+            "names" : ["hypnohub", "hypno", "hypnob", "hypnobooru", "hypnohubb", "hypnohubbooru", "hh"],
+            "url" : "hypnohub.net",
+            "typ" : 2
+        },
+        {
+            "names" : ["danbooru", "danb", "db", "dbooru"],
+            "url" : "danbooru.donmai.us",
+            "typ" : 2
+        },
+        {
+            "names" : ["yandere", "yande", "yre", "yd"],
+            "url" : "yande.re",
+            "typ" : 2
+        },
+        {
+            "names" : ["behoimi", "bhimi", "bhm", "3db"],
+            "url" : "behoimi.org",
+            "typ" : 2
+        }
+    ]
+}
