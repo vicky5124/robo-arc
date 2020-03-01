@@ -1,4 +1,20 @@
-# 0.0.11
+#0.0.12-alpha
+
+### Structure
+- boorus.json
+  New file.
+  Contains the availabe boorus and api type.
+
+### Commands
+- configure_osu:
+  Fixed help.
+- e621, furrybooru, realbooru, r34, safebooru, gelbooru, konachan, yandere:
+  New booru commands.
+  Same parameters as idol.
+- HypnoHub, DanBooru and Behoimi:
+  Broken commands.
+
+# 0.0.11-alpha
 
 ### Commands
 - toggle_annoy:
@@ -9,7 +25,7 @@
 - annoyed_channels table:
   New table.
 
-# 0.0.10
+# 0.0.10-alpha
 
 ### Commands
 - idol:
@@ -21,14 +37,14 @@
 - README.md:
   Updated configuration needed.
 
-# 0.0.9
+# 0.0.9-alpha
 
 ### Commands
 - idol:
   Added a basic api call to the IdolComplex api.
   TODO: Custom tags and flags.
 
-# 0.0.8
+# 0.0.8-alpha
 
 ### Commands
 - pride:
@@ -41,7 +57,7 @@
 - commands/image_manipulation.rs:
   New file.
 
-# 0.0.7
+# 0.0.7-alpha
 
 ### Structure
 - commands/meta.rs:
@@ -53,7 +69,7 @@
 - Source / Invite:
   New commands. One to get the gitlab link to the bot, the other to get the bot invite link.
 
-# 0.0.6
+# 0.0.6-alpha
 
 ### Commands
 - recent:
@@ -63,7 +79,7 @@
 - configure_osu
   Moved description from decorator to docstring.
 
-# 0.0.5
+# 0.0.5-alpha
 
 ### Commands
 - recent:
@@ -77,7 +93,7 @@
 - bitflags
 - num-format
 
-# 0.0.4
+# 0.0.4-alpha
 
 ### Commands
 - configure_osu:
@@ -91,7 +107,7 @@
 ### Data
 - Moved tokens from env_vars to tokens.toml
 
-# 0.0.3
+# 0.0.3-alpha
 
 ### Commands
 - safebooru:
@@ -104,7 +120,7 @@
 - commands:
   Renamed Cogs to Commands.
 
-# 0.0.2
+# 0.0.2-alpha
 
 ### Commands
 - safebooru:
@@ -113,6 +129,7 @@
 ### Groups
 - Changed the NSFW group to only have `test`
 
-# 0.0.1 Initial Release
+# 0.0.1-alpha
+##Initial Release
 
 Just a basic bot with Ping and a Safebooru command.
