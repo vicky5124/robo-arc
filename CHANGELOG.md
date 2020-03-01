@@ -1,3 +1,14 @@
+#0.0.13-alpha
+
+### Structure
+- src/commands/fun.rs
+  New file
+
+### Commands
+- qr:
+  New command.
+  Transforms text into an ASCII qr code.
+
 #0.0.12-alpha
 
 ### Structure
