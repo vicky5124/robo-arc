@@ -146,7 +146,7 @@ impl TypeMapKey for BooruCommands {
 // this group includes the commands that basically every bot has, nothing really special.
 #[group("Meta")]
 #[description = "All the basic commands that every bot should have."]
-#[commands(ping, test, react, invite, source, toggle_annoy)]
+#[commands(ping, test, react, invite, source, toggle_annoy, todo)]
 struct Meta;
 
 // The SankakuComplex command group.
@@ -189,7 +189,7 @@ struct ImageManipulation;
 // Where all the random commands go into lol
 #[group("Fun")]
 #[description = "All the random and fun commands."]
-#[commands(qr)]
+#[commands(qr, urban)]
 struct Fun;
 
 // This is a custom help command.

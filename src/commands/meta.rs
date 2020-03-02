@@ -225,3 +225,58 @@ fn toggle_annoy(ctx: &mut Context, msg: &Message) -> CommandResult {
 
     Ok(())
 }
+
+#[command]
+#[aliases(todo_list)]
+#[description = "Sends the current TO-DO list of the bot"]
+fn todo(ctx: &mut Context, msg: &Message) -> CommandResult {
+    msg.channel_id.say(&ctx, "```prolog
+TODO:
+
+#Random/Fun
+- Define (urban dictionary)
+Dictionary (dictionary search)
+Translate (translates text to language)
+Calculator (maths)
+Encrypt/Devrypt (encrypts and decrypts a message)
+
+#Osu!
+Score (posts the user score on the map id specified)
+Profile (posts the user profile data)
+Top (posts the top plays of the user)
+
+#DDG
+Search (searches term on duckduckgo)
+
+#Twitch
+Streamrole (gives the stream notification role set to the guild)
+ChangeLiveMessage (changes the \"im live\" message)
+ChangeNotLiveMessage (changes the \"im no longer live\" message)
+ConfigureStream (configures stream notifications for the channel)
+
+#Reddit
+Subreddit (posts a random post from the subreddit specified)
+User (posts a random post from the user specified)
+Sub/User Bomb (posts 5 posts from the subreddit or user specified)
+
+#Image Manipulation
+Pride (prides the provided image, either bi or gay)
+
+#Mod
+Clear (clears x messages with specific requieriments)
+Ban (bans user)
+Kick (kicks user)
+PermaBan (permanently bans a user from the guild by not allowing the user to ever get back on (perma kick))
+Mute (mutes the user on the specific channel or all channels)
+Logging (set a channel to log specific events)
+
+#Tags
+\"basically the same as R. Danny\"
+
+# Boorus
+\"Fix tag filter and the 4 boorus that don't work\"
+Bestgirl (sends a picture of the user defined best girl)
+Bestboy (sends a picture of the user defined best boy)
+```")?;
+    Ok(())
+}
