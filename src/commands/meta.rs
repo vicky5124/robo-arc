@@ -236,7 +236,7 @@ TODO:
 #Random/Fun
 - Define (urban dictionary)
 Dictionary (dictionary search)
-Translate (translates text to language)
+- Translate (translates text to language)
 Calculator (maths)
 Encrypt/Devrypt (encrypts and decrypts a message)
 
