@@ -1,3 +1,4 @@
+use std::process::Command;
 use serenity::{
     prelude::Context,
     model::channel::Message,
@@ -91,5 +92,51 @@ fn urban(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         };
     }
 
+    Ok(())
+}
+#[command]
+#[aliases(trans)]
+#[min_args(2)]
+#[description = "Translates a text to the specified language.
+Ex: `.translate ja Hello, World!`"]
+fn translate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+    let mut dest = args.single::<String>()?;
+    let args_text = args.rest();
+
+    dest = match dest.as_str() {
+        "jp" => "ja".to_string(),
+        "kr" => "ko".to_string(),
+        _ => dest,
+    };
+
+    let output = if cfg!(target_os = "windows") {
+        Command::new("cmd")
+                .arg("/C")
+                .arg(format!("./translate.py \"{}\" {}", &args_text, dest).as_str())
+                .output()
+                .expect("failed to execute process")
+    } else {
+        Command::new("sh")
+                .arg("-c")
+                .arg(format!("./translate.py \"{}\" {}", &args_text, dest).as_str())
+                .output()
+                .expect("failed to execute process")
+    };
+
+    let text = String::from_utf8_lossy(&output.stdout);
+    let resp = text.split("'").nth(1).unwrap();
+
+    let fields = vec![
+        ("Original Text", &args_text, false),
+        ("Translation", &resp, false),
+    ];
+
+    msg.channel_id.send_message(&ctx, |m| {
+        m.embed(|e| {
+            e.fields(fields);
+            e
+        });
+        m
+    })?;
     Ok(())
 }

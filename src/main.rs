@@ -189,7 +189,7 @@ struct ImageManipulation;
 // Where all the random commands go into lol
 #[group("Fun")]
 #[description = "All the random and fun commands."]
-#[commands(qr, urban)]
+#[commands(qr, urban, translate)]
 struct Fun;
 
 // This is a custom help command.
