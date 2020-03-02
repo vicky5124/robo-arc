@@ -1,8 +1,22 @@
+#0.0.14-alpha
+
+### Structure
+- translate.py
+  New file.
+
+# Commands
+- urban:
+  New command.
+  Searches a term in Urban Dictionary.
+- translate:
+  New command.
+  Translates text into a specific language.
+
 #0.0.13-alpha
 
 ### Structure
 - src/commands/fun.rs
-  New file
+  New file.
 
 ### Commands
 - qr:
