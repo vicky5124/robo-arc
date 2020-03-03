@@ -878,6 +878,7 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
     Ok(())
 }
 
+/*
 #[command]
 #[owners_only]
 #[aliases("add")]
@@ -931,3 +932,4 @@ pub fn react(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 
     Ok(())
 }
+*/
