@@ -4,7 +4,7 @@
 - src/commands/moderation.rs
   New file.
 
-# Commands
+### Commands
 - urban:
   Fixed error caused by definitions without examples.
 - kick, ban:
@@ -17,7 +17,7 @@
 - translate.py
   New file.
 
-# Commands
+### Commands
 - urban:
   New command.
   Searches a term in Urban Dictionary.
