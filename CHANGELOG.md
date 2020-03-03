@@ -1,4 +1,17 @@
-#0.0.14-alpha
+# 0.0.15-alpha
+
+### Structure
+- src/commands/moderation.rs
+  New file.
+
+# Commands
+- urban:
+  Fixed error caused by definitions without examples.
+- kick, ban:
+  New commands.
+  They Kick or Ban the specified user respectively.
+
+# 0.0.14-alpha
 
 ### Structure
 - translate.py
@@ -12,7 +25,7 @@
   New command.
   Translates text into a specific language.
 
-#0.0.13-alpha
+# 0.0.13-alpha
 
 ### Structure
 - src/commands/fun.rs
@@ -23,7 +36,7 @@
   New command.
   Transforms text into an ASCII qr code.
 
-#0.0.12-alpha
+# 0.0.12-alpha
 
 ### Structure
 - boorus.json
