@@ -68,10 +68,12 @@ fn urban(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         let choice = &resp.list[0];
         let parsed_definition = &choice.definition.replace("[", "").replace("]", "");
         let parsed_example = &choice.example.replace("[", "").replace("]", "");
-        let fields = vec![
+        let mut fields = vec![
             ("Definition", parsed_definition, false),
-            ("Example", parsed_example, false),
         ];
+        if parsed_example != &"".to_string() {
+            fields.push(("Example", parsed_example, false));
+        }
 
         if let Err(why) = msg.channel_id.send_message(&ctx, |m| {
             m.embed(|e| {
