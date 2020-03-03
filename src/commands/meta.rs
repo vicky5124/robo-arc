@@ -21,7 +21,6 @@ use serenity::{
     },
 };
 
-
 #[command] // Sets up a command
 #[aliases("pong", "latency")] // Sets up aliases to that command.
 #[description = "Sends the latency of the bot to the shards."] // Sets a description to be used for the help command. You can also use docstrings.
@@ -225,6 +224,7 @@ fn toggle_annoy(ctx: &mut Context, msg: &Message) -> CommandResult {
 
     Ok(())
 }
+
 
 #[command]
 #[aliases(todo_list)]

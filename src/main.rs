@@ -14,6 +14,7 @@ use commands::osu::*; // Import everything from the osu module.
 use commands::meta::*; // Import everything from the meta module.
 use commands::image_manipulation::*; // Import everything from the image manipulation module.
 use commands::fun::*; // Import everything from the fun module.
+use commands::moderation::*; // Import everything from the moderation module.
 use utils::database::get_database; // Obtain the get_database function from the utilities.
 use utils::basic_functions::capitalize_first; // Obtain the capitalize_first function from the utilities.
 
@@ -146,7 +147,7 @@ impl TypeMapKey for BooruCommands {
 // this group includes the commands that basically every bot has, nothing really special.
 #[group("Meta")]
 #[description = "All the basic commands that every bot should have."]
-#[commands(ping, test, react, invite, source, toggle_annoy, todo)]
+#[commands(ping, test, invite, source, toggle_annoy, todo)]
 struct Meta;
 
 // The SankakuComplex command group.
@@ -191,6 +192,11 @@ struct ImageManipulation;
 #[description = "All the random and fun commands."]
 #[commands(qr, urban, translate)]
 struct Fun;
+
+#[group("Moderation")]
+#[description = "All the moderation related commands."]
+#[commands(kick, ban)]
+struct Mod;
 
 // This is a custom help command.
 // Each line has the explaination that is required.
@@ -562,10 +568,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         //})
 
         .group(&META_GROUP) // Load `Meta` command group
+        .group(&FUN_GROUP) // Load `Fun` command group
+        .group(&OSU_GROUP) // Load `osu!` command group
+        .group(&MOD_GROUP) // Load `moderation` command group
         .group(&SANKAKU_GROUP) // Load `SankakuComplex` command group
         .group(&ALLBOORUS_GROUP) // Load `Boorus` command group
-        .group(&OSU_GROUP) // Load `osu!` command group
-        .group(&FUN_GROUP) // Load `Fun` command group
         .group(&IMAGEMANIPULATION_GROUP) // Load `image manipulaiton` command group
         .help(&MY_HELP) // Load the custom help.
     );
