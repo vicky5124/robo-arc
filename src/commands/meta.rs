@@ -346,7 +346,7 @@ fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
 
     if let Some(pmap_out) = stdout.stdout.take() {
         let mut head = Command::new("head")
-            .arg("-n 3")
+            .arg("-n 2")
             .stdin(pmap_out)
             .stdout(Stdio::piped())
             .spawn()?;
