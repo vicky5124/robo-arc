@@ -1,7 +1,7 @@
 # **Robo Arc**
 Learning Rust project. Yes, im very original and full of ideas, so im remaking what i already did with python, but hopefully better this time.
 
-![Bot profile picture][PFP]
+![Bot profile picture](PFP.png "Bot's profile picture")
 
 This bot is made using [serenity.rs](https://github.com/serenity-rs/serenity/), a sync discord api wrapper for [Rust](https://www.rust-lang.org/)
 
