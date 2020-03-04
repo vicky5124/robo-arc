@@ -18,7 +18,7 @@ use serenity::{
 fn grayscale(image_vec: &Vec<u8>) -> Result<Vec<u8>, Box<dyn std::error::Error>>{
     // Load the image as a buffer.
     let mut imgbuf = image::load_from_memory(&image_vec)?
-        .into_rgb();
+        .into_rgba();
 
     // Iterate over the coordinates and pixels of the image
     // This makes the grading.
@@ -31,14 +31,14 @@ fn grayscale(image_vec: &Vec<u8>) -> Result<Vec<u8>, Box<dyn std::error::Error>>
 
         let gray = r+g+b;
 
-        *pixel = image::Rgb([gray, gray, gray]);
+        *pixel = image::Rgba([gray, gray, gray, pixel.0[3]]);
     }
 
     // Save the image as “fractal.png”, the format is deduced from the path
     // imgbuf.save("grayscale.png")?;
     let mut gray_bytes = Vec::new();
-    image::DynamicImage::ImageRgb8(imgbuf)
-        .write_to(&mut gray_bytes, image::ImageOutputFormat::Jpeg(9))?;
+    image::DynamicImage::ImageRgba8(imgbuf)
+        .write_to(&mut gray_bytes, image::ImageOutputFormat::Png)?;
     Ok(gray_bytes)
 }
 
