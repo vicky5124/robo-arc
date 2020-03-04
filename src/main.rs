@@ -147,7 +147,7 @@ impl TypeMapKey for BooruCommands {
 // this group includes the commands that basically every bot has, nothing really special.
 #[group("Meta")]
 #[description = "All the basic commands that every bot should have."]
-#[commands(ping, test, invite, source, toggle_annoy, todo)]
+#[commands(ping, test, invite, source, toggle_annoy, todo, prefixes, about)]
 struct Meta;
 
 // The SankakuComplex command group.

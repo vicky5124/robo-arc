@@ -6,6 +6,13 @@ use crate::{
 use std::{
     sync::Arc,
     collections::HashSet,
+    fs::File,
+    io::prelude::*,
+    process::{
+        Command,
+        Stdio,
+        id,
+    },
 };
 use serenity::{
     prelude::Context,
@@ -20,6 +27,12 @@ use serenity::{
         macros::command,
     },
 };
+use num_format::{
+    Locale,
+    ToFormattedString,
+};
+use toml::Value;
+
 
 #[command] // Sets up a command
 #[aliases("pong", "latency")] // Sets up aliases to that command.
@@ -221,14 +234,13 @@ fn toggle_annoy(ctx: &mut Context, msg: &Message) -> CommandResult {
         }
     }
 
-
     Ok(())
 }
 
 
+/// Sends the current TO-DO list of the bot
 #[command]
 #[aliases(todo_list)]
-#[description = "Sends the current TO-DO list of the bot"]
 fn todo(ctx: &mut Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(&ctx, "```prolog
 TODO:
@@ -264,8 +276,8 @@ Pride (prides the provided image, either bi or gay)
 
 #Mod
 Clear (clears x messages with specific requieriments)
-Ban (bans user)
-Kick (kicks user)
+- Ban (bans user)
+- Kick (kicks user)
 PermaBan (permanently bans a user from the guild by not allowing the user to ever get back on (perma kick))
 Mute (mutes the user on the specific channel or all channels)
 Logging (set a channel to log specific events)
@@ -278,5 +290,130 @@ Logging (set a channel to log specific events)
 Bestgirl (sends a picture of the user defined best girl)
 Bestboy (sends a picture of the user defined best boy)
 ```")?;
+    Ok(())
+}
+
+/// Sends the current prefixes set to the server.
+#[command]
+#[aliases(prefix)]
+fn prefixes(ctx: &mut Context, msg: &Message) -> CommandResult {
+    msg.channel_id.say(&ctx, "Current prefixes:\n`.` `arc!`")?;
+    Ok(())
+}
+
+/// Sends information about the bot.
+#[command]
+#[aliases(info)]
+fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
+    let pid = id().to_string();
+
+    let mut full_mem = String::new();
+    let mut reasonable_mem = String::new();
+
+    let mut stdout = Command::new("pmap")
+        .arg(&pid)
+        //.arg(" | tail -n 1 | awk '/[0-9]K/{print $2}'")
+        .stdout(Stdio::piped())
+        .spawn()?;
+
+    if let Some(pmap_out) = stdout.stdout.take() {
+        let mut tail = Command::new("tail")
+            .arg("-n 1")
+            .stdin(pmap_out)
+            .stdout(Stdio::piped())
+            .spawn()?;
+        stdout.wait()?;
+
+        if let Some(tail_out) = tail.stdout.take() {
+            let awk = Command::new("awk")
+                .arg("/[0-9]K/{print $2}")
+                .stdin(tail_out)
+                .stdout(Stdio::piped())
+                .spawn()?;
+            let awk_stdout = awk.wait_with_output()?;
+            tail.wait()?;
+            full_mem = String::from_utf8(awk_stdout.stdout).unwrap();
+            full_mem.pop();
+            full_mem.pop();
+        }
+    }
+
+    let mut stdout = Command::new("pmap")
+        .arg(&pid)
+        //.arg(" | tail -n 1 | awk '/[0-9]K/{print $2}'")
+        .stdout(Stdio::piped())
+        .spawn()?;
+
+    if let Some(pmap_out) = stdout.stdout.take() {
+        let mut head = Command::new("head")
+            .arg("-n 3")
+            .stdin(pmap_out)
+            .stdout(Stdio::piped())
+            .spawn()?;
+
+        stdout.wait()?;
+
+        if let Some(head_out) = head.stdout.take() {
+            let mut tail = Command::new("tail")
+                .arg("-n 1")
+                .stdin(head_out)
+                .stdout(Stdio::piped())
+                .spawn()?;
+            head.wait()?;
+
+            if let Some(tail_out) = tail.stdout.take() {
+                let awk = Command::new("awk")
+                    .arg("/[0-9]K/{print $2}")
+                    .stdin(tail_out)
+                    .stdout(Stdio::piped())
+                    .spawn()?;
+                let awk_stdout = awk.wait_with_output()?;
+                tail.wait()?;
+                reasonable_mem = String::from_utf8(awk_stdout.stdout).unwrap();
+                reasonable_mem.pop();
+                reasonable_mem.pop();
+            }
+        }
+    }
+    let hoster_tag = &ctx.http.get_current_application_info()?.owner.tag();
+    let hoster_id = &ctx.http.get_current_application_info()?.owner.id;
+
+    let version = {
+        let mut file = File::open("Cargo.toml")?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+
+        let data = contents.parse::<Value>().unwrap();
+        let version = data["package"]["version"].as_str().unwrap();
+        version.to_string()
+    };
+
+    let bot_name = &ctx.http.get_current_user()?.name;
+    let bot_icon = &ctx.http.get_current_user()?.avatar_url();
+
+    let num_guilds = &ctx.cache.read().guilds.len();
+    let num_shards = &ctx.cache.read().shard_count;
+    let num_members = &ctx.cache.read().users.len();
+
+
+    msg.channel_id.send_message(&ctx, |m| {
+        m.embed(|e| {
+            e.title(format!("**{}** - Version: {}", bot_name, version));
+            e.description("General Purpose Discord Bot made in [Rust](https://www.rust-lang.org/) using [serenity.rs](https://github.com/serenity-rs/serenity)");
+
+            e.field("Creator", "Tag: nitsuga5124#2207\nID: 182891574139682816", true);
+            e.field("Hoster", format!("Tag: {}\nID: {}", hoster_tag, hoster_id), true);
+            e.field("Memory usage", format!("Complete:\n`{} KB`\nBase:\n`{} KB`",
+                                    &full_mem.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en), &reasonable_mem.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en)), true);
+            e.field("Guild Data", format!("Guilds: {}\nUsers: {}\nShards: {}", num_guilds, num_members, num_shards), true);
+
+            if let Some(x) = bot_icon {
+                e.thumbnail(x);
+            }
+            e
+        });
+        m
+    })?;
+
     Ok(())
 }
