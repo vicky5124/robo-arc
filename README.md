@@ -1,11 +1,13 @@
 # **Robo Arc**
 Learning Rust project. Yes, im very original and full of ideas, so im remaking what i already did with python, but hopefully better this time.
 
+![Bot profile picture][PFP]
+
 This bot is made using [serenity.rs](https://github.com/serenity-rs/serenity/), a sync discord api wrapper for [Rust](https://www.rust-lang.org/)
 
 ## __Running the bot for yourself__
 
-### __**Get the source and prepare it**__
+### __**Get the source and prepare it**__:
 
 ```bash
 git clone git@gitlab.com:nitsuga5124/robo-arc.git # Over SSH
@@ -100,7 +102,7 @@ def rust_translate(self, text, dest, src='auto'):
     return data
 ```
 
-### __**Running the bot**__
+### __**Running the bot**__:
 
 It's as simple as just running:
 
