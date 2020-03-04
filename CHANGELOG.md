@@ -1,3 +1,13 @@
+# 0.0.16-alpha
+
+### Commands
+- prefixes:
+  New command.
+  Sends the configured prefixes of the guild.
+- about:
+  New command.
+  Sends information about the bot.
+
 # 0.0.15-alpha
 
 ### Structure
