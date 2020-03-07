@@ -1,3 +1,29 @@
+# 0.0.17-alpha
+
+### Commands
+- about:
+  Added server invite link.
+- gray:
+  Fixed image quality.
+- changelog:
+  New command.
+  Sends this file.
+- todo:
+  Added new items to the list.
+- clear:
+  New command.
+  Clears X messages.
+- toggle_annoy:
+  Moved command to config.
+- configure:
+  New command.
+  Configures different aspects about the bot.
+  Moved toggle_annoy to `.config channel annoy`
+
+### Structure
+- src/commands/configuration.rs
+  New file.
+
 # 0.0.16-alpha
 
 ### Commands
