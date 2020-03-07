@@ -3,7 +3,10 @@ use serenity::{
     model::{
         channel::Message,
         guild::Member,
-        id::UserId,
+        id::{
+            UserId,
+            MessageId,
+        },
     },
     framework::standard::{
         Args,
@@ -105,5 +108,32 @@ fn ban(mut ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         Err(why) => {&msg.reply(&ctx, why.to_string())?;},
     }
 
+    Ok(())
+}
+
+/// Deletes X number of messages from the current channel.
+/// If the messages are older than 2 weeks, due to api limitations, they will not get deleted.
+///
+/// Usage: `.clear 20`
+#[command]
+#[required_permissions(MANAGE_MESSAGES)]
+#[num_args(1)]
+#[only_in("guilds")]
+#[aliases(purge)]
+fn clear(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+    let num = args.single::<u64>();
+    match num {
+        Err(_) => {&msg.channel_id.say(&ctx, "The value provided was not a valid number")?;},
+        Ok(n) => {
+            let channel = &msg.channel(&ctx).unwrap().guild().unwrap();
+
+            let messages = &channel.read().messages(&ctx, |r| r.before(&msg.id).limit(n))?;
+            let messages_ids = messages.iter().map(|m| m.id).collect::<Vec<MessageId>>();
+
+            channel.read().delete_messages(&ctx, messages_ids)?;
+
+            &msg.channel_id.say(&ctx, format!("Successfully deleted `{}` message", n))?;
+        }
+    }
     Ok(())
 }

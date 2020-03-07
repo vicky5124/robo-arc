@@ -15,6 +15,7 @@ use commands::meta::*; // Import everything from the meta module.
 use commands::image_manipulation::*; // Import everything from the image manipulation module.
 use commands::fun::*; // Import everything from the fun module.
 use commands::moderation::*; // Import everything from the moderation module.
+use commands::configuration::*; // Import everything from the moderation module.
 use utils::database::get_database; // Obtain the get_database function from the utilities.
 use utils::basic_functions::capitalize_first; // Obtain the capitalize_first function from the utilities.
 
@@ -147,7 +148,7 @@ impl TypeMapKey for BooruCommands {
 // this group includes the commands that basically every bot has, nothing really special.
 #[group("Meta")]
 #[description = "All the basic commands that every bot should have."]
-#[commands(ping, test, invite, source, toggle_annoy, todo, prefixes, about)]
+#[commands(ping, test, invite, source, todo, prefixes, about, changelog)]
 struct Meta;
 
 // The SankakuComplex command group.
@@ -195,8 +196,18 @@ struct Fun;
 
 #[group("Moderation")]
 #[description = "All the moderation related commands."]
-#[commands(kick, ban)]
+#[commands(kick, ban, clear)]
 struct Mod;
+
+#[group("Configuration")]
+#[description = "All the configuration related commands.
+Basic usage:
+~~`.config user VALUE DATA`~~
+~~`.config guild VALUE DATA`~~
+`.config channel VALUE DATA`"]
+#[prefixes("config", "configure", "conf")]
+#[commands(channel)]
+struct Configuration;
 
 // This is a custom help command.
 // Each line has the explaination that is required.
@@ -214,11 +225,14 @@ You can also react with 🚫 on any message sent by the bot to delete it.\n"]
 // This makes it so specific sections don't get showed to the user if they don't have the
 // permission to use them.
 #[lacking_permissions = "Hide"]
-// In the case of just lacking a role to use whatever is necessary, nothing will happen.
-#[lacking_role = "Nothing"]
+// In the case of just lacking a role to use whatever is necessary, nothing will happen when
+// setting it to "Nothing", rn it just strikes the option.
+#[lacking_role = "Strike"]
 // In the case of being on the wrong channel type (either DM for Guild only commands or vicecersa)
 // the command will be ~~striked~~
 #[wrong_channel = "Strike"]
+// This will change the text that appears on groups that have a custom prefix
+#[group_prefix = "Prefix commands"]
 fn my_help(
     ctx: &mut Context,
     msg: &Message,
@@ -573,6 +587,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .group(&MOD_GROUP) // Load `moderation` command group
         .group(&SANKAKU_GROUP) // Load `SankakuComplex` command group
         .group(&ALLBOORUS_GROUP) // Load `Boorus` command group
+        .group(&CONFIGURATION_GROUP) // Load `Configuration` command group
         .group(&IMAGEMANIPULATION_GROUP) // Load `image manipulaiton` command group
         .help(&MY_HELP) // Load the custom help.
     );

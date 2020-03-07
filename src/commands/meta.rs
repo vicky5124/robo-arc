@@ -1,11 +1,5 @@
-use crate::{
-    ShardManagerContainer,
-    DatabaseConnection,
-    AnnoyedChannels,
-};
+use crate::ShardManagerContainer;
 use std::{
-    sync::Arc,
-    collections::HashSet,
     fs::File,
     io::prelude::*,
     process::{
@@ -150,6 +144,7 @@ fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
+#[help_available(false)] // makes it not show up on the help menu
 #[owners_only] // to only allow the owner of the bot to use this command
 #[min_args(3)] // Sets the minimum ammount of arguments the command requires to be ran. This is used to trigger the `NotEnoughArguments` error.
 // Testing command, please ignore.
@@ -175,69 +170,6 @@ fn source(ctx: &mut Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
-/// Toggles the annoy status on the invoked channel.
-#[command]
-#[required_permissions(ADMINISTRATOR)]
-#[aliases(annoy)]
-fn toggle_annoy(ctx: &mut Context, msg: &Message) -> CommandResult {
-    let client = {
-        let rdata = ctx.data.read();
-        Arc::clone(rdata.get::<DatabaseConnection>().expect("Could not find a database connection."))
-    };
-    let channel_id = *&msg.channel_id.0 as i64;
-
-    let data = {
-        let mut client = client.write();
-        client.query("SELECT channel_id FROM annoyed_channels WHERE channel_id = $1", &[&channel_id])?
-    };
-
-    if !data.is_empty() {
-        for row in data {
-            if row.get::<_, i64>(0) == channel_id {
-                {
-                    let mut client = client.write();
-                    client.execute(
-                        "DELETE FROM annoyed_channels WHERE channel_id IN ($1)",
-                        &[&channel_id]
-                    )?;
-                }
-
-                msg.channel_id.say(&ctx, format!("Successfully removed `{}` from the list of channels that allows the bot to do annoying features.", msg.channel_id.name(&ctx).unwrap()))?;
-            }
-        }
-
-    } else {
-        {
-            let mut client = client.write();
-            client.execute(
-                "INSERT INTO annoyed_channels (channel_id) VALUES ($1)",
-                &[&channel_id]
-            )?;
-        }
-
-        msg.channel_id.say(&ctx, format!("Successfully added `{}` to the list of channels that allows the bot to do annoying features.", msg.channel_id.name(&ctx).unwrap()))?;
-    }
-
-    {
-        let mut db_client = client.write();
-        let raw_annoyed_channels = {
-            db_client.query("SELECT channel_id from annoyed_channels", &[])?
-        };
-        let mut annoyed_channels = HashSet::new();
-
-        for row in raw_annoyed_channels {
-            annoyed_channels.insert(row.get::<_, i64>(0) as u64);
-        } 
-        {
-            let mut data = ctx.data.write();
-            data.insert::<AnnoyedChannels>(annoyed_channels);
-        }
-    }
-
-    Ok(())
-}
-
-
 /// Sends the current TO-DO list of the bot
 #[command]
 #[aliases(todo_list)]
@@ -246,21 +178,22 @@ fn todo(ctx: &mut Context, msg: &Message) -> CommandResult {
 TODO:
 
 #Random/Fun
-- Define (urban dictionary)
 Dictionary (dictionary search)
-- Translate (translates text to language)
 Calculator (maths)
-Encrypt/Devrypt (encrypts and decrypts a message)
+Encrypt/Decrypt (encrypts and decrypts a message)
+Reminder (reminds you of a message after X time)
 
 #Osu!
 Score (posts the user score on the map id specified)
 Profile (posts the user profile data)
 Top (posts the top plays of the user)
+MapPP (calculates pp of a map, like ezpp or tillerino)
 
 #DDG
 Search (searches term on duckduckgo)
 
 #Twitch
+\"Livestream notifications\"
 Streamrole (gives the stream notification role set to the guild)
 ChangeLiveMessage (changes the \"im live\" message)
 ChangeNotLiveMessage (changes the \"im no longer live\" message)
@@ -275,20 +208,24 @@ Sub/User Bomb (posts 5 posts from the subreddit or user specified)
 Pride (prides the provided image, either bi or gay)
 
 #Mod
-Clear (clears x messages with specific requieriments)
-- Ban (bans user)
-- Kick (kicks user)
+Clear (add specific requieriments like \"only webhooks\")
 PermaBan (permanently bans a user from the guild by not allowing the user to ever get back on (perma kick))
-Mute (mutes the user on the specific channel or all channels)
+TempMute (mutes the user on the specific channel or all channels)
 Logging (set a channel to log specific events)
 
 #Tags
-\"basically the same as R. Danny\"
+\"Basically the same as R. Danny, but with personal tags supported\"
 
 # Boorus
 \"Fix tag filter and the 4 boorus that don't work\"
 Bestgirl (sends a picture of the user defined best girl)
 Bestboy (sends a picture of the user defined best boy)
+Source (sends the source of an image, using iqdb and saucenao)
+Exclude (excludes tags automatically from your search)
+nHentai (nhentai reader and searcher)
+
+# Music
+\"Port lavalink to rust/serenity\"
 ```")?;
     Ok(())
 }
@@ -375,8 +312,12 @@ fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
             }
         }
     }
-    let hoster_tag = &ctx.http.get_current_application_info()?.owner.tag();
-    let hoster_id = &ctx.http.get_current_application_info()?.owner.id;
+    let cache = &ctx.cache.read();
+    let current_user = &ctx.http.get_current_user()?;
+    let app_info = &ctx.http.get_current_application_info()?;
+
+    let hoster_tag = &app_info.owner.tag();
+    let hoster_id = &app_info.owner.id;
 
     let version = {
         let mut file = File::open("Cargo.toml")?;
@@ -388,18 +329,18 @@ fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
         version.to_string()
     };
 
-    let bot_name = &ctx.http.get_current_user()?.name;
-    let bot_icon = &ctx.http.get_current_user()?.avatar_url();
+    let bot_name = &current_user.name;
+    let bot_icon = &current_user.avatar_url();
 
-    let num_guilds = &ctx.cache.read().guilds.len();
-    let num_shards = &ctx.cache.read().shard_count;
-    let num_members = &ctx.cache.read().users.len();
+    let num_guilds = &cache.guilds.len();
+    let num_shards = &cache.shard_count;
+    let num_members = &cache.users.len();
 
 
     msg.channel_id.send_message(&ctx, |m| {
         m.embed(|e| {
             e.title(format!("**{}** - Version: {}", bot_name, version));
-            e.description("General Purpose Discord Bot made in [Rust](https://www.rust-lang.org/) using [serenity.rs](https://github.com/serenity-rs/serenity)");
+            e.description("General Purpose Discord Bot made in [Rust](https://www.rust-lang.org/) using [serenity.rs](https://github.com/serenity-rs/serenity)\n\nHaving any issues? join the [Support Server](https://discord.gg/kH7z85n)");
 
             e.field("Creator", "Tag: nitsuga5124#2207\nID: 182891574139682816", true);
             e.field("Hoster", format!("Tag: {}\nID: {}", hoster_tag, hoster_id), true);
@@ -415,5 +356,12 @@ fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
         m
     })?;
 
+    Ok(())
+}
+
+/// Sends the bot changelog.
+#[command]
+fn changelog(ctx: &mut Context, msg: &Message) -> CommandResult {
+    msg.channel_id.say(&ctx, "<https://gitlab.com/nitsuga5124/robo-arc/-/blob/master/CHANGELOG.md>")?;
     Ok(())
 }
