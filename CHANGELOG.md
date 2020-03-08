@@ -1,3 +1,24 @@
+# 0.0.18-alpha
+
+### Commands
+- configure:
+  Moved parameters to subcommands.
+  New subcommand: user.
+  User subcommand:
+  > Can now configure bestgirl and bestboy
+- chan:
+  New command.
+- DanBooru, HypnoBooru:
+  Fixed commands.
+- e621:
+  Moved to the list of broken boorus due to an api change.
+
+### Optimizations
+- idol:
+  Url parameters are now parsed properly.
+- boorus:
+  Changed the source detection system.
+
 # 0.0.17-alpha
 
 ### Commands

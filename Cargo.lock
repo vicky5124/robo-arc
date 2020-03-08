@@ -23,7 +23,7 @@ checksum = "7825f6833612eb2414095684fcf6c635becf3ce97fe48cf6421321e93bfbd53c"
 
 [[package]]
 name = "arc_bot"
-version = "0.0.17-alpha"
+version = "0.0.18-alpha"
 dependencies = [
  "bitflags",
  "hey_listen",
