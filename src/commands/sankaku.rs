@@ -24,14 +24,15 @@ use rand::Rng;
 use reqwest::{
     blocking::Client as ReqwestClient,
     header::*,
+    Url,
 };
 
 #[derive(Deserialize, PartialEq)]
-struct IdolData {
+struct SankakuData {
     rating: String,
     sample_url: String,
     file_url: String,
-    source: String,
+    source: Option<String>,
     md5: String,
     file_size: i32,
     fav_count: i32,
@@ -68,7 +69,7 @@ fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         }
     };
 
-    let tags = raw_tags.iter().map(|x| format!("{}%20", x)).collect::<String>();
+    let tags = raw_tags.iter().map(|x| format!("{} ", x)).collect::<String>();
 
     let reqwest = ReqwestClient::new();
     let mut headers = HeaderMap::new();
@@ -76,12 +77,19 @@ fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     headers.insert(ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8".parse().unwrap());
     headers.insert(USER_AGENT, "Mozilla/5.0 (X11; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0".parse().unwrap());
 
-    let url = format!("https://iapi.sankakucomplex.com/post/index.json?page=1&limit=50&tags={}&login={}&password_hash={}", tags, login, pass);
+    let url = Url::parse_with_params("https://iapi.sankakucomplex.com/post/index.json",
+                                     &[
+                                        ("page", "1"),
+                                        ("limit", "50"),
+                                        ("tags", &tags),
+                                        ("login", &login),
+                                        ("password_hash", &pass),
+                                     ])?;
 
-    let resp = reqwest.get(&url)
+    let resp = reqwest.get(url)
         .headers(headers.clone())
         .send()?
-        .json::<Vec::<IdolData>>()?;
+        .json::<Vec::<SankakuData>>()?;
 
     if resp.len() == 0 {
         msg.channel_id.say(&ctx, "No posts match the provided tags.")?;
@@ -123,7 +131,7 @@ fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         filename: filename.to_string(),
     };
 
-    let rating = match &choice.rating[..] {
+    let rating = match &choice.rating[..]{
         "s" => "Safe".to_string(),
         "q" => "Questionable".to_string(),
         "e" => "Explicit".to_string(),
@@ -137,8 +145,8 @@ fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         //("MD5", &choice.md5, true),
     ];
 
-    let source_md = format!("[Here]({})", &choice.source);
-    if &choice.source != &"".to_string() {
+    let source_md = format!("[Here]({})", &choice.source.as_ref().unwrap());
+    if &choice.source.as_ref().unwrap() != &&"".to_string() {
         &fields.push(("Source", &source_md, true));
     }
 
@@ -158,6 +166,132 @@ fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 
     Ok(())
 }
+
+#[command]
+#[aliases(sankaku, complex, sc)]
+fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    let channel = &ctx.http.get_channel(msg.channel_id.0)?; // Gets the channel object to be used for the nsfw check.
+    // Checks if the command was invoked on a DM
+    let dm_channel: bool;
+    if msg.guild_id == None {
+        dm_channel = true;
+    } else {
+        dm_channel = false;
+    }
+
+    let raw_tags = {
+        if channel.is_nsfw() || dm_channel {
+            let mut raw_tags = booru::obtain_tags_unsafe(args);
+            booru::illegal_check_unsafe(&mut raw_tags)
+        } else {
+            let mut raw_tags = booru::obtain_tags_safe(args);
+            booru::illegal_check_safe(&mut raw_tags)
+        }
+    };
+
+    let tags = raw_tags.iter().map(|x| format!("{} ", x)).collect::<String>();
+
+    let reqwest = ReqwestClient::new();
+    let mut headers = HeaderMap::new();
+
+    headers.insert(ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8".parse().unwrap());
+    headers.insert(USER_AGENT, "Mozilla/5.0 (X11; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0".parse().unwrap());
+
+    //page=1&limit=50&tags={}
+    let url = Url::parse_with_params("https://capi-v2.sankakucomplex.com/posts",
+                                     &[
+                                        ("page", "1"),
+                                        ("limit", "50"),
+                                        ("tags", &tags),
+                                     ])?;
+    println!("{}", &url);
+
+    let resp = reqwest.get(url)
+        .headers(headers.clone())
+        .send()?
+        .json::<Vec::<SankakuData>>()?;
+
+    if resp.len() == 0 {
+        msg.channel_id.say(&ctx, "No posts match the provided tags.")?;
+        return Ok(());
+    }
+
+    let choice;
+    {
+        let mut y = 1;
+        loop {
+            let r = rand::thread_rng().gen_range(0, resp.len());
+            let x = &resp[r];
+            y += 1;
+            if &x.file_size < &8000000 {
+                choice = x;
+                break;
+            } else if &y > &(&resp.len()*2) {
+                msg.channel_id.say(&ctx, "All the content matching the requested tags is too big to be sent.")?;
+                return Ok(());
+            }
+        }
+    };
+
+    let sample_url = &choice.sample_url;
+    let file_url = &choice.file_url;
+
+    let mut resp = reqwest.get(sample_url)
+        .headers(headers.clone())
+        .send()?;
+
+    let mut buf: Vec<u8> = vec![];
+    &resp.read_to_end(&mut buf)?;
+
+    let fullsize_tagless = &choice.file_url.split("?").nth(0).unwrap();
+    let fullsize_split = fullsize_tagless.split("/").collect::<Vec<&str>>();
+    let filename = fullsize_split.get(6).unwrap();
+
+    let attachment = AttachmentType::Bytes {
+        data: Cow::from(&buf),
+        filename: filename.to_string(),
+    };
+
+    let rating = match &choice.rating[..] {
+        "s" => "Safe".to_string(),
+        "q" => "Questionable".to_string(),
+        "e" => "Explicit".to_string(),
+        _ => String::new(),
+    };
+
+    let score = format!("{}", &choice.fav_count);
+    let mut fields = vec![
+        ("Rating", &rating, true),
+        ("Score", &score, true),
+        //("MD5", &choice.md5, true),
+    ];
+
+    let text;
+    if let Some(s) = &choice.source {
+        if s != &"".to_string() {
+            text = format!("[Here]({})", &s);
+            &fields.push(("Source", &text, true));
+        }
+    }
+
+
+    msg.channel_id.send_message(&ctx, |m| {
+        m.add_file(attachment);
+        m.embed(|e| {
+            e.image(format!("attachment://{}", filename));
+            e.title("Original Post");
+            e.description(format!("[Sample]({}) | [Full Size]({})", &sample_url, &file_url));
+            e.url(format!("https://chan.sankakucomplex.com/post/show/{}/", &choice.id));
+            e.fields(fields);
+            e
+        });
+        m
+    })?;
+
+    Ok(())
+}
+
+
 
 /*
 https://iapi.sankakucomplex.com/post/index.json?page=1&limit=1&tags=rating:safe

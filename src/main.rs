@@ -155,7 +155,7 @@ struct Meta;
 // This group contains commands for the variants Chan and Idol of the sankaku boorus.
 #[group("Sankaku")]
 #[description = "All the NSFW/BSFW related commands."]
-#[commands(idol)]
+#[commands(idol, chan)]
 struct Sankaku;
 
 // The osu! command group.
@@ -206,7 +206,7 @@ Basic usage:
 ~~`.config guild VALUE DATA`~~
 `.config channel VALUE DATA`"]
 #[prefixes("config", "configure", "conf")]
-#[commands(channel)]
+#[commands(channel, user)]
 struct Configuration;
 
 // This is a custom help command.
