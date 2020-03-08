@@ -41,9 +41,7 @@ struct Posts {
 }
 
 pub fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) -> Result<(), Box<dyn std::error::Error>> {
-    // TODO: Hypno has no source value
-    // danbooru has not sample_url value
-    // behoimi needs login
+    // TODO: behoimi needs login
 
     let channel = &ctx.http.get_channel(msg.channel_id.0)?; // Gets the channel object to be used for the nsfw check.
     // Checks if the command was invoked on a DM
@@ -79,6 +77,8 @@ pub fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) ->
         url = format!("https://{}/index.php?page=dapi&s=post&q=index&tags={}&pid={}&limit=50", booru.url, tags, page);
     } else if booru.typ == 2 {
         url = format!("https://{}/post/index.xml?tags={}&page={}&limit=50", booru.url, tags, page);
+    } else if booru.typ == 3 {
+        url = format!("http://{}/post/index.xml?tags={}&page={}&limit=50", booru.url, tags, page);
     } else {
         url = "https://safebooru.org/index.php?page=dapi&s=post&q=index".to_string();
     }
