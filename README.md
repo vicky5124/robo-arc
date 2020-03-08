@@ -70,6 +70,14 @@ CREATE TABLE public.annoyed_channels (
     CONSTRAINT annoyed_channels_pkey PRIMARY KEY (channel_id)
 )
 ```
+```sql
+CREATE TABLE public.best_bg (
+    user_id bigint NOT NULL,
+    best_boy text COLLATE pg_catalog."default",
+    best_girl text COLLATE pg_catalog."default",
+    CONSTRAINT best_bg_pkey PRIMARY KEY (user_id)
+)
+```
 
 ### __**Translate**__:
 
