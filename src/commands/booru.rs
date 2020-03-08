@@ -28,9 +28,9 @@ use serde::{
 #[derive(Serialize, Deserialize, PartialEq)]
 struct Post {
     score: String, // i32
-    source: String,
+    source: Option<String>,
     rating: String,
-    sample_url: String,
+    sample_url: Option<String>,
     file_url: String,
 }
 
@@ -96,18 +96,12 @@ pub fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) ->
 
     // define both url types.
     let full_size = &choice.file_url;
-    let sample_size = &choice.sample_url;
-    
-    // Check if there's a source to get added to the fields.
-    let source_avail: bool;
-    if &choice.source == &String::from(""){
-        source_avail = false;
+    let sample_size = if let Some(u) = &choice.sample_url {
+        u.to_owned()
     } else {
-        source_avail = true;
-    }
-    let source = &choice.source;
-    let source_md = format!("[Here]({})", source);
-
+        full_size.clone()
+    };
+    
     // Sets the score and rating for ease of uses
     let score = &choice.score;
     let rating = match &choice.rating[..] {
@@ -122,8 +116,14 @@ pub fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) ->
         ("Rating", &rating, true),
         ("Score", &score, true),
     ];
-    if source_avail {
-        fields.push(("Source", &source_md, true));
+
+    // Check if there's a source to get added to the fields.
+    let text;
+    if let Some(s) = &choice.source {
+        if s != &"".to_string() {
+            text = format!("[Here]({})", &s);
+            &fields.push(("Source", &text, true));
+        }
     }
 
     // https://github.com/serenity-rs/serenity/blob/current/examples/11_create_message_builder/src/main.rs
@@ -157,20 +157,20 @@ Usage: `(prefix)booru_name tag tag tag`
 
 The currently available boorus are:
 __Working:__
-`e621` - Largest Furry booru.
-`FurryBooru` - Second largest Furry booru.
-`Rule34` - If it exist, there's porn of it.
 `SafeBooru` - Safe only booru.
+`Chan` - Largest, most popular booru.
 `GelBooru` - One of the most popular boorus.
 `KonaChan` - Quality Moderated, Girls only booru.
 `YandeRe` - Quality Moderated booru.
+`Rule34` - If it exist, there's porn of it.
+`DanBooru` - Very popular booru, limited to only 2 tags.
+`HypnoBooru` - A booru that hosts all sorts of hypno based content.
+`FurryBooru` - Second largest Furry booru.
 `RealBooru` - Very large IRL booru.
 `Idol` - Largest IRL booru, very asian based.
 
 __Broken:__
-`Chan` - Largest, most popular booru.
-`DanBooru` - Very popular booru, limited to only 2 tags.
-`HypnoBooru` - A booru that hosts all sorts of hypno based content.
+`e621` - Largest Furry booru.
 `Behoimi` - IRL, Mostly cosplays booru.
 
 Available parameters:
