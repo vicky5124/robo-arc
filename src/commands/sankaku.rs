@@ -189,7 +189,8 @@ fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         }
     };
 
-    let tags = raw_tags.iter().map(|x| format!("{} ", x)).collect::<String>();
+    let mut tags = raw_tags.iter().map(|x| format!("{} ", x)).collect::<String>();
+    tags.pop();
 
     let reqwest = ReqwestClient::new();
     let mut headers = HeaderMap::new();
@@ -204,12 +205,19 @@ fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                                         ("limit", "50"),
                                         ("tags", &tags),
                                      ])?;
-    println!("{}", &url);
 
-    let resp = reqwest.get(url)
+    let raw_resp = reqwest.get(url)
         .headers(headers.clone())
         .send()?
-        .json::<Vec::<SankakuData>>()?;
+        .json::<Vec::<SankakuData>>();
+    let resp = match raw_resp {
+        Ok(x) => x,
+        Err(_) => {
+            &msg.reply(&ctx, "There's a 4 tag limit to the requests.\nWhat counts as a tag? Most of the tags that have `:` on the name don't count as a tag.");
+            return Ok(());
+        }
+    };
+
 
     if resp.len() == 0 {
         msg.channel_id.say(&ctx, "No posts match the provided tags.")?;
