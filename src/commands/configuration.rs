@@ -16,68 +16,152 @@ use serenity::{
     },
 };
 
-/// Configures the bot for the channel it was invoked on.
-///
-/// Current configurable aspects:
-/// `annoy` Toggles the annoying features on or off.
-#[command]
-#[required_permissions(MANAGE_CHANNELS)]
-fn channel(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    if args.message().starts_with("annoy") {
-        let client = {
-            let rdata = ctx.data.read();
-            Arc::clone(rdata.get::<DatabaseConnection>().expect("Could not find a database connection."))
-        };
-        let channel_id = *&msg.channel_id.0 as i64;
+fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: String) -> Result<(), Box<dyn std::error::Error>> {
+    let client = {
+        let rdata = ctx.data.read();
+        Arc::clone(rdata.get::<DatabaseConnection>().expect("Could not find a database connection."))
+    };
+    let user_id = *&msg.author.id.0 as i64;
 
-        let data = {
+    let data = {
+        let mut client = client.write();
+        client.query("SELECT best_boy, best_girl FROM best_bg WHERE user_id = $1", &[&user_id])?
+    };
+
+    if data.is_empty() {
+        if sex == "boy" {
+            // insert +1boy
+            tags += " 1boy";
+            let id: i64 = 182891574139682816;
+            println!("{}", &tags);
+
             let mut client = client.write();
-            client.query("SELECT channel_id FROM annoyed_channels WHERE channel_id = $1", &[&channel_id])?
-        };
+            client.execute(
+                "INSERT INTO best_bg (best_boy, user_id) VALUES ($1, $2)",
+                &[&tags, &id]
+            )?;
+        } else if sex == "girl" {
+            // insert +1girl
+            tags += " 1girl";
 
-        if !data.is_empty() {
-            for row in data {
-                if row.get::<_, i64>(0) == channel_id {
-                    {
-                        let mut client = client.write();
-                        client.execute(
-                            "DELETE FROM annoyed_channels WHERE channel_id IN ($1)",
-                            &[&channel_id]
-                        )?;
-                    }
-
-                    msg.channel_id.say(&ctx, format!("Successfully removed `{}` from the list of channels that allows the bot to do annoying features.", msg.channel_id.name(&ctx).unwrap()))?;
-                }
-            }
-
-        } else {
-            {
-                let mut client = client.write();
-                client.execute(
-                    "INSERT INTO annoyed_channels (channel_id) VALUES ($1)",
-                    &[&channel_id]
-                )?;
-            }
-
-            msg.channel_id.say(&ctx, format!("Successfully added `{}` to the list of channels that allows the bot to do annoying features.", msg.channel_id.name(&ctx).unwrap()))?;
+            let mut client = client.write();
+            client.execute(
+                "INSERT INTO best_bg (best_girl, user_id) VALUES ($1, $2)",
+                &[&tags, &user_id]
+            )?;
         }
+    } else {
+        if sex == "boy" {
+            // update +1boy
+            tags += " 1boy";
 
-        {
-            let mut db_client = client.write();
-            let raw_annoyed_channels = {
-                db_client.query("SELECT channel_id from annoyed_channels", &[])?
-            };
-            let mut annoyed_channels = HashSet::new();
+            let mut client = client.write();
+            client.execute(
+                "UPDATE best_bg SET best_boy = $1 WHERE user_id = $2",
+                &[&tags, &user_id]
+            )?;
+        } else if sex == "girl" {
+            // update +1girl
+            tags += " 1girl";
 
-            for row in raw_annoyed_channels {
-                annoyed_channels.insert(row.get::<_, i64>(0) as u64);
-            } 
-            {
-                let mut data = ctx.data.write();
-                data.insert::<AnnoyedChannels>(annoyed_channels);
-            }
+            let mut client = client.write();
+            client.execute(
+                "UPDATE best_bg SET best_girl = $1 WHERE user_id = $2",
+                &[&tags, &user_id]
+            )?;
         }
     }
+    Ok(())
+}
 
+/// Configures aspects of the bot tied to your account.
+///
+/// Configurable aspects:
+/// `best_girl`: Toggles the annoying features on or off.
+/// `best_boy`: Toggles the annoying features on or off.
+#[command]
+#[sub_commands(best_boy, best_girl)]
+fn user(_ctx: &mut Context, _msg: &Message, _args: Args) -> CommandResult {
+    Ok(())
+}
+
+#[command]
+fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    Ok(set_best_tags("boy", ctx, msg, args.message().to_string())?)
+}
+
+#[command]
+fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    Ok(set_best_tags("girl", ctx, msg, args.message().to_string())?)
+}
+
+/// Configures the bot for the channel it was invoked on.
+///
+/// Configurable aspects:
+/// `annoy`: Toggles the annoying features on or off.
+#[command]
+#[required_permissions(MANAGE_CHANNELS)]
+#[only_in("guilds")]
+#[sub_commands(annoy)]
+fn channel(_ctx: &mut Context, _msg: &Message, _args: Args) -> CommandResult {
+    Ok(())
+}
+
+/// Toggles the annoying features on or off.
+#[command]
+fn annoy(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
+    let client = {
+        let rdata = ctx.data.read();
+        Arc::clone(rdata.get::<DatabaseConnection>().expect("Could not find a database connection."))
+    };
+    let channel_id = *&msg.channel_id.0 as i64;
+
+    let data = {
+        let mut client = client.write();
+        client.query("SELECT channel_id FROM annoyed_channels WHERE channel_id = $1", &[&channel_id])?
+    };
+
+    if !data.is_empty() {
+        for row in data {
+            if row.get::<_, i64>(0) == channel_id {
+                {
+                    let mut client = client.write();
+                    client.execute(
+                        "DELETE FROM annoyed_channels WHERE channel_id IN ($1)",
+                        &[&channel_id]
+                    )?;
+                }
+
+                msg.channel_id.say(&ctx, format!("Successfully removed `{}` from the list of channels that allows the bot to do annoying features.", msg.channel_id.name(&ctx).unwrap()))?;
+            }
+        }
+
+    } else {
+        {
+            let mut client = client.write();
+            client.execute(
+                "INSERT INTO annoyed_channels (channel_id) VALUES ($1)",
+                &[&channel_id]
+            )?;
+        }
+
+        msg.channel_id.say(&ctx, format!("Successfully added `{}` to the list of channels that allows the bot to do annoying features.", msg.channel_id.name(&ctx).unwrap()))?;
+    }
+
+    {
+        let mut db_client = client.write();
+        let raw_annoyed_channels = {
+            db_client.query("SELECT channel_id from annoyed_channels", &[])?
+        };
+        let mut annoyed_channels = HashSet::new();
+
+        for row in raw_annoyed_channels {
+            annoyed_channels.insert(row.get::<_, i64>(0) as u64);
+        } 
+        {
+            let mut data = ctx.data.write();
+            data.insert::<AnnoyedChannels>(annoyed_channels);
+        }
+    }
     Ok(())
 }
