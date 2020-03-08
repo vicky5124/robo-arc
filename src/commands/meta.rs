@@ -217,7 +217,7 @@ Logging (set a channel to log specific events)
 \"Basically the same as R. Danny, but with personal tags supported\"
 
 # Boorus
-\"Fix tag filter and the 4 boorus that don't work\"
+\"Fix tag filter and the 2 boorus that don't work\"
 Bestgirl (sends a picture of the user defined best girl)
 Bestboy (sends a picture of the user defined best boy)
 Source (sends the source of an image, using iqdb and saucenao)
