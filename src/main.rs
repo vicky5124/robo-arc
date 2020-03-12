@@ -154,6 +154,7 @@ struct Meta;
 // The SankakuComplex command group.
 // This group contains commands for the variants Chan and Idol of the sankaku boorus.
 #[group("Sankaku")]
+#[help_available(false)]
 #[description = "All the NSFW/BSFW related commands."]
 #[commands(idol, chan)]
 struct Sankaku;
@@ -257,7 +258,7 @@ impl EventHandler for Handler {
     fn ready(&self, ctx: Context, ready: Ready) {
         // Changes the presence of the bot to "Listening to C++ cry a Rusted death."
         ctx.set_presence(
-            Some(Activity::listening("C++ cry a Rusted death.")),
+            Some(Activity::listening("my ears... or trying to atleast.")),
             OnlineStatus::Online
         );
 

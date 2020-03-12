@@ -32,14 +32,13 @@ fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: String) 
         if sex == "boy" {
             // insert +1boy
             tags += " 1boy";
-            let id: i64 = 182891574139682816;
-            println!("{}", &tags);
 
             let mut client = client.write();
             client.execute(
                 "INSERT INTO best_bg (best_boy, user_id) VALUES ($1, $2)",
-                &[&tags, &id]
+                &[&tags, &user_id]
             )?;
+            msg.reply(&ctx, format!("Successfully set your husbando to `{}`", &tags))?;
         } else if sex == "girl" {
             // insert +1girl
             tags += " 1girl";
@@ -49,6 +48,7 @@ fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: String) 
                 "INSERT INTO best_bg (best_girl, user_id) VALUES ($1, $2)",
                 &[&tags, &user_id]
             )?;
+            msg.reply(&ctx, format!("Successfully set your waifu to `{}`", &tags))?;
         }
     } else {
         if sex == "boy" {
@@ -60,6 +60,7 @@ fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: String) 
                 "UPDATE best_bg SET best_boy = $1 WHERE user_id = $2",
                 &[&tags, &user_id]
             )?;
+            msg.reply(&ctx, format!("You successfully broke up with your old husbando, now your husbando is `{}`", &tags))?;
         } else if sex == "girl" {
             // update +1girl
             tags += " 1girl";
@@ -69,6 +70,7 @@ fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: String) 
                 "UPDATE best_bg SET best_girl = $1 WHERE user_id = $2",
                 &[&tags, &user_id]
             )?;
+            msg.reply(&ctx, format!("You successfully broke up with your old waifu, now your waifu is `{}`", &tags))?;
         }
     }
     Ok(())
@@ -79,20 +81,64 @@ fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: String) 
 /// Configurable aspects:
 /// `best_girl`: Toggles the annoying features on or off.
 /// `best_boy`: Toggles the annoying features on or off.
+/// `booru`: Sets the booru to be used for the best_X commands ~~and `picture`~~
 #[command]
-#[sub_commands(best_boy, best_girl)]
+#[sub_commands(best_boy, best_girl, booru)]
 fn user(_ctx: &mut Context, _msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
 
 #[command]
+#[aliases(husbando, husband)]
 fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     Ok(set_best_tags("boy", ctx, msg, args.message().to_string())?)
 }
 
 #[command]
+#[aliases(waifu, wife)]
 fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     Ok(set_best_tags("girl", ctx, msg, args.message().to_string())?)
+}
+
+#[command]
+fn booru(ctx: &mut Context, msg: &Message, raw_args: Args) -> CommandResult {
+    let booru = raw_args.message().to_lowercase();
+    let client = {
+        let rdata = ctx.data.read();
+        Arc::clone(rdata.get::<DatabaseConnection>().expect("Could not find a database connection."))
+    };
+
+    let user_id = *&msg.author.id.0 as i64;
+
+    let data = {
+        let mut client = client.write();
+        client.query("SELECT best_boy, best_girl FROM best_bg WHERE user_id = $1", &[&user_id])?
+    };
+
+    if data.is_empty() {
+        if booru.as_str() == "" {
+            msg.reply(&ctx, "Please, specify the booru to set as your default.")?;
+            return Ok(());
+        }
+        let mut client = client.write();
+        client.execute(
+            "INSERT INTO booru (booru, user_id) VALUES ($1, $2)",
+            &[&booru, &user_id]
+        )?;
+
+        msg.reply(&ctx, format!("Successfully set your main booru to `{}`", &booru))?;
+    } else {
+        if booru.as_str() == "" {return Ok(());}
+
+        let mut client = client.write();
+        client.execute(
+            "UPDATE best_bg SET booru = $1 WHERE user_id = $2",
+            &[&booru, &user_id]
+        )?;
+
+        msg.reply(&ctx, format!("Successfully edited your main booru to `{}`", &booru))?;
+    }
+    Ok(())
 }
 
 /// Configures the bot for the channel it was invoked on.
