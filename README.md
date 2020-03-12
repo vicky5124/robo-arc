@@ -75,6 +75,7 @@ CREATE TABLE public.best_bg (
     user_id bigint NOT NULL,
     best_boy text COLLATE pg_catalog."default",
     best_girl text COLLATE pg_catalog."default",
+    booru text COLLATE pg_catalog."default",
     CONSTRAINT best_bg_pkey PRIMARY KEY (user_id)
 )
 ```
