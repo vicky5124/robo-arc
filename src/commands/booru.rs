@@ -1,6 +1,16 @@
 use crate::{
-    utils::booru,
+    commands::sankaku::{
+        idol,
+        chan,
+    },
+    utils::{
+        booru,
+        basic_functions::capitalize_first,
+    },
     Booru,
+    BooruList,
+    BooruCommands,
+    DatabaseConnection,
 };
 
 use serenity::{
@@ -8,6 +18,7 @@ use serenity::{
     model::channel::Message,
     framework::standard::{
         Args,
+        Delimiter,
         CommandResult,
         macros::command,
     },
@@ -62,7 +73,8 @@ pub fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) ->
         }
     };
 
-    let tags = raw_tags.iter().map(|x| format!("{}%20", x)).collect::<String>();
+    let mut tags = raw_tags.iter().map(|x| format!("{}+", x)).collect::<String>();
+    tags.pop();
 
     let reqwest = ReqwestClient::new();
     let mut headers = HeaderMap::new();
@@ -143,43 +155,205 @@ pub fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) ->
     Ok(())
 }
 
+/// Sends a random picture from the first page of the booru selected with the specific tags.
+/// Usage: `.booru_name tag tag tag`
+/// 
+/// ```
+/// .idol feet -x stockings
+/// .e621 paws
+/// .chan -x
+/// .r32
+/// ```
+/// 
+/// The currently available boorus are:
+/// __Working:__
+/// `SafeBooru` - Safe only booru.
+/// `SankakuChan` - Largest, most popular booru, limited to 4 tags.
+/// `GelBooru` - One of the most popular boorus.
+/// `KonaChan` - Quality Moderated, Girls only booru.
+/// `YandeRe` - Quality Moderated booru.
+/// `Rule34` - If it exist, there's porn of it.
+/// `DanBooru` - Very popular booru, limited to only 2 tags.
+/// `HypnoBooru` - A booru that hosts all sorts of hypno based content.
+/// `FurryBooru` - Second largest Furry booru.
+/// `RealBooru` - Very large IRL booru.
+/// `IdolComplex` - Largest IRL booru, very asian based.
+/// 
+/// __Broken:__
+/// `e621` - Largest Furry booru.
+/// `Behoimi` - IRL, Mostly cosplays booru.
+/// 
+/// Available parameters:
+/// `-x` Explicit
+/// `-q` Questionable
+/// `-s` Safe. 
+/// `-n` Non Safe (Random between E or Q)
+/// 
+/// Inspired by -GN's [WaifuBot](https://github.com/isakvik/waifubot/)
 #[command]
 #[aliases("picture", "pic", "booru", "boorus")]
-#[description = "Sends a random picture from the first page of the booru selected with the specific tags.
-Usage: `(prefix)booru_name tag tag tag`
-
-```
-.idol feet -x stockings
-.e621 paws
-.yandere -x
-.r32
-```
-
-The currently available boorus are:
-__Working:__
-`SafeBooru` - Safe only booru.
-`Chan` - Largest, most popular booru.
-`GelBooru` - One of the most popular boorus.
-`KonaChan` - Quality Moderated, Girls only booru.
-`YandeRe` - Quality Moderated booru.
-`Rule34` - If it exist, there's porn of it.
-`DanBooru` - Very popular booru, limited to only 2 tags.
-`HypnoBooru` - A booru that hosts all sorts of hypno based content.
-`FurryBooru` - Second largest Furry booru.
-`RealBooru` - Very large IRL booru.
-`Idol` - Largest IRL booru, very asian based.
-
-__Broken:__
-`e621` - Largest Furry booru.
-`Behoimi` - IRL, Mostly cosplays booru.
-
-Available parameters:
-`-x` Explicit
-`-q` Questionable
-`-s` Safe. 
-`-n` Non Safe (Random between E or Q)
-
-Inspired by -GN's [WaifuBot](https://github.com/isakvik/waifubot/)"]
 pub fn booru_command(_ctx: &mut Context, _msg: &Message, _args: Args) -> CommandResult {
+    Ok(())
+}
+
+/// Sends a picture of your best girl!
+/// 
+/// You can configure your best girl with this command:
+/// `.config user best_girl <booru tag of your best girl>`
+#[command]
+#[aliases(bg, bestgirl, waifu, wife)]
+pub fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    let data = ctx.data.read(); // set mutable global data.
+    let client = data.get::<DatabaseConnection>().unwrap(); // get the database connection from the global data.
+    let commands = data.get::<BooruCommands>();
+    let boorus = data.get::<BooruList>().unwrap();
+
+    let author_id = msg.author.id.as_u64().clone() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
+    let data ={
+        let mut client = client.write();
+        client.query("SELECT best_girl, booru FROM best_bg WHERE user_id = $1",
+                     &[&author_id])?
+    };
+    let (tags, mut booru);
+
+    if data.is_empty() { // if the data is not empty, aka if the user is on the database already
+        &msg.reply(&ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`")?;
+        return Ok(());
+    } else {
+        let row = data.first().unwrap();
+        tags = row.get::<_, Option<&str>>(0);
+        booru = row.get::<_, Option<&str>>(1);
+
+        if tags == None {
+            &msg.reply(&ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`")?;
+            return Ok(());
+        }
+
+        if booru == None {
+            booru = Some("sankaku");
+        } 
+    }
+    let mut tags = tags.unwrap();
+    let booru = booru.unwrap();
+
+    {
+        let mut name = tags.split(" ").collect::<Vec<&str>>().first().unwrap().to_string();
+        name = name.replace("_(", " from ");
+        name = name.replace("_", " ");
+        name = name.replace(")", "");
+        name += "!";
+        &msg.channel_id.say(&ctx, capitalize_first(&name))?;
+    }
+
+    let a = args.message();
+    let args_tags = format!("{} {}", a, tags);
+    tags = args_tags.as_str();
+
+    let args_tags = Args::new(&tags, &[Delimiter::Single(' ')]);
+
+    if booru == "idol" {
+        idol(&mut ctx.clone(), &msg, args_tags)?;
+    } else if booru == "sankaku" || booru == "chan" {
+        chan(&mut ctx.clone(), &msg, args_tags)?;
+    } else {
+        if commands.as_ref().unwrap().contains(&booru.to_string()) {
+            let b: Booru = {
+                let mut x = Booru::default();
+
+                for b in boorus {
+                    if b.names.contains(&booru.to_string()) {
+                        x = b.clone()
+                    }
+                }
+                x
+            };
+            get_booru(&mut ctx.clone(), &msg.clone(), &b, args_tags)?;
+        } else {
+            &msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan")?;
+            chan(&mut ctx.clone(), &msg, args_tags)?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Sends a picture of your best boy!
+/// 
+/// You can configure your best boy with this command:
+/// `.config user best_boy <booru tag of your best boy>`
+#[command]
+#[aliases(bb, bestboy, husbando, husband)]
+pub fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    let data = ctx.data.read(); // set mutable global data.
+    let client = data.get::<DatabaseConnection>().unwrap(); // get the database connection from the global data.
+    let commands = data.get::<BooruCommands>();
+    let boorus = data.get::<BooruList>().unwrap();
+
+    let author_id = msg.author.id.as_u64().clone() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
+    let data ={
+        let mut client = client.write();
+        client.query("SELECT best_boy, booru FROM best_bg WHERE user_id = $1",
+                     &[&author_id])?
+    };
+    let (tags, mut booru);
+
+    if data.is_empty() { // if the data is not empty, aka if the user is on the database already
+        &msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`.conf user best_boy your_best_boy_tag`")?;
+        return Ok(());
+    } else {
+        let row = data.first().unwrap();
+        tags = row.get::<_, Option<&str>>(0);
+        booru = row.get::<_, Option<&str>>(1);
+
+        if tags == None {
+            &msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`.conf user best_boy your_best_boy_tag`")?;
+            return Ok(());
+        }
+
+        if booru == None {
+            booru = Some("sankaku");
+        } 
+    }
+    let mut tags = tags.unwrap();
+    let booru = booru.unwrap();
+
+    {
+        let mut name = tags.split(" ").collect::<Vec<&str>>().first().unwrap().to_string();
+        name = name.replace("_(", " from ");
+        name = name.replace("_", " ");
+        name = name.replace(")", "");
+        name += "!";
+        &msg.channel_id.say(&ctx, capitalize_first(&name))?;
+    }
+
+    let a = args.message();
+    let args_tags = format!("{} {}", a, tags);
+    tags = args_tags.as_str();
+
+    let args_tags = Args::new(&tags, &[Delimiter::Single(' ')]);
+
+    if booru == "idol" {
+        idol(&mut ctx.clone(), &msg, args_tags)?;
+    } else if booru == "sankaku" || booru == "chan" {
+        chan(&mut ctx.clone(), &msg, args_tags)?;
+    } else {
+        if commands.as_ref().unwrap().contains(&booru.to_string()) {
+            let b: Booru = {
+                let mut x = Booru::default();
+
+                for b in boorus {
+                    if b.names.contains(&booru.to_string()) {
+                        x = b.clone()
+                    }
+                }
+                x
+            };
+            get_booru(&mut ctx.clone(), &msg.clone(), &b, args_tags)?;
+        } else {
+            &msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan")?;
+            chan(&mut ctx.clone(), &msg, args_tags)?;
+        }
+    }
+
     Ok(())
 }

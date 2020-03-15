@@ -7,7 +7,11 @@
 
 mod utils; // Load the utils module
 mod commands; // Load the commands module
-
+// BEST_BOY_COMMAND
+use commands::booru::{
+    BEST_BOY_COMMAND as BG_COMMAND,
+    BEST_GIRL_COMMAND as BB_COMMAND,
+};
 use commands::booru::*; // Import everything from the booru module.
 use commands::sankaku::*; // Import everything from the sankaku booru module.
 use commands::osu::*; // Import everything from the osu module.
@@ -178,7 +182,7 @@ Available parameters:
 `-n` Non Safe (Random between E or Q)
 
 Inspired by -GN's WaifuBot ([source](https://github.com/isakvik/waifubot/))"]
-#[commands(booru_command)]
+#[commands(booru_command, BB, BG)]
 struct AllBoorus;
 
 // The Image Manipulation command group.
@@ -216,8 +220,10 @@ struct Configuration;
 // This is the basic help message
 // We use \ at the end of the line to easily allow for newlines visually on the code.
 #[individual_command_tip = "Hello!
-If youd like to get extra information about a specific command, just pass it as an argument.
-You can also react with 🚫 on any message sent by the bot to delete it.\n"]
+If youd like to get more information about a specific command or group, you can just pass it as a command argument.
+All the command examples through out the help will be shown using the default prefix `.`
+
+You can react with 🚫 on *any* message sent by the bot to delete it.\n"]
 // This is the text that gets displayed when a given parameter was not found for information.
 #[command_not_found_text = "Could not find: `{}`."]
 // This is the level of similarities between the given argument and possible other arguments.

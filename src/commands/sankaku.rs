@@ -40,7 +40,8 @@ struct SankakuData {
 }
 
 #[command]
-fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+#[aliases(idol_complex, idolcomplex, sankaku_idol, sankakuidol)]
+pub fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let (login, pass) = {
         let data = ctx.data.read(); // set inmutable global data.
         let tokens = data.get::<Tokens>().unwrap(); 
@@ -168,8 +169,8 @@ fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 }
 
 #[command]
-#[aliases(sankaku, complex, sc)]
-fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+#[aliases(sankaku, complex, sc, sankakuchan, sankakublack, sankakuwhite, sankaku_chan, sankaku_black, sankaku_white, sankaku_complex)]
+pub fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let channel = &ctx.http.get_channel(msg.channel_id.0)?; // Gets the channel object to be used for the nsfw check.
     // Checks if the command was invoked on a DM
     let dm_channel: bool;
