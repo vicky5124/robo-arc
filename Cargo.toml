@@ -1,6 +1,6 @@
 [package]
 name = "arc_bot"
-version = "0.0.18-alpha"
+version = "0.0.19-alpha"
 authors = ["nitsuga5124 <nitsuga5124@gmail.com>"]
 edition = "2018"
 
@@ -21,7 +21,7 @@ qrcode = "0.12.0"
 [dependencies.serenity]
 version = "0.8"
 default-features = false
-features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "native_tls_backend", "voice", "absolute_ratelimits"]
+features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "native_tls_backend", "absolute_ratelimits"]
 
 
 [dependencies.reqwest]

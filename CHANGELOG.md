@@ -2,6 +2,17 @@
 
 ### Commands
 - configure:
+  User subcommand:
+  > Can now configure a preffered booru
+- best_girl, best_boy:
+  New command:
+  Sends a picture of your best girl or best boy respectively.
+  Configured with .configure
+- chan:
+  Fixed error handling for invalid requests.
+
+### Commands
+- configure:
   Moved parameters to subcommands.
   New subcommand: user.
   User subcommand:
