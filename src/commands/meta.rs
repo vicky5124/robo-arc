@@ -338,9 +338,9 @@ fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
     msg.channel_id.send_message(&ctx, |m| {
         m.embed(|e| {
             e.title(format!("**{}** - Version: {}", bot_name, version));
-            e.description("General Purpose Discord Bot made in [Rust](https://www.rust-lang.org/) using [serenity.rs](https://github.com/serenity-rs/serenity)\n\nHaving any issues? join the [Support Server](https://discord.gg/kH7z85n)");
+            e.description("General Purpose Discord Bot made in [Rust](https://www.rust-lang.org/) using [serenity.rs](https://github.com/serenity-rs/serenity)\n\nHaving any issues? join the [Support Server](https://discord.gg/kH7z85n)\n\n[Top.GG](https://top.gg/bot/673680961535475712)");
 
-            e.field("Creator", "Tag: nitsuga5124#2207\nID: 182891574139682816", true);
+            //e.field("Creator", "Tag: nitsuga5124#2207\nID: 182891574139682816", true);
             e.field("Hoster", format!("Tag: {}\nID: {}", hoster_tag, hoster_id), true);
             e.field("Memory usage", format!("Complete:\n`{} KB`\nBase:\n`{} KB`",
                                     &full_mem.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en), &reasonable_mem.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en)), true);
