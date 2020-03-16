@@ -142,3 +142,17 @@ fn translate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult 
     })?;
     Ok(())
 }
+
+/// Searches a term on duckduckgo.com, for you.
+///
+/// Usage: `.ddg hello world`
+#[command]
+#[min_args(1)]
+#[aliases(ddg, duck, duckduckgo, search, better_than_google, betterthangoogle)]
+fn duck_duck_go(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    let url = Url::parse_with_params("https://lmddgtfy.net/",
+                                     &[("q", args.message())])?;
+    &msg.channel_id.say(&ctx, url)?;
+
+    Ok(())
+}
