@@ -218,14 +218,12 @@ Logging (set a channel to log specific events)
 
 # Boorus
 \"Fix tag filter and the 2 boorus that don't work\"
-Bestgirl (sends a picture of the user defined best girl)
-Bestboy (sends a picture of the user defined best boy)
 Source (sends the source of an image, using iqdb and saucenao)
 Exclude (excludes tags automatically from your search)
 nHentai (nhentai reader and searcher)
 
 # Music
-\"Port lavalink to rust/serenity\"
+\"Make a lavalink wrapper for serenity\"
 ```")?;
     Ok(())
 }
