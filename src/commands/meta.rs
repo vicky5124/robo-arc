@@ -1,7 +1,12 @@
-use crate::ShardManagerContainer;
+use crate::{
+    ShardManagerContainer,
+    DatabaseConnection,
+    utils::database::get_database,
+};
 use std::{
     fs::File,
     io::prelude::*,
+    sync::Arc,
     process::{
         Command,
         Stdio,
@@ -9,7 +14,10 @@ use std::{
     },
 };
 use serenity::{
-    prelude::Context,
+    prelude::{
+        Context,
+        RwLock,
+    },
     model::{
         channel::Message,
         Permissions,
@@ -361,5 +369,14 @@ fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
 #[command]
 fn changelog(ctx: &mut Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(&ctx, "<https://gitlab.com/nitsuga5124/robo-arc/-/blob/master/CHANGELOG.md>")?;
+    Ok(())
+}
+
+#[command]
+#[owners_only]
+fn reload_db(ctx: &mut Context, msg: &Message) -> CommandResult {
+    let mut data = ctx.data.write();
+    data.insert::<DatabaseConnection>(Arc::clone(&Arc::new(RwLock::new(get_database()?))));
+    msg.channel_id.say(&ctx, "Ok.")?;
     Ok(())
 }
