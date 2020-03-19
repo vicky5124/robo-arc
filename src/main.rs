@@ -281,54 +281,80 @@ impl EventHandler for Handler {
 
         // Read the global data
         let data_read = ctx.data.read();
+        let guild_id = &msg.guild_id;
 
-        let guild_prefix = [".", "arc!"]; // Change this with the specific guild prefixes when dynamic prefixes gets implemented.
+        let cache = ctx.cache.read();
+        let bot_id = cache.user.id.as_u64();
+        let bot_mention_spaced = format!("<@!{}> ", bot_id);
+        let bot_mention = format!("<@!{}>", bot_id);
+
+        let prefix;
+        if msg.content.starts_with(bot_mention.as_str()) {
+            prefix = bot_mention;
+        } else if msg.content.starts_with(bot_mention_spaced.as_str()) {
+            prefix = bot_mention_spaced;
+        } else if let Some(id) = guild_id {
+            let gid = id.0 as i64;
+            let db_conn = data_read.get::<DatabaseConnection>().unwrap();
+            let db_prefix = {
+                let mut db_conn = db_conn.write();
+                db_conn.query("SELECT prefix FROM prefixes WHERE guild_id = $1",
+                             &[&gid]).expect("Could not query the database.")
+            };
+            if db_prefix.is_empty() {
+                prefix = ".".to_string();
+            } else {
+                let row = db_prefix.first().unwrap();
+                let p = row.get::<_, Option<&str>>(0);
+                prefix = p.unwrap().to_string();
+            }
+        } else {
+            prefix = ".".to_string();
+        };
+
         // Get the list of booru commands and the data of the json.
         let commands = data_read.get::<BooruCommands>();
         let boorus = data_read.get::<BooruList>().unwrap();
 
-        // iterate over the guild prefixes
-        for prefix in &guild_prefix {
-            // if the message content starts with a prefix of the guild
-            if msg.content.starts_with(prefix) {
-                // remove the prefix from the message content
-                let command = msg.content.replacen(prefix, "", 1);
-                // split the message words into a Vector
-                let words = command.split(" ").collect::<Vec<&str>>();
-                // get the first item of the Vector, aka the command name.
-                // and everything after it.
-                let (command_name, parameters) = &words.split_first().unwrap();
+        // if the message content starts with a prefix of the guild
+        if msg.content.starts_with(&prefix){
+            // remove the prefix from the message content
+            let command = msg.content.replacen(&prefix, "", 1);
+            // split the message words into a Vector
+            let words = command.split(" ").collect::<Vec<&str>>();
+            // get the first item of the Vector, aka the command name.
+            // and everything after it.
+            let (command_name, parameters) = &words.split_first().unwrap();
 
-                // if the command invoked is on the list of booru commands
-                // (obtained from "global" data)
-                if commands.as_ref().unwrap().contains(&command_name.to_string()){
-                    let booru: Booru = {
-                        // Get the Booru default values
-                        let mut x = Booru::default();
-                        // Set X to the data on the json matching the command invoked
-                        for b in boorus {
-                            if b.names.contains(&command_name.to_string()) {
-                                x = b.clone();
-                            }
+            // if the command invoked is on the list of booru commands
+            // (obtained from "global" data)
+            if commands.as_ref().unwrap().contains(&command_name.to_string()){
+                let booru: Booru = {
+                    // Get the Booru default values
+                    let mut x = Booru::default();
+                    // Set X to the data on the json matching the command invoked
+                    for b in boorus {
+                        if b.names.contains(&command_name.to_string()) {
+                            x = b.clone();
                         }
-                        x
-                    };
-                    // transform the parameters into a string
-                    let mut parameters_str = parameters.iter().map(|word| format!(" {}", word)).collect::<String>();
-                    // if there are parameters
-                    if parameters_str != "".to_string() {
-                        // remove the first space on the string, created by the previous function
-                        parameters_str = parameters_str.chars().next().map(|c| &parameters_str[c.len_utf8()..]).unwrap().to_string();
                     }
-                    // Create an Args delimiting the string with a space (' ')
-                    let params = Args::new(&parameters_str, &[Delimiter::Single(' ')]);
-
-                    // Call the booru function with the obtained data
-                    if let Err(why) = get_booru(&mut ctx.clone(), &msg.clone(), &booru, params) {
-                        // Handle any error that may occur.
-                        let _ = msg.channel_id.say(&ctx, format!("There was an error executing the command: {}", capitalize_first(&why.to_string())));
-                    };
+                    x
+                };
+                // transform the parameters into a string
+                let mut parameters_str = parameters.iter().map(|word| format!(" {}", word)).collect::<String>();
+                // if there are parameters
+                if parameters_str != "".to_string() {
+                    // remove the first space on the string, created by the previous function
+                    parameters_str = parameters_str.chars().next().map(|c| &parameters_str[c.len_utf8()..]).unwrap().to_string();
                 }
+                // Create an Args delimiting the string with a space (' ')
+                let params = Args::new(&parameters_str, &[Delimiter::Single(' ')]);
+
+                // Call the booru function with the obtained data
+                if let Err(why) = get_booru(&mut ctx.clone(), &msg.clone(), &booru, params) {
+                    // Handle any error that may occur.
+                    let _ = msg.channel_id.say(&ctx, format!("There was an error executing the command: {}", capitalize_first(&why.to_string())));
+                };
             }
         }
 
@@ -532,30 +558,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // This is what allows for easier and faster commaands.
     client.with_framework(StandardFramework::new() // Create a new framework
         .configure(|c| c
-            .prefixes(vec![".", "arc!"]) // Add a list of prefixes to be used to invoke commands.
+            //.prefixes(vec![".", "arc!"]) // Add a list of prefixes to be used to invoke commands.
             .on_mention(Some(bot_id)) // Add a bot mention as a prefix.
             .with_whitespace(true) // Allow a whitespace between the prefix and the command name.
-            //.dynamic_prefixes({
-            //    let vec = [",,,", ",,,,"];
-            //    let mut index = 0;
+            .dynamic_prefix(|ctx, msg| {
+                let guild_id = &msg.guild_id;
 
-            //    let x = |_ctx: &mut Context, msg: &Message| {
-            //        if msg.is_private() {
-            //            return Some(",".to_owned());
-            //        } else {
-            //            let guild_id = msg.guild_id.unwrap_or(GuildId(0));
-            //            if guild_id.0 == 182892283111276544 {
-            //                let indexed = vec[0];
-            //                let pick = Some(indexed.to_owned());
-            //                index += 1;
-            //                return pick;
-            //        }
-            //    } 
-            //    return Some(",,".to_owned());
-            //    };
-            //    vec![x]
-            //})
+                let p;
+                if let Some(id) = guild_id {
+                    let gid = id.0 as i64;
+                    let data = ctx.data.read();
+                    let db_conn = data.get::<DatabaseConnection>().unwrap();
+                    let db_prefix = {
+                        let mut db_conn = db_conn.write();
+                        db_conn.query("SELECT prefix FROM prefixes WHERE guild_id = $1",
+                                     &[&gid]).expect("Could not query the database.")
+                    };
+                    if db_prefix.is_empty() {
+                        p = ".".to_string();
+                    } else {
+                        let row = db_prefix.first().unwrap();
+                        let prefix = row.get::<_, Option<&str>>(0);
+                        p = prefix.unwrap().to_string();
+                    }
+                } else {
+                    p = ".".to_string();
+                };
+                Some(p)
+            })
             .owners(owners) // Defines the owners, this can be later used to make owner specific commands.
+            .case_insensitivity(true)
         )
 
         // This is for errors that happen before command execution.
