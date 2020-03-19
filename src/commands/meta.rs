@@ -103,6 +103,7 @@ fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
     permissions.set(Permissions::MOVE_MEMBERS, true);
     permissions.set(Permissions::MANAGE_ROLES, true);
     permissions.set(Permissions::MANAGE_WEBHOOKS, true);
+    permissions.set(Permissions::MENTION_EVERYONE, true);
 
     // Creates the invite link for the bot with the permissions specified earlier.
     // Error handling in rust is so nice.
@@ -131,11 +132,12 @@ fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
                      ("Manage Messages", "Be able to clear reactions of timed out paginations.\nClear moderation command.", true),
                      ("Manage Webhooks", "For all the commands that can be ran on a schedule, so it's more efficient.", true),
                      ("Manage Channels", "To have native access to see and speak on every channel on the server.\nTo avoid slowmode.", true),
-                     ("Manage Roles", "Be able to give a stream notification role.\nMute moderation command", true),
+                     ("Manage Roles", "Be able to give a stream notification role.\nMute moderation command.", true),
                      ("Read Message History", "This is a required permission for every paginated command.", true),
                      ("Use External Emojis", "For all the commands that use emojis for better emphasis.", true),
                      ("View Audit Log", "To be able to have a more feature rich logging to a channel.", true),
                      ("Add Reactions", "To be able to add reactions for all the paginated commands.", true),
+                     ("Mention Everyone", "To be able to mention the livestream notification role.", true),
                      ("Send Messages", "So the bot can send the messages it needs to send.", true),
                      ("Speak", "To be able to play music on that voice channel.", true),
                      ("Embed Links", "For the tags to be able to embed images.", true),
