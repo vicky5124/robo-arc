@@ -211,7 +211,7 @@ Basic usage:
 ~~`.config guild VALUE DATA`~~
 `.config channel VALUE DATA`"]
 #[prefixes("config", "configure", "conf")]
-#[commands(channel, user)]
+#[commands(guild, channel, user)]
 struct Configuration;
 
 // This is a custom help command.

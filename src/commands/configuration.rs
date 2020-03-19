@@ -14,6 +14,10 @@ use serenity::{
         CommandResult,
         macros::command,
     },
+    utils::{
+        content_safe,
+        ContentSafeOptions,
+    },
 };
 
 fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: String) -> Result<(), Box<dyn std::error::Error>> {
@@ -209,5 +213,60 @@ fn annoy(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
             data.insert::<AnnoyedChannels>(annoyed_channels);
         }
     }
+    Ok(())
+}
+
+/// Configures the bot for the guild/server it was invoked on.
+///
+/// Configurable aspects:
+/// `prefix`: Changes the bot prefix for the guild.
+#[command]
+#[required_permissions(MANAGE_GUILD)]
+#[only_in("guilds")]
+#[aliases(server)]
+#[sub_commands(prefix)]
+fn guild(_ctx: &mut Context, _msg: &Message, _args: Args) -> CommandResult {
+    Ok(())
+}
+
+#[command]
+#[min_args(1)]
+fn prefix(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    if args.len() < 1 {
+        &msg.reply(&ctx, "Invalid prefix was given")?;
+        return Ok(());
+    }
+    let prefix = args.message();
+
+    // change prefix on db 
+    let client = {
+        let rdata = ctx.data.read();
+        Arc::clone(rdata.get::<DatabaseConnection>().expect("Could not find a database connection."))
+    };
+    let guild_id = msg.guild_id.unwrap().0 as i64;
+
+    let data = {
+        let mut client = client.write();
+        client.query("SELECT prefix FROM prefixes WHERE guild_id = $1", &[&guild_id])?
+    };
+
+    if data.is_empty() {
+        let mut client = client.write();
+        client.execute(
+            "INSERT INTO prefixes (guild_id, prefix) VALUES ($1, $2)",
+            &[&guild_id, &prefix]
+        )?;
+    } else {
+        let mut client = client.write();
+        client.execute(
+            "UPDATE prefixes SET prefix = $2 WHERE guild_id = $1",
+            &[&guild_id, &prefix]
+        )?;
+    }
+
+    let content_safe_options = ContentSafeOptions::default();
+    let bad_success_message = format!("Successfully changed your prefix to `{}`", prefix);
+    let success_message = content_safe(&ctx, bad_success_message, &content_safe_options);
+    &msg.reply(&ctx, success_message)?;
     Ok(())
 }
