@@ -1,4 +1,23 @@
-# 0.0.18-alpha
+# 0.0.20-alpha
+
+### Commands
+- duck_duck_go:
+  New command.
+  Searches a term on duckduckgo for you.
+- reload_db:
+  New command.
+  Reloads the database connection. Owner only.
+- invite:
+  Updated for recent role mention changes.
+- configure:
+  New subcommand: Guild
+  New subsubcommand of guild: prefix
+  > Configures the prefix for the guild.
+
+### Framework
+- Implemented custom prefix.
+
+# 0.0.19-alpha
 
 ### Commands
 - configure:
@@ -10,6 +29,8 @@
   Configured with .configure
 - chan:
   Fixed error handling for invalid requests.
+
+# 0.0.18-alpha
 
 ### Commands
 - configure:
