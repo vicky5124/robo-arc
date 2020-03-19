@@ -79,6 +79,13 @@ CREATE TABLE public.best_bg (
     CONSTRAINT best_bg_pkey PRIMARY KEY (user_id)
 )
 ```
+```sql
+CREATE TABLE public.prefixes (
+    guild_id bigint NOT NULL,
+    prefix text COLLATE pg_catalog."default",
+    CONSTRAINT prefixes_pkey PRIMARY KEY (guild_id)
+)
+```
 
 ### __**Translate**__:
 
