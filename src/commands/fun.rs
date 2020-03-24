@@ -96,11 +96,12 @@ fn urban(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 
     Ok(())
 }
+
+/// Translates a text to the specified language.
+/// Ex: `.translate ja Hello, World!`
 #[command]
 #[aliases(trans)]
 #[min_args(2)]
-#[description = "Translates a text to the specified language.
-Ex: `.translate ja Hello, World!`"]
 fn translate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
     let mut dest = args.single::<String>()?;
     let args_text = args.rest();
@@ -154,5 +155,32 @@ fn duck_duck_go(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                                      &[("q", args.message())])?;
     &msg.channel_id.say(&ctx, url)?;
 
+    Ok(())
+}
+
+/// Encrypts a message. **NOT WORKING**
+/// 15 character limit.
+/// Usage: `.encrypt Hello!`
+/// 
+/// You can decrypt the message with .decrypt
+#[command]
+#[min_args(1)]
+fn encrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    let message = args.message();
+    let bytes = message.as_bytes();
+    let encrypted_bytes = bytes.iter().map(|b| format!("{}", b)).collect::<String>();
+    let encrypted_message = encrypted_bytes.parse::<u128>()? << 1;
+    &msg.channel_id.say(&ctx, format!("`{:X}`", encrypted_message))?;
+    Ok(())
+}
+/// Decrypts and encrypted message. **NOT WORKING**
+/// Usage: `.decrypt FBACB56A78BAFCD8239012F`
+#[command]
+fn decrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    let message = args.message();
+    let bytes = message.as_bytes();
+    let encrypted_bytes = bytes.iter().map(|b| format!("{}", b)).collect::<String>();
+    let encrypted_message = encrypted_bytes.parse::<u128>()? >> 1;
+    &msg.channel_id.say(&ctx, format!("`{:X}`", encrypted_message))?;
     Ok(())
 }
