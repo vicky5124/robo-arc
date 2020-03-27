@@ -52,7 +52,7 @@ You'll need to have a psql server running. If you don't know how, i recommend us
 
     NOTE: if you are using windows, docker requires the hyper-V module to be enabled, which breaks other virualization software like VirtualBox or VMWare. If you use any of those software's, consider setting the database on the system natively.
 
-With a created database and you connected with a user, youll need to create the osu_user table.
+With a created database and you connected with a user, youll need to create different tables, required by the bot.
 ```sql
 CREATE TABLE public.osu_user (
     discord_id bigint NOT NULL,
@@ -98,8 +98,10 @@ NOTE: If you use this package for any other project, it will still work as usual
 
 To get the modification for it to work, you will need to edit the file:
 \
-`$HOME/.local/lib/python3.8/site-packages/googletrans/client.py`
+*nix: `$HOME/.local/lib/python3.8/site-packages/googletrans/client.py`
 \
+Windows: google it.
+
 And add the next function inside the Translator class:
 ```py
 def rust_translate(self, text, dest, src='auto'):

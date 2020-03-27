@@ -6,35 +6,41 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
-rand = "0.7.3"
-toml = "0.5.6"
-postgres = "0.17.1"
-regex = "1.3.4"
-bitflags = "1.2.1"
-num-format = "0.4.0"
-hey_listen = "0.4.0"
-serde_json = "1.0.48"
-image = "0.23.0"
-qrcode = "0.12.0"
+[dependencies] # a lot of github smh
+rand = "0.7.3" # https://github.com/rust-random/rand
+toml = "0.5.6" # https://github.com/alexcrichton/toml-rs
+postgres = "0.17.1" # https://github.com/sfackler/rust-postgres
+regex = "1.3.4" # https://github.com/rust-lang/regex
+bitflags = "1.2.1" # https://github.com/bitflags/bitflags
+num-format = "0.4.0" # https://github.com/bcmyers/num-format
+hey_listen = "0.4.0" # https://github.com/lakelezz/hey_listen
+serde_json = "1.0.48" # https://github.com/serde-rs/json
+image = "0.23.0" # https://github.com/image-rs/image
+qrcode = "0.12.0" # https://github.com/kennytm/qrcode-rust
 
+# https://github.com/serenity-rs/serenity
 [dependencies.serenity]
 version = "0.8"
 default-features = false
 features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "native_tls_backend", "absolute_ratelimits"]
 
-
+# https://github.com/seanmonstar/reqwest
 [dependencies.reqwest]
 version = "0.10.1"
 features = ["blocking", "json"]
 
+# https://github.com/serde-rs/serde
+# https://serde.rs/
 [dependencies.serde]
 version = "1.0.104"
 features = ["derive"]
 
+# https://github.com/tafia/quick-xml
 [dependencies.quick-xml]
 version = "0.17.2"
 features = ["serialize"]
 
+# used for profiling for flamegraph
+# https://github.com/flamegraph-rs/flamegraph
 [profile.release]
 debug = true

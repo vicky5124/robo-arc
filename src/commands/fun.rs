@@ -19,6 +19,7 @@ use reqwest::{
 };
 use serde::Deserialize;
 
+// Struct used to deserialize the output of the urban dictionary api call...
 #[derive(Deserialize, Clone)]
 struct UrbanDict {
     definition: String,
@@ -31,11 +32,14 @@ struct UrbanDict {
     word: String,
 }
 
+// But it returns a list, so we use this for the request.
 #[derive(Deserialize)]
 struct UrbanList {
     list: Vec<UrbanDict>
 }
 
+/// Sends a qr code of the term mentioned.
+/// Usage: `.qr Hello world!`
 #[command]
 fn qr(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let words = args.message();
@@ -50,6 +54,8 @@ fn qr(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     Ok(())
 }
 
+/// Defines a term, using the urban dictionary.
+/// Usage: `.urban lmao`
 #[command]
 #[aliases(define)]
 fn urban(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {

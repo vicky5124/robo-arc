@@ -25,7 +25,7 @@ fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: String) 
         let rdata = ctx.data.read();
         Arc::clone(rdata.get::<DatabaseConnection>().expect("Could not find a database connection."))
     };
-    let user_id = *&msg.author.id.0 as i64;
+    let user_id = msg.author.id.0 as i64;
 
     let data = {
         let mut client = client.write();
@@ -112,7 +112,7 @@ fn booru(ctx: &mut Context, msg: &Message, raw_args: Args) -> CommandResult {
         Arc::clone(rdata.get::<DatabaseConnection>().expect("Could not find a database connection."))
     };
 
-    let user_id = *&msg.author.id.0 as i64;
+    let user_id = msg.author.id.0 as i64;
 
     let data = {
         let mut client = client.write();
@@ -164,7 +164,7 @@ fn annoy(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
         let rdata = ctx.data.read();
         Arc::clone(rdata.get::<DatabaseConnection>().expect("Could not find a database connection."))
     };
-    let channel_id = *&msg.channel_id.0 as i64;
+    let channel_id = msg.channel_id.0 as i64;
 
     let data = {
         let mut client = client.write();

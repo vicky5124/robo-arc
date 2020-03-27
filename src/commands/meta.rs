@@ -73,7 +73,7 @@ fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
    
     let latency;
     match runner.latency {
-        Some(ms) => latency = format!("{:?}", ms),
+        Some(ms) => latency = format!("{:.2}ms", ms.as_micros() as f32 / 1000.0),
         _ => latency = String::new(),
     }
     msg.reply(&ctx, format!("Ping? {}", latency))?;
