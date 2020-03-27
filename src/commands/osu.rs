@@ -144,7 +144,11 @@ pub fn left_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock
             Some(DispatcherRequest::StopListening)
         // Else, edit the message with updated data (increased vector index)
         } else {
-            *index -= 1;
+            if *index != 0 {
+                *index -= 1;
+            } else {
+                *index = event_data.clone().user_recent_raw.unwrap().len() - 1;
+            }
             let _ = short_recent_builder(http.clone(), &event_data, msg.clone(), *index);
             None
         }
@@ -183,6 +187,9 @@ pub fn right_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLoc
             Some(DispatcherRequest::StopListening)
         } else {
             *index += 1;
+            if event_data.clone().user_recent_raw.unwrap().len() == *index {
+                *index = 0;
+            }
             let _ = short_recent_builder(http.clone(), &event_data, msg.clone(), *index);
             None
         }
