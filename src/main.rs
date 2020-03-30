@@ -40,6 +40,11 @@ use std::{
     sync::Arc,
 };
 
+use tracing::{info, Level};
+use tracing_subscriber::FmtSubscriber;
+use tracing_log::LogTracer;
+use log;
+
 use postgres::Client as PgClient; // PostgreSQL Client struct.
 use toml::Value; // To parse the data of .toml files
 use serde_json; // To parse the data of .json files (where's serde_toml smh)
@@ -319,18 +324,24 @@ impl EventHandler for Handler {
 
         // obtain the mention strings of the bot.
         // one with a space after the mention, another one without it.
-        let bot_mention_spaced = format!("<@!{}> ", bot_id);
         let bot_mention = format!("<@!{}>", bot_id);
+        let bot_mention_spaced = format!("<@!{}> ", bot_id);
+        let bot_mention_pure = format!("<@{}>", bot_id);
+        let bot_mention_spaced_pure = format!("<@{}> ", bot_id);
 
         // Here's where i obtain the prefix used for the command.
         let prefix;
 
         // if the message starts with any of the 2 bot mentions
         // set the prefix to the mentions
-        if msg.content.starts_with(bot_mention.as_str()) {
-            prefix = bot_mention;
-        } else if msg.content.starts_with(bot_mention_spaced.as_str()) {
+        if msg.content.starts_with(bot_mention_spaced.as_str()) {
             prefix = bot_mention_spaced;
+        } else if msg.content.starts_with(bot_mention_spaced_pure.as_str()) {
+            prefix = bot_mention_spaced_pure;
+        } else if msg.content.starts_with(bot_mention.as_str()) {
+            prefix = bot_mention;
+        } else if msg.content.starts_with(bot_mention_pure.as_str()) {
+            prefix = bot_mention_pure;
         // else, obtain the custom prefix of the guild
         } else if let Some(id) = guild_id {
             // obtain the id of the guild as an i64, because the id is stored as a u64, which is
@@ -481,7 +492,7 @@ impl EventHandler for Handler {
             ReactionType::Custom{id, ..} => {
                 // If the emote is the GW version of slof, React back.
                 // This also shows a couple ways to do error handling.
-                if id.0 == 375459870524047361 {
+                if id.0 == 375_459_870_524_047_361 {
                     let reaction = msg.react(&ctx, add_reaction.emoji);
                     if let Err(why) = reaction {
                         eprintln!("There was an error adding a reaction: {}", why)
@@ -520,20 +531,45 @@ impl EventHandler for Handler {
 }
 
 
-
 // The main function!
 // Here's where everything starts.
 // This main function is a little special, as it returns Result
 // which allows ? to be used for error handling.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+
     // Opens the config.toml file and reads it's content
     let mut file = File::open("config.toml")?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
 
-    // gets the discord and osu api tokens from config.toml
-    let tokens = contents.parse::<Value>().unwrap();
-    let bot_token = tokens["discord"].as_str().unwrap();
+    // gets the data from the config.toml file
+    let configuration = contents.parse::<Value>().unwrap();
+    
+    if configuration["enable_tracing"].as_bool().unwrap() {
+        LogTracer::init()?;
+        log::trace!("test log");
+        // obtains the tracing level from the config
+        let base_level = configuration["trace_level"].as_str().unwrap();
+        let level = match base_level {
+            "error" => Level::ERROR,
+            "warn" => Level::WARN,
+            "info" => Level::INFO,
+            "debug" => Level::DEBUG,
+            "trace" => Level::TRACE,
+            _ => Level::TRACE,
+        };
+
+        let subscriber = FmtSubscriber::builder()
+            .with_max_level(level)
+            .finish();
+        tracing::subscriber::set_global_default(subscriber)?;
+
+        let number_of_yaks = 3;
+        info!(number_of_yaks, "Preparing to shave taks...");
+    }
+
+    // obtains the discord token from the config
+    let bot_token = configuration["discord"].as_str().unwrap();
     // Defines a client with the token obtained from the config.toml file.
     // This also starts up the Event Handler structure defined earlier.
     let mut client = Client::new(
@@ -551,7 +587,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Add the shard manager to the data.
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
         // Add the tokens to the data.
-        data.insert::<Tokens>(tokens);
+        data.insert::<Tokens>(configuration);
         // Add the recent index hashmap to data.
         data.insert::<RecentIndex>(HashMap::new());
 
@@ -694,7 +730,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // inform the user about an error when it happens.
             if let Err(why) = &error {
                 eprintln!("Error while ruiing {}:\n{:?}", &cmd_name, &error);
-                let err = format!("{}", why.0);
+                let err = why.0.to_string();
                 let _ = msg.channel_id.say(&ctx, &err);
             }
         })
