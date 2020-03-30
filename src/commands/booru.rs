@@ -134,7 +134,11 @@ pub fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) ->
     };
     
     // Sets the score the post has. this score is basically how many favorites the post has.
-    let score = &choice.score;
+    let mut score = &choice.score.as_str()[..];
+    if score == "" {
+        score = "0";
+    }
+    let score_string = score.to_string();
     // Changes the single letter ratings into the more descriptive names.
     let rating = match &choice.rating[..] {
         "s" => "Safe".to_string(),
@@ -146,7 +150,7 @@ pub fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) ->
     // Addes a source field to the embed if available.
     let mut fields = vec![
         ("Rating", &rating, true),
-        ("Score", &score, true),
+        ("Score", &score_string, true),
     ];
 
     // Check if there's a source to get added to the fields.
