@@ -14,6 +14,7 @@ use commands::booru::{
     BEST_BOY_COMMAND as BG_COMMAND,
     BEST_GIRL_COMMAND as BB_COMMAND,
 };
+use commands::meta::PREFIX_COMMAND as PREFIXES_COMMAND;
 
 use commands::booru::*; // Import everything from the booru module.
 use commands::sankaku::*; // Import everything from the sankaku booru module.

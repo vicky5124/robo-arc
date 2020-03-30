@@ -240,9 +240,40 @@ nHentai (nhentai reader and searcher)
 
 /// Sends the current prefixes set to the server.
 #[command]
-#[aliases(prefix)]
-fn prefixes(ctx: &mut Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(&ctx, "Current prefixes:\n`.` `arc!`")?;
+#[aliases(prefixes)]
+fn prefix(ctx: &mut Context, msg: &Message) -> CommandResult {
+    let data_read = ctx.data.read();
+    let guild_id = &msg.guild_id;
+
+    let prefix;
+    if let Some(id) = guild_id {
+        // obtain the id of the guild as an i64, because the id is stored as a u64, which is
+        // not compatible with the postgre datbase types.
+        let gid = id.0 as i64;
+
+        // Obtain the database connection.
+        let db_conn = data_read.get::<DatabaseConnection>().unwrap();
+        // Read the configured prefix of the guild from the database.
+        let db_prefix = {
+            let mut db_conn = db_conn.write();
+            db_conn.query("SELECT prefix FROM prefixes WHERE guild_id = $1",
+                         &[&gid]).expect("Could not query the database.")
+        };
+        // If the guild doesn't have a configured prefix, return the default prefix.
+        if db_prefix.is_empty() {
+            prefix = ".".to_string();
+        // Else, just read the value that was stored on the database and return it.
+        } else {
+            let row = db_prefix.first().unwrap();
+            let p = row.get::<_, Option<&str>>(0);
+            prefix = p.unwrap().to_string();
+        }
+    } else {
+        prefix = ".".to_string();
+    }
+
+    msg.channel_id.say(&ctx, format!("Current prefix:\n`{}`", &prefix))?;
+
     Ok(())
 }
 
