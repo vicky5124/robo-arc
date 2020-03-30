@@ -104,7 +104,8 @@ pub fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
             let r = rand::thread_rng().gen_range(0, resp.len());
             let x = &resp[r];
             y += 1;
-            if &x.file_size < &8000000 {
+            // 8MB
+            if &x.file_size < &8_000_000 {
                 choice = x;
                 break;
             } else if &y > &(&resp.len()*2) {
@@ -232,7 +233,8 @@ pub fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
             let r = rand::thread_rng().gen_range(0, resp.len());
             let x = &resp[r];
             y += 1;
-            if &x.file_size < &8000000 {
+            // 8MB
+            if &x.file_size < &8_000_000 {
                 choice = x;
                 break;
             } else if &y > &(&resp.len()*2) {

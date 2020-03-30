@@ -26,10 +26,9 @@ fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Member, 
         let member = &msg.guild_id.unwrap().member(&ctx, UserId(member_id.parse::<u64>().unwrap()));
 
         match member {
-            Ok(m) => return Ok(m.to_owned()),
-            Err(why) => return Err(why.to_string()),
+            Ok(m) => Ok(m.to_owned()),
+            Err(why) => Err(why.to_string()),
         }
-
     } else {
         let guild = &msg.guild(&ctx).unwrap();
         let rguild = &guild.read();
@@ -54,15 +53,15 @@ fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Member, 
                     format!("No member named '{}' was found.\nDid you mean: {}", member_name, members_string)
                 }
             };
-            return Err(message);
+            Err(message)
         } else if &members.len() == &1 {
-            return Ok(members[0].to_owned());
+            Ok(members[0].to_owned())
         } else {
             let members_string = &mut members.iter().map(|i| format!("`{}#{}`|", i.user.read().name, i.user.read().discriminator)).collect::<String>();
             members_string.pop();
 
             let message = format!("Multiple members with the same name where found: '{}'", &members_string);
-            return Err(message);
+            Err(message)
         }
     }
 }

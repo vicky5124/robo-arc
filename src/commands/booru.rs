@@ -388,23 +388,21 @@ pub fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         idol(&mut ctx.clone(), &msg, args_tags)?;
     } else if booru == "sankaku" || booru == "chan" {
         chan(&mut ctx.clone(), &msg, args_tags)?;
-    } else {
-        if commands.as_ref().unwrap().contains(&booru.to_string()) {
-            let b: Booru = {
-                let mut x = Booru::default();
+    } else if commands.as_ref().unwrap().contains(&booru.to_string()) {
+        let b: Booru = {
+            let mut x = Booru::default();
 
-                for b in boorus {
-                    if b.names.contains(&booru.to_string()) {
-                        x = b.clone()
-                    }
+            for b in boorus {
+                if b.names.contains(&booru.to_string()) {
+                    x = b.clone()
                 }
-                x
-            };
-            get_booru(&mut ctx.clone(), &msg.clone(), &b, args_tags)?;
-        } else {
-            &msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan")?;
-            chan(&mut ctx.clone(), &msg, args_tags)?;
-        }
+            }
+            x
+        };
+        get_booru(&mut ctx.clone(), &msg.clone(), &b, args_tags)?;
+    } else {
+        &msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan")?;
+        chan(&mut ctx.clone(), &msg, args_tags)?;
     }
 
     Ok(())

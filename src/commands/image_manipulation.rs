@@ -71,7 +71,7 @@ fn pride(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
             }
         },
         // else say that an image was not provided.
-        None => (format!("No image was provided."), vec![0])
+        None => ("No image was provided.".to_string(), vec![0])
     };
 
     // if an error was returned from the previous checks, say the error and finish the command.

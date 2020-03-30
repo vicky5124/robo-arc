@@ -226,20 +226,20 @@ mod bitwhise_mods {
             const Perfect        = 16384;
             const Key4           = 32768;
             const Key5           = 65536;
-            const Key6           = 131072;
-            const Key7           = 262144;
-            const Key8           = 524288;
-            const FadeIn         = 1048576;
-            const Random         = 2097152;
-            const Cinema         = 4194304;
-            const Target         = 8388608;
-            const Key9           = 16777216;
-            const KeyCoop        = 33554432;
-            const Key1           = 67108864;
-            const Key3           = 134217728;
-            const Key2           = 268435456;
-            const ScoreV2        = 536870912;
-            const Mirror         = 1073741824;
+            const Key6           = 131_072;
+            const Key7           = 262_144;
+            const Key8           = 524_288;
+            const FadeIn         = 1_048_576;
+            const Random         = 2_097_152;
+            const Cinema         = 4_194_304;
+            const Target         = 8_388_608;
+            const Key9           = 16_777_216;
+            const KeyCoop        = 33_554_432;
+            const Key1           = 67_108_864;
+            const Key3           = 134_217_728;
+            const Key2           = 268_435_456;
+            const ScoreV2        = 536_870_912;
+            const Mirror         = 1_073_741_824;
         }
     }
     bitflags! {
@@ -258,24 +258,24 @@ mod bitwhise_mods {
             const FL = 1024;
             const AT = 2048;
             const SO = 4096;
-            const AP = 8192;//Autopilot
+            const AP = 8192;
             const PF = 16384;
             const K4 = 32768;
             const K5 = 65536;
-            const K6 = 131072;
-            const K7 = 262144;
-            const K8 = 524288;
-            const FI = 1048576;
-            const RD = 2097152;
-            const CN = 4194304;
-            const TP = 8388608;
-            const K9 = 16777216;
-            const CO = 33554432;
-            const K1 = 67108864;
-            const K3 = 134217728;
-            const K2 = 268435456;
-            const V2 = 536870912;
-            const MR = 1073741824;
+            const K6 = 131_072;
+            const K7 = 262_144;
+            const K8 = 524_288;
+            const FI = 1_048_576;
+            const RD = 2_097_152;
+            const CN = 4_194_304;
+            const TP = 8_388_608;
+            const K9 = 16_777_216;
+            const CO = 33_554_432;
+            const K1 = 67_108_864;
+            const K3 = 134_217_728;
+            const K2 = 268_435_456;
+            const V2 = 536_870_912;
+            const MR = 1_073_741_824;
         }
     }
 }
@@ -388,24 +388,22 @@ pub struct EventData {
 }
 
 // Calculates the accuracy % from the number of 300's 100's 50's and misses.
-fn acc_math(_300: f32, _100: f32, _50: f32, _miss: f32) -> f32 {
-    let mix = _300  + _100  + _50  + _miss ;
+fn acc_math(score_300: f32, score_100: f32, score_50: f32, _miss: f32) -> f32 {
+    let mix = score_300  + score_100  + score_50  + _miss ;
 
-    let pcount50 = _50  / mix * (100.0 / 6.0);
-    let pcount100 = _100  / mix * (100.0 / 3.0);
-    let pcount300 = _300  / mix * 100.0;
+    let pcount50 = score_50  / mix * (100.0 / 6.0);
+    let pcount100 = score_100  / mix * (100.0 / 3.0);
+    let pcount300 = score_300  / mix * 100.0;
 
     let acc: f32 = pcount50 + pcount100 + pcount300;
     acc
 }
 
 // Calculates the progress on the map with the number of notes hit over the number of notes the map has.
-fn progress_math(count_normal: f32, count_slider: f32, count_spinner: f32, _300: f32, _100: f32, _50: f32, _miss: f32) -> f32 {
+fn progress_math(count_normal: f32, count_slider: f32, count_spinner: f32, score_300: f32, score_100: f32, score_50: f32, _miss: f32) -> f32 {
     let all_the_things = count_normal + count_slider + count_spinner;
-    let everything = _300 + _100 + _50 + _miss;
-    let progress = everything / all_the_things * 100.0;
-    
-    progress
+    let everything = score_300 + score_100 + score_50 + _miss;
+    everything / all_the_things * 100.0
 }
 
 // Obtains the long named version of the mods
@@ -432,9 +430,9 @@ fn get_osu_id(name: &String, osu_key: &String) -> Result<i32, Box<dyn std::error
 
     if resp.len() != 0 {
         let id: i32 = resp[0].user_id.trim().parse()?;
-        return Ok(id);
+        Ok(id)
     } else {
-        return Ok(0);
+        Ok(0)
     }
 }
 
@@ -632,36 +630,33 @@ fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRe
             
             // this triggers if the argument was not a keyword argument and adds the argument to
             // the username adding a space.
+            } else if empty_data {
+                user_data.name += arg;
             } else {
-                if empty_data {
-                    user_data.name += arg;
-                } else {
-                    user_data.name = if user_data.name == user_data.old_name {arg.to_string()} else {user_data.name + " " + arg};
-                }
+                user_data.name = if user_data.name == user_data.old_name {arg.to_string()} else {user_data.name + " " + arg};
             }
         }
+    } else if empty_data {
+        // sends the help of the command
+        let a = Args::new("configure_osu", &[Delimiter::Single(' ')]);
+        (MY_HELP.fun)(&mut ctx.clone(), &msg, a, &MY_HELP.options, &[&OSU_GROUP], HashSet::new())?;
+        return Ok(());
     } else {
-        if empty_data {
-            // sends the help of the command
-            let a = Args::new("configure_osu", &[Delimiter::Single(' ')]);
-            (MY_HELP.fun)(&mut ctx.clone(), &msg, a, &MY_HELP.options, &[&OSU_GROUP], HashSet::new())?;
-            return Ok(());
-        } else {
-            // gets the current configuration of the user
-            let current_conf = format!("
+        // gets the current configuration of the user
+        let current_conf = format!("
 Your current configuration:
 ```User ID: '{}'
 Username: '{}'
 Mode ID: '{}'
 Show PP? '{}'
 Short recent? '{}'```",
-                user_data.osu_id, user_data.name, user_data.mode.unwrap(), user_data.pp.unwrap(), user_data.short_recent.unwrap()
-            );
-            // and sends it.
-            msg.channel_id.say(&ctx, current_conf)?;
-            return Ok(());
-        }
+            user_data.osu_id, user_data.name, user_data.mode.unwrap(), user_data.pp.unwrap(), user_data.short_recent.unwrap()
+        );
+        // and sends it.
+        msg.channel_id.say(&ctx, current_conf)?;
+        return Ok(());
     }
+
     // calls the get_osu_id function to get the id of the user.
     user_data.osu_id = get_osu_id(&user_data.name, &osu_key)?;
 
@@ -756,8 +751,7 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
     let client = {
         let rdata = ctx.data.read();
 
-        let client = Arc::clone(rdata.get::<DatabaseConnection>().expect("no database connection found")); // get the database connection from the global data.
-        client
+        Arc::clone(rdata.get::<DatabaseConnection>().expect("no database connection found")) // get the database connection from the global data.
     };
 
     // Obtain the event dispatcher from the global data

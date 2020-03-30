@@ -54,29 +54,28 @@ fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: String) 
             )?;
             msg.reply(&ctx, format!("Successfully set your waifu to `{}`", &tags))?;
         }
-    } else {
-        if sex == "boy" {
-            // update +1boy
-            tags += " 1boy";
+    } else if sex == "boy" {
+        // update +1boy
+        tags += " 1boy";
 
-            let mut client = client.write();
-            client.execute(
-                "UPDATE best_bg SET best_boy = $1 WHERE user_id = $2",
-                &[&tags, &user_id]
-            )?;
-            msg.reply(&ctx, format!("You successfully broke up with your old husbando, now your husbando is `{}`", &tags))?;
-        } else if sex == "girl" {
-            // update +1girl
-            tags += " 1girl";
+        let mut client = client.write();
+        client.execute(
+            "UPDATE best_bg SET best_boy = $1 WHERE user_id = $2",
+            &[&tags, &user_id]
+        )?;
+        msg.reply(&ctx, format!("You successfully broke up with your old husbando, now your husbando is `{}`", &tags))?;
+    } else if sex == "girl" {
+        // update +1girl
+        tags += " 1girl";
 
-            let mut client = client.write();
-            client.execute(
-                "UPDATE best_bg SET best_girl = $1 WHERE user_id = $2",
-                &[&tags, &user_id]
-            )?;
-            msg.reply(&ctx, format!("You successfully broke up with your old waifu, now your waifu is `{}`", &tags))?;
-        }
+        let mut client = client.write();
+        client.execute(
+            "UPDATE best_bg SET best_girl = $1 WHERE user_id = $2",
+            &[&tags, &user_id]
+        )?;
+        msg.reply(&ctx, format!("You successfully broke up with your old waifu, now your waifu is `{}`", &tags))?;
     }
+
     Ok(())
 }
 
