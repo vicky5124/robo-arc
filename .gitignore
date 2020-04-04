@@ -3,3 +3,5 @@
 tokens.toml
 config.toml
 .env
+i_want_to_see.txt
+*.log
