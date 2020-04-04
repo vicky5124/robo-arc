@@ -1,3 +1,21 @@
+# 0.0.21-alpha
+
+### Commands
+- encrypt/decrypt:
+  New command, but broken.
+- SafeBooru / RealBooru:
+  Fixed recent api change.
+
+### Debug
+- Added basic logging.
+
+### Optimizations
+- Fixed linting
+
+### Bugs
+- Fixed command prefixes on booru commands.
+
+
 # 0.0.20-alpha
 
 ### Commands
