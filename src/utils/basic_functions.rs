@@ -1,5 +1,5 @@
 // Capitalizes the first letter of a str.
-pub fn capitalize_first(input: &str) -> String {
+pub async fn capitalize_first(input: &str) -> String {
     // get an array of all the charactesr on the string
     let mut c = input.chars();
     match c.next() {

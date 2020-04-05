@@ -5,8 +5,9 @@ use crate::{
 
 use std::{
     borrow::Cow,
-    io::Read,
+    //io::Read,
 };
+use futures_util::StreamExt;
 
 use serenity::{
     prelude::Context,
@@ -22,7 +23,7 @@ use serenity::{
 use serde::Deserialize;
 use rand::Rng;
 use reqwest::{
-    blocking::Client as ReqwestClient,
+    Client as ReqwestClient,
     header::*,
     Url,
 };
@@ -41,9 +42,9 @@ struct SankakuData {
 
 #[command]
 #[aliases(idol_complex, idolcomplex, sankaku_idol, sankakuidol)]
-pub fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let (login, pass) = {
-        let data = ctx.data.read(); // set inmutable global data.
+        let data = ctx.data.read().await; // set inmutable global data.
         let tokens = data.get::<Tokens>().unwrap(); 
 
         let login = tokens["sankaku"]["idol_login"].as_str().unwrap().to_owned();
@@ -51,7 +52,7 @@ pub fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         (login, pass)
     };
 
-    let channel = &ctx.http.get_channel(msg.channel_id.0)?; // Gets the channel object to be used for the nsfw check.
+    let channel = &ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
     // Checks if the command was invoked on a DM
     let dm_channel: bool;
     if msg.guild_id == None {
@@ -61,12 +62,12 @@ pub fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     }
 
     let raw_tags = {
-        if channel.is_nsfw() || dm_channel {
-            let mut raw_tags = booru::obtain_tags_unsafe(args);
-            booru::illegal_check_unsafe(&mut raw_tags)
+        if channel.is_nsfw().await || dm_channel {
+            let mut raw_tags = booru::obtain_tags_unsafe(args).await;
+            booru::illegal_check_unsafe(&mut raw_tags).await
         } else {
-            let mut raw_tags = booru::obtain_tags_safe(args);
-            booru::illegal_check_safe(&mut raw_tags)
+            let mut raw_tags = booru::obtain_tags_safe(args).await;
+            booru::illegal_check_safe(&mut raw_tags).await
         }
     };
 
@@ -89,11 +90,13 @@ pub fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 
     let resp = reqwest.get(url)
         .headers(headers.clone())
-        .send()?
-        .json::<Vec::<SankakuData>>()?;
+        .send()
+        .await?
+        .json::<Vec::<SankakuData>>()
+        .await?;
 
     if resp.len() == 0 {
-        msg.channel_id.say(&ctx, "No posts match the provided tags.")?;
+        msg.channel_id.say(&ctx, "No posts match the provided tags.").await?;
         return Ok(());
     }
 
@@ -109,7 +112,7 @@ pub fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                 choice = x;
                 break;
             } else if &y > &(&resp.len()*2) {
-                msg.channel_id.say(&ctx, "All the content matching the requested tags is too big to be sent.")?;
+                msg.channel_id.say(&ctx, "All the content matching the requested tags is too big to be sent.").await?;
                 return Ok(());
             }
         }
@@ -119,17 +122,24 @@ pub fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let file_url = &format!("https:{}", &choice.file_url).to_owned()[..];
     let mut resp = reqwest.get(sample_url)
         .headers(headers.clone())
-        .send()?;
+        .send()
+        .await?
+        .bytes_stream();
 
-    let mut buf: Vec<u8> = vec![];
-    &resp.read_to_end(&mut buf)?;
+    //let mut buf: Vec<u8> = vec![];
+    //&resp.read_to_end(&mut buf)?;
+    let mut buf: Vec<u8> = Vec::new();
+
+    while let Some(item) = resp.next().await {
+        buf.push(item?.as_ref()[0]);
+    }
 
     let fullsize_tagless = &choice.file_url.split("?").nth(0).unwrap();
     let fullsize_split = fullsize_tagless.split("/").collect::<Vec<&str>>();
     let filename = fullsize_split.get(6).unwrap();
 
     let attachment = AttachmentType::Bytes {
-        data: Cow::from(&buf),
+        data: Cow::from(buf),
         filename: filename.to_string(),
     };
 
@@ -164,15 +174,15 @@ pub fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
             e
         });
         m
-    })?;
+    }).await?;
 
     Ok(())
 }
 
 #[command]
 #[aliases(sankaku, complex, sc, sankakuchan, sankakublack, sankakuwhite, sankaku_chan, sankaku_black, sankaku_white, sankaku_complex)]
-pub fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    let channel = &ctx.http.get_channel(msg.channel_id.0)?; // Gets the channel object to be used for the nsfw check.
+pub async fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    let channel = &ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
     // Checks if the command was invoked on a DM
     let dm_channel: bool;
     if msg.guild_id == None {
@@ -182,12 +192,12 @@ pub fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     }
 
     let raw_tags = {
-        if channel.is_nsfw() || dm_channel {
-            let mut raw_tags = booru::obtain_tags_unsafe(args);
-            booru::illegal_check_unsafe(&mut raw_tags)
+        if channel.is_nsfw().await || dm_channel {
+            let mut raw_tags = booru::obtain_tags_unsafe(args).await;
+            booru::illegal_check_unsafe(&mut raw_tags).await
         } else {
-            let mut raw_tags = booru::obtain_tags_safe(args);
-            booru::illegal_check_safe(&mut raw_tags)
+            let mut raw_tags = booru::obtain_tags_safe(args).await;
+            booru::illegal_check_safe(&mut raw_tags).await
         }
     };
 
@@ -210,8 +220,11 @@ pub fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 
     let raw_resp = reqwest.get(url)
         .headers(headers.clone())
-        .send()?
-        .json::<Vec::<SankakuData>>();
+        .send()
+        .await?
+        .json::<Vec::<SankakuData>>()
+        .await;
+
     let resp = match raw_resp {
         Ok(x) => x,
         Err(_) => {
@@ -222,7 +235,7 @@ pub fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 
 
     if resp.len() == 0 {
-        msg.channel_id.say(&ctx, "No posts match the provided tags.")?;
+        msg.channel_id.say(&ctx, "No posts match the provided tags.").await?;
         return Ok(());
     }
 
@@ -238,7 +251,7 @@ pub fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                 choice = x;
                 break;
             } else if &y > &(&resp.len()*2) {
-                msg.channel_id.say(&ctx, "All the content matching the requested tags is too big to be sent.")?;
+                msg.channel_id.say(&ctx, "All the content matching the requested tags is too big to be sent.").await?;
                 return Ok(());
             }
         }
@@ -249,10 +262,15 @@ pub fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 
     let mut resp = reqwest.get(sample_url)
         .headers(headers.clone())
-        .send()?;
+        .send()
+        .await?
+        .bytes_stream();
 
-    let mut buf: Vec<u8> = vec![];
-    &resp.read_to_end(&mut buf)?;
+    let mut buf: Vec<u8> = Vec::new();
+
+    while let Some(item) = resp.next().await {
+        buf.push(item?.as_ref()[0]);
+    }
 
     let fullsize_tagless = &choice.file_url.split("?").nth(0).unwrap();
     let fullsize_split = fullsize_tagless.split("/").collect::<Vec<&str>>();
@@ -297,7 +315,7 @@ pub fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
             e
         });
         m
-    })?;
+    }).await?;
 
     Ok(())
 }

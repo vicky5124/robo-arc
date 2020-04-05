@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use postgres::{
+use tokio_postgres::{
     Client,
     NoTls,
 };
@@ -24,7 +24,7 @@ struct Psql {
 }
 
 // This function obtains a database connection to the postgresql database used for the bot.
-pub fn get_database() -> Result<Client, Box<dyn std::error::Error>> {
+pub async fn get_database() -> Result<Client, Box<dyn std::error::Error>> {
     // Open the configuration file
     let mut file = File::open("config.toml")?;
     // and read it's content into a String
@@ -35,13 +35,20 @@ pub fn get_database() -> Result<Client, Box<dyn std::error::Error>> {
     let tokens: Config = toml::from_str(&contents.as_str()).unwrap();
 
     // Connect to the database with the information provided on the configuration.
-    let client = Client::connect(
+    let (client, connection) = tokio_postgres::connect(
         &format!("host={} user={} password={} dbname={} port={}",
                  tokens.psql.host, tokens.psql.username, tokens.psql.password, tokens.psql.database_name, tokens.psql.port
         ).to_owned()[..],
         // no Tls because the db is not ssl
         NoTls
-    )?;
+    ).await?;
+
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            eprintln!("connection error: {}", e);
+        }
+    });
+
     // return the client connection
     Ok(client)
 }

@@ -3,7 +3,6 @@
 use crate::{
     DatabaseConnection,
     Tokens,
-    RecentIndex,
     MY_HELP,
     OSU_GROUP,
 };
@@ -11,22 +10,8 @@ use crate::{
 use serenity::{
     http::Http,
     utils::Colour,
-    prelude::{
-        Context,
-        TypeMapKey,
-        RwLock,
-        ShareMap,
-    },
-    model::{
-        channel::{
-            Message,
-            ReactionType,
-        },
-        prelude:: {
-            MessageId,
-            ChannelId,
-        },
-    },
+    prelude::Context,
+    model::channel::Message,
     framework::standard::{
         Args,
         Delimiter,
@@ -35,20 +20,9 @@ use serenity::{
     },
 };
 
-// Used for the reaction events happening on the reaction command.
-use hey_listen::sync::{
-    ParallelDispatcher as Dispatcher,
-    ParallelDispatcherRequest as DispatcherRequest
-};
-
 use std::{
-    thread,
     sync::Arc,
     collections::HashSet,
-    hash::{
-        Hash,
-        Hasher,
-    },
 };
 
 // Used to format the numbers on the embeds.
@@ -60,142 +34,6 @@ use num_format::{
 use regex::Regex;
 use reqwest;
 use serde::Deserialize;
-
-
-// Defining the function that will be used to check if the isolated event should be triggered or
-// not
-#[derive(Clone)]
-pub enum DispatchEvent {
-    ReactEvent(MessageId, ReactionType, bool),
-}
-
-// Checks for equality between a reaction obtained and the stored data.
-impl PartialEq for DispatchEvent {
-    fn eq(&self, other: &DispatchEvent) -> bool {
-        match (self, other) {
-            // Checks if the reaction happened on a stored message_id anad emoji
-            (DispatchEvent::ReactEvent(self_message_id, self_emoji, _),
-            DispatchEvent::ReactEvent(other_message_id, other_emoji, _)) => {
-                self_message_id == other_message_id &&
-                self_emoji == other_emoji
-            }
-        }
-    }
-}
-
-// Required to be able to implement PartialEq
-impl Eq for DispatchEvent {}
-
-// IDK
-// Likely just used for extra validation.
-impl Hash for DispatchEvent {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        match self {
-            DispatchEvent::ReactEvent(msg_id, user_id, _) => {
-                msg_id.hash(state);
-                user_id.hash(state);
-            }
-        }
-    }
-}
-
-pub struct DispatcherKey;
-impl TypeMapKey for DispatcherKey {
-    type Value = Arc<RwLock<Dispatcher<DispatchEvent>>>;
-}
-
-
-// Function that triggers when a right reaction was recieved
-pub fn left_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>, _command: &str, event_data: EventData) ->
-    Box<dyn Fn(&DispatchEvent) -> Option<DispatcherRequest> + Send + Sync> {
-
-    Box::new(move |event| {
-        // Allow the event to die if it was requested so
-        let mut kill = false;
-        if let DispatchEvent::ReactEvent(_, _, true) = event {
-            kill = true;
-        }
-
-        // Obtain the message ID from the event function
-        let msg_id = match event {
-            DispatchEvent::ReactEvent(m, _, _) => m.0,
-        };
-
-        // Obtain the "global" data in write mode
-        let mut wdata = data.write();
-
-        // Increase the index of the data.
-        let hm = wdata.get_mut::<RecentIndex>().unwrap();
-        let index = hm.entry(msg_id).or_insert(0);
-        
-        // Obtain the message object
-        // But kill the event if the message was not able to be obtained
-        let msg = match http.clone().get_message(channel.0, msg_id){
-            Err(why) => {
-                println!("Could not obtain message: {}", why);
-                return Some(DispatcherRequest::StopListening);
-            },
-            Ok(x) => x
-        };
-
-        // Kill the event if said so
-        if kill {
-            hm.remove_entry(&msg_id);
-            Some(DispatcherRequest::StopListening)
-        // Else, edit the message with updated data (increased vector index)
-        } else {
-            if *index != 0 {
-                *index -= 1;
-            } else {
-                *index = event_data.clone().user_recent_raw.unwrap().len() - 1;
-            }
-            let _ = short_recent_builder(http.clone(), &event_data, msg.clone(), *index);
-            None
-        }
-    })
-}
-
-// Function that triggers when a left reaction was recieved
-// Uncommented as it's the same as the Right reaction event, just decreasing the index instead of
-// increasing it.
-pub fn right_reaction_event(http: Arc<Http>, channel: ChannelId, data: Arc<RwLock<ShareMap>>, _command: &str, event_data: EventData) ->
-    Box<dyn Fn(&DispatchEvent) -> Option<DispatcherRequest> + Send + Sync> {
-
-    Box::new(move |event| {
-        let mut kill = false;
-        if let DispatchEvent::ReactEvent(_, _, true) = event {
-            kill = true;
-        }
-        let msg_id = match event {
-            DispatchEvent::ReactEvent(m, _, _) => m.0,
-        };
-        let mut wdata = data.write();
-        let hm = wdata.get_mut::<RecentIndex>().unwrap();
-
-        let index = hm.entry(msg_id).or_insert(0);
-
-        let msg = match http.clone().get_message(channel.0, msg_id){
-            Err(why) => {
-                println!("Could not obtain message: {}", why);
-                return Some(DispatcherRequest::StopListening);
-            },
-            Ok(x) => x
-        };
-
-        if kill {
-            hm.remove_entry(&msg_id);
-            Some(DispatcherRequest::StopListening)
-        } else {
-            *index += 1;
-            if event_data.clone().user_recent_raw.unwrap().len() == *index {
-                *index = 0;
-            }
-            let _ = short_recent_builder(http.clone(), &event_data, msg.clone(), *index);
-            None
-        }
-   })
-}
-
 
 // This is a map to convert the bitwhise number obtained from the api
 // To the mods it represents.
@@ -388,7 +226,7 @@ pub struct EventData {
 }
 
 // Calculates the accuracy % from the number of 300's 100's 50's and misses.
-fn acc_math(score_300: f32, score_100: f32, score_50: f32, _miss: f32) -> f32 {
+async fn acc_math(score_300: f32, score_100: f32, score_50: f32, _miss: f32) -> f32 {
     let mix = score_300  + score_100  + score_50  + _miss ;
 
     let pcount50 = score_50  / mix * (100.0 / 6.0);
@@ -400,14 +238,14 @@ fn acc_math(score_300: f32, score_100: f32, score_50: f32, _miss: f32) -> f32 {
 }
 
 // Calculates the progress on the map with the number of notes hit over the number of notes the map has.
-fn progress_math(count_normal: f32, count_slider: f32, count_spinner: f32, score_300: f32, score_100: f32, score_50: f32, _miss: f32) -> f32 {
+async fn progress_math(count_normal: f32, count_slider: f32, count_spinner: f32, score_300: f32, score_100: f32, score_50: f32, _miss: f32) -> f32 {
     let all_the_things = count_normal + count_slider + count_spinner;
     let everything = score_300 + score_100 + score_50 + _miss;
     everything / all_the_things * 100.0
 }
 
 // Obtains the long named version of the mods
-fn _get_mods_long(value: u32) -> String {
+async fn _get_mods_long(value: u32) -> String {
     use bitwhise_mods::LongMods;
 
     let mods = LongMods::from_bits_truncate(value);
@@ -415,7 +253,7 @@ fn _get_mods_long(value: u32) -> String {
 }
 
 // Obtains the short named version of the mods
-fn get_mods_short(value: u32) -> String {
+async fn get_mods_short(value: u32) -> String {
     use bitwhise_mods::ShortMods;
 
     let mods = ShortMods::from_bits_truncate(value);
@@ -425,8 +263,8 @@ fn get_mods_short(value: u32) -> String {
 
 
 // This function simply calls the osu! api to get the id of the user from a username.
-fn get_osu_id(name: &String, osu_key: &String) -> Result<i32, Box<dyn std::error::Error>> {
-    let resp = get_osu_user(&name, osu_key)?;
+async fn get_osu_id(name: &String, osu_key: &String) -> Result<i32, Box<dyn std::error::Error>> {
+    let resp = get_osu_user(&name, osu_key).await?;
 
     if resp.len() != 0 {
         let id: i32 = resp[0].user_id.trim().parse()?;
@@ -438,54 +276,58 @@ fn get_osu_id(name: &String, osu_key: &String) -> Result<i32, Box<dyn std::error
 
 
 // Requests to the api the user data
-fn get_osu_user(name: &String, osu_key: &String) -> Result<Vec<OsuUserData>, Box<dyn std::error::Error>> {
+async fn get_osu_user(name: &String, osu_key: &String) -> Result<Vec<OsuUserData>, Box<dyn std::error::Error>> {
     let re = Regex::new("[^0-9A-Za-z\\[\\]'_ ]").unwrap();
     let mut sanitized_name = re.replace_all(name, "").into_owned();
     sanitized_name = sanitized_name.replace(" ", "%20");
 
     let url = format!("https://osu.ppy.sh/api/get_user?k={}&u={}&type=string", osu_key, sanitized_name);
-    let resp = reqwest::blocking::get(&url)?
-        .json::<Vec<OsuUserData>>()?;
-
+    let resp = reqwest::get(&url)
+        .await?
+        .json::<Vec<OsuUserData>>()
+        .await?;
     Ok(resp)
 }
 
 // Requests to the api the recent plays of a user
-fn get_osu_user_recent(user_id: i32, osu_key: &String) -> Result<Vec<OsuUserRecentData>, Box<dyn std::error::Error>> {
+async fn get_osu_user_recent(user_id: i32, osu_key: &String) -> Result<Vec<OsuUserRecentData>, Box<dyn std::error::Error>> {
     let url = format!("https://osu.ppy.sh/api/get_user_recent?k={}&u={}&type=id", osu_key, user_id);
-    let resp = reqwest::blocking::get(&url)?
-        .json::<Vec<OsuUserRecentData>>()?;
+    let resp = reqwest::get(&url)
+        .await?
+        .json::<Vec<OsuUserRecentData>>()
+        .await?;
     Ok(resp)
 }
 
 // Requests to the api the data of a beatmap
-fn get_osu_beatmap(beatmap_id: &String, osu_key: &String) -> Result<Vec<OsuBeatmapData>, Box<dyn std::error::Error>> {
+async fn get_osu_beatmap(beatmap_id: &String, osu_key: &String) -> Result<Vec<OsuBeatmapData>, Box<dyn std::error::Error>> {
     let url = format!("https://osu.ppy.sh/api/get_beatmaps?k={}&b={}", osu_key, beatmap_id);
-    let resp = reqwest::blocking::get(&url)?
-        .json::<Vec<OsuBeatmapData>>()?;
+    let resp = reqwest::get(&url)
+        .await?
+        .json::<Vec<OsuBeatmapData>>()
+        .await?;
     Ok(resp)
 }
 
 // Builds the short version of the recent embed and edits the specified message with it.
-fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: Message, index: usize) -> Result<(), Box<dyn std::error::Error>> {
+async fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: Message, index: usize) -> Result<(), Box<dyn std::error::Error>> {
     let user_data = event_data.user_db_data.as_ref().unwrap();
     let user_recent_raw = event_data.user_recent_raw.as_ref().unwrap();
     let osu_key = event_data.osu_key.as_ref().unwrap();
 
     let user_recent = &user_recent_raw[index];
-    let user_raw = get_osu_user(&user_data.name, &osu_key)?;
+    let user_raw = get_osu_user(&user_data.name, &osu_key).await?;
     let user = &user_raw[0];
 
-    let beatmap_raw = get_osu_beatmap(&user_recent.beatmap_id, &osu_key)?;
+    let beatmap_raw = get_osu_beatmap(&user_recent.beatmap_id, &osu_key).await?;
     let beatmap = &beatmap_raw[0];
 
-    let accuracy = acc_math(user_recent.count300.parse()?, user_recent.count100.parse()?, user_recent.count50.parse()?, user_recent.countmiss.parse()?);
+    let accuracy = acc_math(user_recent.count300.parse()?, user_recent.count100.parse()?, user_recent.count50.parse()?, user_recent.countmiss.parse()?).await;
 
-    let progress: f32 = progress_math(beatmap.count_normal.parse()?, beatmap.count_slider.parse()?, beatmap.count_spinner.parse()?,
-    user_recent.count300.parse()?, user_recent.count100.parse()?, user_recent.count50.parse()?, user_recent.countmiss.parse()?);
+    let progress: f32 = progress_math(beatmap.count_normal.parse()?, beatmap.count_slider.parse()?, beatmap.count_spinner.parse()?,user_recent.count300.parse()?, user_recent.count100.parse()?, user_recent.count50.parse()?, user_recent.countmiss.parse()?).await;
 
     let attempts = index;
-    let mods: String = get_mods_short(user_recent.enabled_mods.parse()?);
+    let mods: String = get_mods_short(user_recent.enabled_mods.parse()?).await;
 
     let rating_url: String;
 
@@ -533,7 +375,7 @@ fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: Messag
         });
 
         m
-    })?;
+    }).await?;
     Ok(())
 }
 
@@ -554,23 +396,23 @@ fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: Messag
 /// `n!osuc [ Frost ] mode=mania pp=yes recent=false`
 #[command]
 #[aliases("osuc", "config_osu", "configosu", "configureosu", "configo", "setosu", "osuset", "set_osu", "osu_set")]
-fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
+async fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
 
     let client;
     let osu_key = {
-        let data = ctx.data.read(); // set inmutable global data.
+        let data = ctx.data.read().await; // set inmutable global data.
         let tokens = data.get::<Tokens>().unwrap().clone(); // get the tokens from the global data.
         tokens["osu"].as_str().unwrap().to_string()
     };
 
-    let mut data = ctx.data.write(); // set mutable global data.
+    let mut data = ctx.data.write().await; // set mutable global data.
     client = data.get_mut::<DatabaseConnection>().unwrap(); // get the database connection from the global data.
 
     let author_id = msg.author.id.as_u64().clone() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
     let data ={
-        let mut client = client.write();
+        let mut client = client.write().await;
         client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
-                     &[&author_id])? // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
+                     &[&author_id]).await? // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
     };
     let empty_data: bool;
 
@@ -639,7 +481,7 @@ fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRe
     } else if empty_data {
         // sends the help of the command
         let a = Args::new("configure_osu", &[Delimiter::Single(' ')]);
-        (MY_HELP.fun)(&mut ctx.clone(), &msg, a, &MY_HELP.options, &[&OSU_GROUP], HashSet::new())?;
+        (MY_HELP.fun)(&mut ctx.clone(), &msg, a, &MY_HELP.options, &[&OSU_GROUP], HashSet::new()).await?;
         return Ok(());
     } else {
         // gets the current configuration of the user
@@ -653,12 +495,12 @@ Short recent? '{}'```",
             user_data.osu_id, user_data.name, user_data.mode.unwrap(), user_data.pp.unwrap(), user_data.short_recent.unwrap()
         );
         // and sends it.
-        msg.channel_id.say(&ctx, current_conf)?;
+        msg.channel_id.say(&ctx, current_conf).await?;
         return Ok(());
     }
 
     // calls the get_osu_id function to get the id of the user.
-    user_data.osu_id = get_osu_id(&user_data.name, &osu_key)?;
+    user_data.osu_id = get_osu_id(&user_data.name, &osu_key).await?;
 
     // applies the default values in case of being not specified.
     user_data.pp = match &user_data.pp {
@@ -677,27 +519,27 @@ Short recent? '{}'```",
     if empty_data {
         // inserts the data because the user is new.
         {
-            let mut client = client.write();
+            let mut client = client.write().await;
             client.execute(
                 "INSERT INTO osu_user (osu_id, osu_username, pp, mode, short_recent, discord_id) VALUES ($1, $2, $3, $4, $5, $6)",
                 &[&user_data.osu_id, &user_data.name, &user_data.pp.unwrap(), &user_data.mode.unwrap(), &user_data.short_recent.unwrap(), &author_id]
-            )?;
+            ).await?;
         }
 
     } else {
         // updates the database with the new user data.
         {
-            let mut client = client.write();
+            let mut client = client.write().await;
             client.execute(
                 "UPDATE osu_user SET osu_id = $1, osu_username = $2, pp = $3, mode = $4, short_recent = $5 WHERE discord_id = $6",
                 &[&user_data.osu_id, &user_data.name, &user_data.pp.unwrap(), &user_data.mode.unwrap(), &user_data.short_recent.unwrap(), &author_id]
-            )?;
+            ).await?;
         }
     }
    
     // if the id obtained is 0, it means the user doesn't exist.
     if user_data.osu_id == 0 {
-        msg.channel_id.say(&ctx, "It looks like your osu ID is 0, Is the Username correct?")?;
+        msg.channel_id.say(&ctx, "It looks like your osu ID is 0, Is the Username correct?").await?;
     }
 
     let current_conf = format!("
@@ -710,7 +552,7 @@ Short recent? '{}'```",
         user_data.osu_id, user_data.name, user_data.mode.unwrap(), user_data.pp.unwrap(), user_data.short_recent.unwrap()
     );
 
-    msg.channel_id.say(&ctx, current_conf)?;
+    msg.channel_id.say(&ctx, current_conf).await?;
 
     Ok(())
 }
@@ -730,7 +572,7 @@ Short recent? '{}'```",
 /// Ex: `.recent [ Frost ]`
 #[command]
 #[aliases("rs", "rc")]
-fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
+async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
     let mut arg_user = String::from("");
     if arguments.len() > 0 {
         let args = arguments.raw_quoted().collect::<Vec<&str>>();
@@ -742,23 +584,16 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
 
     // Obtains the osu! api key from the "global" data
     let osu_key = {
-        let data = ctx.data.read(); // set inmutable global data.
+        let data = ctx.data.read().await; // set inmutable global data.
         let tokens = data.get::<Tokens>().unwrap().clone(); // get the tokens from the global data.
         tokens["osu"].as_str().unwrap().to_string()
     };
     
     // Obtain the client connection from the "global" data.
     let client = {
-        let rdata = ctx.data.read();
+        let rdata = ctx.data.read().await;
 
         Arc::clone(rdata.get::<DatabaseConnection>().expect("no database connection found")) // get the database connection from the global data.
-    };
-
-    // Obtain the event dispatcher from the global data
-    // to be used for the left and right reaction events.
-    let dispatcher = {
-        let mut wdata = ctx.data.write();
-        wdata.get_mut::<DispatcherKey>().expect("Expected Dispatcher.").clone()
     };
 
     let mut user_data = OsuUserDBData::default(); // generate a basic structure with the default values.
@@ -768,9 +603,9 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
     if arg_user == "" {
         let author_id = msg.author.id.as_u64().clone() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
         {
-            let mut client = client.write();
+            let mut client = client.write().await;
             data = client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
-                                &[&author_id])?; // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
+                                &[&author_id]).await?; // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
 
         }
         arg_user = msg.author.name.clone();
@@ -778,9 +613,9 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
 
     } else {
         {
-            let mut client = client.write();
+            let mut client = client.write().await;
             data = client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE osu_username = $1", // query the SQL to the database.
-                                &[&arg_user])?;
+                                &[&arg_user]).await?;
         }
 
     }
@@ -796,7 +631,7 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
         }
     } else {
         if arg_user == "" {
-            msg.channel_id.say(&ctx, "It looks like you don't have a configured osu! username, consider configuring one with `n!osuc`")?;
+            msg.channel_id.say(&ctx, "It looks like you don't have a configured osu! username, consider configuring one with `n!osuc`").await?;
         }
         user_data.name = arg_user;
         user_data.mode = Some(0);
@@ -805,23 +640,23 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
     }
 
     if user_data.osu_id == 0 {
-        let user_id = get_osu_id(&user_data.name, &osu_key)?;
+        let user_id = get_osu_id(&user_data.name, &osu_key).await?;
         if user_id == 0 {
-            msg.channel_id.say(&ctx, format!("Could not find any osu! user with the name of '{}'", user_data.name))?;
+            msg.channel_id.say(&ctx, format!("Could not find any osu! user with the name of '{}'", user_data.name)).await?;
             return Ok(());
         } else {
             user_data.osu_id = user_id;
         }
     }
-    let bot_msg = msg.channel_id.say(&ctx, format!("Obtaining **{}** recent data", user_data.name))?;
+    let bot_msg = msg.channel_id.say(&ctx, format!("Obtaining **{}** recent data", user_data.name)).await?;
 
-    let user_recent_raw = get_osu_user_recent(user_data.osu_id, &osu_key)?;
+    let user_recent_raw = get_osu_user_recent(user_data.osu_id, &osu_key).await?;
 
     if user_recent_raw.len() < 1 {
         bot_msg.clone().edit(&ctx, |m| {
             m.content(format!("The user **{}** has not played in the last 24 hours.", user_data.name));
             m
-        })?;
+        }).await?;
         return Ok(());
     }
 
@@ -837,44 +672,44 @@ fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
     event_data.osu_key = Some(osu_key);
 
     // Build the initial recent embed
-    short_recent_builder(http.clone(), &event_data, bot_msg.clone(), 0)?;
+    short_recent_builder(http.clone(), &event_data, bot_msg.clone(), 0).await?;
 
     let mut timeout = 0;
 
-    // Add left and right reactions, to make the life easier for the user using the event.
-    bot_msg.react(&ctx, "⬅️")?;
-    bot_msg.react(&ctx, "➡️")?;
+    //// Add left and right reactions, to make the life easier for the user using the event.
+    //bot_msg.react(&ctx, "⬅️")?;
+    //bot_msg.react(&ctx, "➡️")?;
 
-    let left = ReactionType::Unicode(String::from("⬅️"));
-    let right = ReactionType::Unicode(String::from("➡️"));
+    //let left = ReactionType::Unicode(String::from("⬅️"));
+    //let right = ReactionType::Unicode(String::from("➡️"));
  
-    // Start the left and right events
-    dispatcher.write()
-        .add_fn(
-            DispatchEvent::ReactEvent(bot_msg.id, left.clone(), false),
-            left_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent", event_data.clone())
-        );
-    dispatcher.write()
-        .add_fn(
-            DispatchEvent::ReactEvent(bot_msg.id, right.clone(), false),
-            right_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent", event_data.clone())
-        );
-    
-    // Finish the events after a timeout.
-    loop {
-        thread::sleep(std::time::Duration::from_secs(1));
-        timeout += 1;
-        if timeout == 500 {
-            break;
-        }
-    }
-    dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, left.clone(), true));
-    dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, right.clone(), true));
+    //// Start the left and right events
+    //dispatcher.write()
+    //    .add_fn(
+    //        DispatchEvent::ReactEvent(bot_msg.id, left.clone(), false),
+    //        left_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent", event_data.clone())
+    //    );
+    //dispatcher.write()
+    //    .add_fn(
+    //        DispatchEvent::ReactEvent(bot_msg.id, right.clone(), false),
+    //        right_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent", event_data.clone())
+    //    );
+    //
+    //// Finish the events after a timeout.
+    //loop {
+    //    thread::sleep(std::time::Duration::from_secs(1));
+    //    timeout += 1;
+    //    if timeout == 500 {
+    //        break;
+    //    }
+    //}
+    //dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, left.clone(), true));
+    //dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, right.clone(), true));
 
-    // Clear the reactions of the message if the message was not sent on a DM
-    if msg.guild_id != None{
-        let _ = bot_msg.delete_reactions(&ctx);
-    };
+    //// Clear the reactions of the message if the message was not sent on a DM
+    //if msg.guild_id != None{
+    //    let _ = bot_msg.delete_reactions(&ctx);
+    //};
 
     Ok(())
 }

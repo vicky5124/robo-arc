@@ -15,35 +15,49 @@ use serenity::{
     },
 };
 use regex::Regex;
+use futures::{
+    //future::FutureExt,
+    stream,
+    StreamExt,
+};
 
-fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Member, String> {
+async fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Member, String> {
     let member_name = args.message();
     let mut members = Vec::new();
 
     if member_name.starts_with("<@") && member_name.ends_with(">") {
         let re = Regex::new("[<@!>]").unwrap();
         let member_id = re.replace_all(member_name, "").into_owned();
-        let member = &msg.guild_id.unwrap().member(&ctx, UserId(member_id.parse::<u64>().unwrap()));
+        let member = &msg.guild_id.unwrap().member(&ctx, UserId(member_id.parse::<u64>().unwrap())).await;
 
         match member {
             Ok(m) => Ok(m.to_owned()),
             Err(why) => Err(why.to_string()),
         }
     } else {
-        let guild = &msg.guild(&ctx).unwrap();
-        let rguild = &guild.read();
+        let guild = &msg.guild(&ctx).await.unwrap();
+        let rguild = &guild.read().await;
 
         for (_,m) in &rguild.members {
-            if m.display_name() == std::borrow::Cow::Borrowed(member_name) ||
-                m.user.read().name == member_name.to_string()
+            if m.display_name().await == std::borrow::Cow::Borrowed(member_name) ||
+                m.user.read().await.name == member_name.to_string()
             {
                 members.push(m);
             }
         }
 
         if &members.len() == &0 {
-            let similar_members = &rguild.members_containing(&member_name, false, false);
-            let mut members_string = similar_members.iter().map(|i| format!("`{}`|", i.display_name())).collect::<String>();
+            let similar_members = &rguild.members_containing(&member_name, false, false).await;
+
+            let mut members_string =  stream::iter(similar_members.iter())
+                .map(|m| async move {
+                    let member = m.0.user.read().await;
+                    format!("`{}`|", member.name)
+                })
+                .fold(String::new(), |mut acc, c| async move {
+                    acc.push_str(&c.await);
+                    acc
+                }).await;
 
             let message = {
                 if members_string == "".to_string() {
@@ -57,7 +71,16 @@ fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Member, 
         } else if &members.len() == &1 {
             Ok(members[0].to_owned())
         } else {
-            let members_string = &mut members.iter().map(|i| format!("`{}#{}`|", i.user.read().name, i.user.read().discriminator)).collect::<String>();
+            let mut members_string =  stream::iter(members.iter())
+                .map(|m| async move {
+                    let member = m.user.read().await;
+                    format!("`{}#{}`|", member.name, member.discriminator)
+                })
+                .fold(String::new(), |mut acc, c| async move {
+                    acc.push_str(&c.await);
+                    acc
+                }).await;
+
             members_string.pop();
 
             let message = format!("Multiple members with the same name where found: '{}'", &members_string);
@@ -75,14 +98,14 @@ fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Member, 
 #[required_permissions(KICK_MEMBERS)]
 #[min_args(1)]
 #[only_in("guilds")]
-fn kick(mut ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    let member = parse_member(&mut ctx, &msg, args);
+async fn kick(mut ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    let member = parse_member(&mut ctx, &msg, args).await;
     match member {
         Ok(m) => {
-            m.kick(&ctx)?;
-            &msg.reply(&ctx, format!("Successfully kicked member `{}#{}`", m.user.read().name, m.user.read().discriminator))?;
+            m.kick(&ctx).await?;
+            &msg.reply(&ctx, format!("Successfully kicked member `{}#{}`", m.user.read().await.name, m.user.read().await.discriminator)).await?;
         },
-        Err(why) => {&msg.reply(&ctx, why.to_string())?;},
+        Err(why) => {&msg.reply(&ctx, why.to_string()).await?;},
     }
 
     Ok(())
@@ -97,14 +120,14 @@ fn kick(mut ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 #[required_permissions(BAN_MEMBERS)]
 #[min_args(1)]
 #[only_in("guilds")]
-fn ban(mut ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    let member = parse_member(&mut ctx, &msg, args);
+async fn ban(mut ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    let member = parse_member(&mut ctx, &msg, args).await;
     match member {
         Ok(m) => {
-            m.ban(&ctx, &1)?;
-            &msg.reply(&ctx, format!("Successfully banned member `{}#{}`", m.user.read().name, m.user.read().discriminator))?;
+            m.ban(&ctx, &1).await?;
+            &msg.reply(&ctx, format!("Successfully banned member `{}#{}`", m.user.read().await.name, m.user.read().await.discriminator)).await?;
         },
-        Err(why) => {&msg.reply(&ctx, why.to_string())?;},
+        Err(why) => {&msg.reply(&ctx, why.to_string()).await?;},
     }
 
     Ok(())
@@ -119,19 +142,19 @@ fn ban(mut ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 #[num_args(1)]
 #[only_in("guilds")]
 #[aliases(purge)]
-fn clear(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn clear(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
     let num = args.single::<u64>();
     match num {
-        Err(_) => {&msg.channel_id.say(&ctx, "The value provided was not a valid number")?;},
+        Err(_) => {&msg.channel_id.say(&ctx, "The value provided was not a valid number").await?;},
         Ok(n) => {
-            let channel = &msg.channel(&ctx).unwrap().guild().unwrap();
+            let channel = &msg.channel(&ctx).await.unwrap().guild().unwrap();
 
-            let messages = &channel.read().messages(&ctx, |r| r.before(&msg.id).limit(n))?;
+            let messages = &channel.read().await.messages(&ctx, |r| r.before(&msg.id).limit(n)).await?;
             let messages_ids = messages.iter().map(|m| m.id).collect::<Vec<MessageId>>();
 
-            channel.read().delete_messages(&ctx, messages_ids)?;
+            channel.read().await.delete_messages(&ctx, messages_ids).await?;
 
-            &msg.channel_id.say(&ctx, format!("Successfully deleted `{}` message", n))?;
+            &msg.channel_id.say(&ctx, format!("Successfully deleted `{}` message", n)).await?;
         }
     }
     Ok(())

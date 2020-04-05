@@ -2,7 +2,7 @@ use serenity::framework::standard::Args;
 use rand::Rng;
 
 // This function parses the arguments on the booru commands and returns a list of the tags.
-pub fn obtain_tags_unsafe(raw_args: Args) -> Vec<String> {
+pub async fn obtain_tags_unsafe(raw_args: Args) -> Vec<String> {
     // transform the arguments into a Vec<&str> for easier management.
     let args = raw_args.raw_quoted().collect::<Vec<&str>>();
     let mut tags = Vec::new();
@@ -38,7 +38,7 @@ pub fn obtain_tags_unsafe(raw_args: Args) -> Vec<String> {
 }
 
 // This function parses the arguments for safe content on booru commands and returns a lit of the tags.
-pub fn obtain_tags_safe(raw_args: Args) -> Vec<String> {
+pub async fn obtain_tags_safe(raw_args: Args) -> Vec<String> {
     // transform the arguments into a Vec<&str> for easier management.
     let args = raw_args.raw_quoted().collect::<Vec<&str>>();
     // Since this will only allow safe tags, we add rating:Safe to the tags by default 
@@ -59,7 +59,7 @@ pub fn obtain_tags_safe(raw_args: Args) -> Vec<String> {
 }
 
 // This function removes any illegal tags for not SFW content from the tags.
-pub fn illegal_check_unsafe(tags: &mut Vec<String>) -> Vec<String> {
+pub async fn illegal_check_unsafe(tags: &mut Vec<String>) -> Vec<String> {
     // This is a list of tags that are banable from discord.
     // automatically remove them from the arguments if mentioned.
     let banlist = vec!["loli", "lolicon", "shota", "shotacon", "swastika", "gore", "guro", "smoking", "underage", "underaged", "jailbait", "extreme_content", "extremely_large_filesize", "contentious_content"];
@@ -76,7 +76,7 @@ pub fn illegal_check_unsafe(tags: &mut Vec<String>) -> Vec<String> {
 }
 
 // This function removes any illegal tags for SFW contnet from the tags.
-pub fn illegal_check_safe(tags: &mut Vec<String>) -> Vec<String> {
+pub async fn illegal_check_safe(tags: &mut Vec<String>) -> Vec<String> {
     // This is a list of tags that are banable when sent outside nsfw channels.
     let banlist = vec!["swastika", "gore", "guro", "smoking", "jailbait", "extreme_content", "extremely_large_filesize", "pussy", "dick", "nude", "partial_nude"];
     let mut new_tags = Vec::new();

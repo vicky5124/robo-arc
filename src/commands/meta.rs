@@ -8,7 +8,6 @@ use std::{
     io::prelude::*,
     sync::Arc,
     process::{
-        Command,
         Stdio,
         id,
     },
@@ -34,6 +33,7 @@ use num_format::{
     ToFormattedString,
 };
 use toml::Value;
+use tokio::process::Command;
 
 
 #[command] // Sets up a command
@@ -43,21 +43,21 @@ use toml::Value;
 // All command functions must take a Context and Message type parameters.
 // Optionally they may also take an Args type parameter for command arguments.
 // They must also return CommandResult.
-fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
     // The shard manager is an interface for mutating, stopping, restarting, and
     // retrieving information about shards.
-    let data = ctx.data.read();
+    let data = ctx.data.read().await;
     let shard_manager = match data.get::<ShardManagerContainer>() {
         Some(v) => v,
         None => {
-            let _ = msg.reply(&ctx, "There was a problem getting the shard manager");
+            msg.reply(&ctx, "There was a problem getting the shard manager").await?;
 
             return Ok(());
         },
     };
 
-    let manager = shard_manager.lock();
-    let runners = manager.runners.lock();
+    let manager = shard_manager.lock().await;
+    let runners = manager.runners.lock().await;
 
     // Shards are backed by a "shard runner" responsible for processing events
     // over the shard, so we'll get the information about the shard runner for
@@ -65,7 +65,7 @@ fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
     let runner = match runners.get(&ShardId(ctx.shard_id)) {
         Some(runner) => runner,
         None => {
-            let _ = msg.reply(&ctx,  "No shard found");
+            msg.reply(&ctx,  "No shard found").await?;
 
             return Ok(());
         },
@@ -76,14 +76,14 @@ fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
         Some(ms) => latency = format!("{:.2}ms", ms.as_micros() as f32 / 1000.0),
         _ => latency = String::new(),
     }
-    msg.reply(&ctx, format!("Ping? {}", latency))?;
+    msg.reply(&ctx, format!("Ping? {}", latency)).await?;
 
     Ok(())
 }
 
 /// This command just sends an invite of the bot with the required permissions.
 #[command]
-fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
     // Sets up the permissions
     let mut permissions = Permissions::empty();
     permissions.set(Permissions::KICK_MEMBERS, true);
@@ -107,7 +107,7 @@ fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
 
     // Creates the invite link for the bot with the permissions specified earlier.
     // Error handling in rust is so nice.
-    let url = match ctx.cache.read().user.invite_url(&ctx, permissions) {
+    let url = match ctx.cache.read().await.user.invite_url(&ctx, permissions).await {
         Ok(v) => v,
         Err(why) => {
             println!("Error creating invite url: {:?}", why);
@@ -116,11 +116,7 @@ fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
         }
     };
     
-    // Sends a DM to the author of the message with the invite link.
-    //let _ = msg.author.direct_message(&ctx, |m| {
-    //    m.content(format!("My invite link: <{}>\nCurrently private only, while the bot is in developement.", url))
-    //});
-    let _ = msg.channel_id.send_message(&ctx, |m| {
+    msg.channel_id.send_message(&ctx, |m| {
         m.embed( |e| {
             e.title("Invite Link");
             e.url(url);
@@ -149,7 +145,7 @@ fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
         });
 
         m
-    });
+    }).await?;
     Ok(())
 }
 
@@ -158,32 +154,32 @@ fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
 #[owners_only] // to only allow the owner of the bot to use this command
 #[min_args(3)] // Sets the minimum ammount of arguments the command requires to be ran. This is used to trigger the `NotEnoughArguments` error.
 // Testing command, please ignore.
-fn test(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
-    source(&mut ctx.clone(), &msg.clone(), args.clone())?;
+async fn test(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+    source(&mut ctx.clone(), &msg.clone(), args.clone()).await?;
     std::thread::sleep(std::time::Duration::from_secs(50));
     let x = args.single::<String>()?;
     let y = args.single::<i32>()?;
     let z = args.single::<i32>()?;
     
     let multiplied = y * z;
-    msg.channel_id.say(&ctx, format!("{} nice: {}", x, multiplied))?;
+    msg.channel_id.say(&ctx, format!("{} nice: {}", x, multiplied)).await?;
     let f = vec![123; 1000];
-    msg.channel_id.say(&ctx, format!("{:?}", &f))?;
+    msg.channel_id.say(&ctx, format!("{:?}", &f)).await?;
 
     Ok(())
 }
 
 /// Sends the source code url to the bot.
 #[command]
-fn source(ctx: &mut Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(&ctx, "<https://gitlab.com/nitsuga5124/robo-arc/>")?;
+async fn source(ctx: &mut Context, msg: &Message) -> CommandResult {
+    msg.channel_id.say(&ctx, "<https://gitlab.com/nitsuga5124/robo-arc/>").await?;
     Ok(())
 }
 
 /// Sends the current TO-DO list of the bot
 #[command]
 #[aliases(todo_list)]
-fn todo(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn todo(ctx: &mut Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(&ctx, "```prolog
 TODO:
 
@@ -234,15 +230,15 @@ nHentai (nhentai reader and searcher)
 
 # Music
 \"Make a lavalink wrapper for serenity\"
-```")?;
+```").await?;
     Ok(())
 }
 
 /// Sends the current prefixes set to the server.
 #[command]
 #[aliases(prefixes)]
-fn prefix(ctx: &mut Context, msg: &Message) -> CommandResult {
-    let data_read = ctx.data.read();
+async fn prefix(ctx: &mut Context, msg: &Message) -> CommandResult {
+    let data_read = ctx.data.read().await;
     let guild_id = &msg.guild_id;
 
     let prefix;
@@ -255,9 +251,9 @@ fn prefix(ctx: &mut Context, msg: &Message) -> CommandResult {
         let db_conn = data_read.get::<DatabaseConnection>().unwrap();
         // Read the configured prefix of the guild from the database.
         let db_prefix = {
-            let mut db_conn = db_conn.write();
+            let mut db_conn = db_conn.write().await;
             db_conn.query("SELECT prefix FROM prefixes WHERE guild_id = $1",
-                         &[&gid]).expect("Could not query the database.")
+                         &[&gid]).await.expect("Could not query the database.")
         };
         // If the guild doesn't have a configured prefix, return the default prefix.
         if db_prefix.is_empty() {
@@ -272,7 +268,7 @@ fn prefix(ctx: &mut Context, msg: &Message) -> CommandResult {
         prefix = ".".to_string();
     }
 
-    msg.channel_id.say(&ctx, format!("Current prefix:\n`{}`", &prefix))?;
+    msg.channel_id.say(&ctx, format!("Current prefix:\n`{}`", &prefix)).await?;
 
     Ok(())
 }
@@ -280,80 +276,80 @@ fn prefix(ctx: &mut Context, msg: &Message) -> CommandResult {
 /// Sends information about the bot.
 #[command]
 #[aliases(info)]
-fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
     let pid = id().to_string();
 
     let mut full_mem = String::new();
     let mut reasonable_mem = String::new();
 
-    let mut stdout = Command::new("pmap")
-        .arg(&pid)
-        //.arg(" | tail -n 1 | awk '/[0-9]K/{print $2}'")
-        .stdout(Stdio::piped())
-        .spawn()?;
+    //let mut stdout = Command::new("pmap")
+    //    .arg(&pid)
+    //    //.arg(" | tail -n 1 | awk '/[0-9]K/{print $2}'")
+    //    .stdout(Stdio::piped())
+    //    .spawn()?;
 
-    if let Some(pmap_out) = stdout.stdout.take() {
-        let mut tail = Command::new("tail")
-            .arg("-n 1")
-            .stdin(pmap_out)
-            .stdout(Stdio::piped())
-            .spawn()?;
-        stdout.wait()?;
+    //if let Some(pmap_out) = stdout.stdout.take() {
+    //    let mut tail = Command::new("tail")
+    //        .arg("-n 1")
+    //        .stdin(pmap_out)
+    //        .stdout(Stdio::piped())
+    //        .spawn()?;
+    //    stdout.await?;
 
-        if let Some(tail_out) = tail.stdout.take() {
-            let awk = Command::new("awk")
-                .arg("/[0-9]K/{print $2}")
-                .stdin(tail_out)
-                .stdout(Stdio::piped())
-                .spawn()?;
-            let awk_stdout = awk.wait_with_output()?;
-            tail.wait()?;
-            full_mem = String::from_utf8(awk_stdout.stdout).unwrap();
-            full_mem.pop();
-            full_mem.pop();
-        }
-    }
+    //    if let Some(tail_out) = tail.stdout.take() {
+    //        let awk = Command::new("awk")
+    //            .arg("/[0-9]K/{print $2}")
+    //            .stdin(tail_out)
+    //            .stdout(Stdio::piped())
+    //            .spawn()?;
+    //        let awk_stdout = awk.wait_with_output().await?;
+    //        tail.await?;
+    //        full_mem = String::from_utf8(awk_stdout.stdout).unwrap();
+    //        full_mem.pop();
+    //        full_mem.pop();
+    //    }
+    //}
 
-    let mut stdout = Command::new("pmap")
-        .arg(&pid)
-        //.arg(" | tail -n 1 | awk '/[0-9]K/{print $2}'")
-        .stdout(Stdio::piped())
-        .spawn()?;
+    //let mut stdout = Command::new("pmap")
+    //    .arg(&pid)
+    //    //.arg(" | tail -n 1 | awk '/[0-9]K/{print $2}'")
+    //    .stdout(Stdio::piped())
+    //    .spawn()?;
 
-    if let Some(pmap_out) = stdout.stdout.take() {
-        let mut head = Command::new("head")
-            .arg("-n 2")
-            .stdin(pmap_out)
-            .stdout(Stdio::piped())
-            .spawn()?;
+    //if let Some(pmap_out) = stdout.stdout.take() {
+    //    let mut head = Command::new("head")
+    //        .arg("-n 2")
+    //        .stdin(pmap_out)
+    //        .stdout(Stdio::piped())
+    //        .spawn()?;
 
-        stdout.wait()?;
+    //    stdout.await?;
 
-        if let Some(head_out) = head.stdout.take() {
-            let mut tail = Command::new("tail")
-                .arg("-n 1")
-                .stdin(head_out)
-                .stdout(Stdio::piped())
-                .spawn()?;
-            head.wait()?;
+    //    if let Some(head_out) = head.stdout.take() {
+    //        let mut tail = Command::new("tail")
+    //            .arg("-n 1")
+    //            .stdin(head_out)
+    //            .stdout(Stdio::piped())
+    //            .spawn()?;
+    //        head.await?;
 
-            if let Some(tail_out) = tail.stdout.take() {
-                let awk = Command::new("awk")
-                    .arg("/[0-9]K/{print $2}")
-                    .stdin(tail_out)
-                    .stdout(Stdio::piped())
-                    .spawn()?;
-                let awk_stdout = awk.wait_with_output()?;
-                tail.wait()?;
-                reasonable_mem = String::from_utf8(awk_stdout.stdout).unwrap();
-                reasonable_mem.pop();
-                reasonable_mem.pop();
-            }
-        }
-    }
-    let cache = &ctx.cache.read();
-    let current_user = &ctx.http.get_current_user()?;
-    let app_info = &ctx.http.get_current_application_info()?;
+    //        if let Some(tail_out) = tail.stdout.take() {
+    //            let awk = Command::new("awk")
+    //                .arg("/[0-9]K/{print $2}")
+    //                .stdin(tail_out)
+    //                .stdout(Stdio::piped())
+    //                .spawn()?;
+    //            let awk_stdout = awk.wait_with_output().await?;
+    //            tail.await?;
+    //            reasonable_mem = String::from_utf8(awk_stdout.stdout).unwrap();
+    //            reasonable_mem.pop();
+    //            reasonable_mem.pop();
+    //        }
+    //    }
+    //}
+    let cache = &ctx.cache.read().await;
+    let current_user = &ctx.http.get_current_user().await?;
+    let app_info = &ctx.http.get_current_application_info().await?;
 
     let hoster_tag = &app_info.owner.tag();
     let hoster_id = &app_info.owner.id;
@@ -393,23 +389,23 @@ fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
             e
         });
         m
-    })?;
+    }).await?;
 
     Ok(())
 }
 
 /// Sends the bot changelog.
 #[command]
-fn changelog(ctx: &mut Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(&ctx, "<https://gitlab.com/nitsuga5124/robo-arc/-/blob/master/CHANGELOG.md>")?;
+async fn changelog(ctx: &mut Context, msg: &Message) -> CommandResult {
+    msg.channel_id.say(&ctx, "<https://gitlab.com/nitsuga5124/robo-arc/-/blob/master/CHANGELOG.md>").await?;
     Ok(())
 }
 
 #[command]
 #[owners_only]
-fn reload_db(ctx: &mut Context, msg: &Message) -> CommandResult {
-    let mut data = ctx.data.write();
-    data.insert::<DatabaseConnection>(Arc::clone(&Arc::new(RwLock::new(get_database()?))));
-    msg.channel_id.say(&ctx, "Ok.")?;
+async fn reload_db(ctx: &mut Context, msg: &Message) -> CommandResult {
+    let mut data = ctx.data.write().await;
+    data.insert::<DatabaseConnection>(Arc::clone(&Arc::new(RwLock::new(get_database().await?))));
+    msg.channel_id.say(&ctx, "Ok.").await?;
     Ok(())
 }

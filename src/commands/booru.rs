@@ -34,7 +34,7 @@ use rand::Rng;
 // reqwest is a crate used to do http requests.
 // used to request posts matching the specified tags on the selected site.
 use reqwest::{
-    blocking::Client as ReqwestClient,
+    Client as ReqwestClient,
     header::*,
 };
 // quick_xml is an xml sedrde library.
@@ -63,10 +63,10 @@ struct Posts {
 }
 
 // Function to get the booru data and send it.
-pub fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // TODO: behoimi needs login, e621 changed the api.
 
-    let channel = &ctx.http.get_channel(msg.channel_id.0)?; // Gets the channel object to be used for the nsfw check.
+    let channel = &ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
     // Checks if the command was invoked on a DM
     let dm_channel: bool;
     if msg.guild_id == None {
@@ -78,13 +78,13 @@ pub fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) ->
     // Obtains a list of tags from the arguments.
     let raw_tags = {
         // if the channel is nsfw or a dm, parse for nsfw tags.
-        if channel.is_nsfw() || dm_channel {
-            let mut raw_tags = booru::obtain_tags_unsafe(args);
-            booru::illegal_check_unsafe(&mut raw_tags)
+        if channel.is_nsfw().await || dm_channel {
+            let mut raw_tags = booru::obtain_tags_unsafe(args).await;
+            booru::illegal_check_unsafe(&mut raw_tags).await
         // else, parse for safe tags.
         } else {
-            let mut raw_tags = booru::obtain_tags_safe(args);
-            booru::illegal_check_safe(&mut raw_tags)
+            let mut raw_tags = booru::obtain_tags_safe(args).await;
+            booru::illegal_check_safe(&mut raw_tags).await
         }
     };
 
@@ -98,7 +98,7 @@ pub fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) ->
     headers.insert(ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8".parse().unwrap());
     headers.insert(USER_AGENT, "Mozilla/5.0 (X11; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0".parse().unwrap());
 
-    let page = 1;
+    let page: usize = 1;
     let url;
 
     if booru.typ == 1 {
@@ -114,8 +114,10 @@ pub fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) ->
     // Send a request with the parsed url, and return the output text.
     let resp = reqwest.get(&url)
         .headers(headers.clone())
-        .send()?
-        .text()?;
+        .send()
+        .await?
+        .text()
+        .await?;
 
     // deserialize the request XML into the Posts struct.
     let xml: Posts = from_str(&resp.as_str())?;
@@ -174,7 +176,7 @@ pub fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) ->
         });
 
         m
-    })?;
+    }).await?;
 
 
     Ok(())
@@ -222,7 +224,7 @@ pub fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) ->
 /// Inspired by -GN's [WaifuBot](https://github.com/isakvik/waifubot/)
 #[command]
 #[aliases("picture", "pic", "booru", "boorus")]
-pub fn booru_command(_ctx: &mut Context, _msg: &Message, _args: Args) -> CommandResult {
+pub async fn booru_command(_ctx: &mut Context, _msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
 
@@ -232,9 +234,9 @@ pub fn booru_command(_ctx: &mut Context, _msg: &Message, _args: Args) -> Command
 /// `.config user best_girl <booru tag of your best girl>`
 #[command]
 #[aliases(bg, bestgirl, waifu, wife)]
-pub fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     // open the context data lock in read mode.
-    let data = ctx.data.read();
+    let data = ctx.data.read().await;
     // get the database connection from the context data.
     let client = data.get::<DatabaseConnection>().unwrap();
     // get the list of booru commands.
@@ -247,15 +249,15 @@ pub fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult 
 
     // read from the database, and obtain the best girl and booru from the user.
     let data ={
-        let mut client = client.write();
+        let client = client.write().await;
         client.query("SELECT best_girl, booru FROM best_bg WHERE user_id = $1",
-                     &[&author_id])?
+                     &[&author_id]).await?
     };
     let (tags, mut booru);
 
     // if the data is not empty, aka if the user is on the database already, tell them to get one.
     if data.is_empty() {
-        &msg.reply(&ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`")?;
+        &msg.reply(&ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`").await?;
         return Ok(());
     }
 
@@ -266,7 +268,7 @@ pub fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult 
 
     // if the user had only a configured booru, but not a best girl, tell the user to get a best girl.
     if tags == None {
-        &msg.reply(&ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`")?;
+        &msg.reply(&ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`").await?;
         return Ok(());
     }
 
@@ -291,7 +293,7 @@ pub fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult 
         // add an exclamation mark to the end.
         name += "!";
         // output should look like "Kou from granblue fantasy!" from the original "koy_(granblue_fantasy)"
-        &msg.channel_id.say(&ctx, capitalize_first(&name))?;
+        &msg.channel_id.say(&ctx, capitalize_first(&name).await).await?;
     }
 
     // combine the command arguments with the saved tags on the database.
@@ -304,10 +306,10 @@ pub fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult 
 
     // if the preffered booru is idol, invoke the idol command.
     if booru == "idol" {
-        idol(&mut ctx.clone(), &msg, args_tags)?;
+        idol(&mut ctx.clone(), &msg, args_tags).await?;
     // if the preffered booru is sankaku or chan, invoke the chan command.
     } else if booru == "sankaku" || booru == "chan" {
-        chan(&mut ctx.clone(), &msg, args_tags)?;
+        chan(&mut ctx.clone(), &msg, args_tags).await?;
     // if the command is a part of the boorus.json file, invoke the get_booru() function.
     } else if commands.as_ref().unwrap().contains(&booru.to_string()) {
         // obtain the rest of the data from the boorus.json file, of the specific booru.
@@ -322,11 +324,11 @@ pub fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult 
             x
         };
         // invoke the get_booru command with the args and booru.
-        get_booru(&mut ctx.clone(), &msg, &b, args_tags)?;
+        get_booru(&mut ctx.clone(), &msg, &b, args_tags).await?;
     // else, the booru they have configured is not supported, so we default to chan.
     } else {
-        &msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan")?;
-        chan(&mut ctx.clone(), &msg, args_tags)?;
+        &msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan").await?;
+        chan(&mut ctx.clone(), &msg, args_tags).await?;
     }
 
     Ok(())
@@ -338,23 +340,23 @@ pub fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult 
 /// `.config user best_boy <booru tag of your best boy>`
 #[command]
 #[aliases(bb, bestboy, husbando, husband)]
-pub fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     // This is the exact same as best_girl, so read the comments of that command instead.
-    let data = ctx.data.read(); // set mutable global data.
+    let data = ctx.data.read().await; // set mutable global data.
     let client = data.get::<DatabaseConnection>().unwrap(); // get the database connection from the global data.
     let commands = data.get::<BooruCommands>();
     let boorus = data.get::<BooruList>().unwrap();
 
     let author_id = msg.author.id.as_u64().clone() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
     let data ={
-        let mut client = client.write();
+        let mut client = client.write().await;
         client.query("SELECT best_boy, booru FROM best_bg WHERE user_id = $1",
-                     &[&author_id])?
+                     &[&author_id]).await?
     };
     let (tags, mut booru);
 
     if data.is_empty() { // if the data is not empty, aka if the user is on the database already
-        &msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`.conf user best_boy your_best_boy_tag`")?;
+        &msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`.conf user best_boy your_best_boy_tag`").await?;
         return Ok(());
     } else {
         let row = data.first().unwrap();
@@ -362,7 +364,7 @@ pub fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         booru = row.get::<_, Option<&str>>(1);
 
         if tags == None {
-            &msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`.conf user best_boy your_best_boy_tag`")?;
+            &msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`.conf user best_boy your_best_boy_tag`").await?;
             return Ok(());
         }
 
@@ -379,7 +381,7 @@ pub fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         name = name.replace(")", "");
         name = name.replace("_", " ");
         name += "!";
-        &msg.channel_id.say(&ctx, capitalize_first(&name))?;
+        &msg.channel_id.say(&ctx, capitalize_first(&name).await).await?;
     }
 
     let a = args.message();
@@ -389,9 +391,9 @@ pub fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let args_tags = Args::new(&tags, &[Delimiter::Single(' ')]);
 
     if booru == "idol" {
-        idol(&mut ctx.clone(), &msg, args_tags)?;
+        idol(&mut ctx.clone(), &msg, args_tags).await?;
     } else if booru == "sankaku" || booru == "chan" {
-        chan(&mut ctx.clone(), &msg, args_tags)?;
+        chan(&mut ctx.clone(), &msg, args_tags).await?;
     } else if commands.as_ref().unwrap().contains(&booru.to_string()) {
         let b: Booru = {
             let mut x = Booru::default();
@@ -403,10 +405,10 @@ pub fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
             }
             x
         };
-        get_booru(&mut ctx.clone(), &msg.clone(), &b, args_tags)?;
+        get_booru(&mut ctx.clone(), &msg.clone(), &b, args_tags).await?;
     } else {
-        &msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan")?;
-        chan(&mut ctx.clone(), &msg, args_tags)?;
+        &msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan").await?;
+        chan(&mut ctx.clone(), &msg, args_tags).await?;
     }
 
     Ok(())

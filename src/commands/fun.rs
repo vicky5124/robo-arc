@@ -1,4 +1,3 @@
-use std::process::Command;
 use serenity::{
     prelude::Context,
     model::channel::Message,
@@ -14,10 +13,11 @@ use qrcode::{
     render::unicode,
 };
 use reqwest::{
-    blocking::Client as ReqwestClient,
+    Client as ReqwestClient,
     Url,
 };
 use serde::Deserialize;
+use tokio::process::Command;
 
 // Struct used to deserialize the output of the urban dictionary api call...
 #[derive(Deserialize, Clone)]
@@ -41,7 +41,7 @@ struct UrbanList {
 /// Sends a qr code of the term mentioned.
 /// Usage: `.qr Hello world!`
 #[command]
-fn qr(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn qr(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let words = args.message();
 
     let code = QrCode::new(words).unwrap();
@@ -50,7 +50,7 @@ fn qr(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         .light_color(unicode::Dense1x2::Dark)
         .build();
 
-    msg.channel_id.say(&ctx, format!(">>> ```{}```", image))?;
+    msg.channel_id.say(&ctx, format!(">>> ```{}```", image)).await?;
     Ok(())
 }
 
@@ -58,18 +58,20 @@ fn qr(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 /// Usage: `.urban lmao`
 #[command]
 #[aliases(define)]
-fn urban(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn urban(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let term = args.message();
     let url = Url::parse_with_params("http://api.urbandictionary.com/v0/define",
                                      &[("term", term)])?;
 
     let reqwest = ReqwestClient::new();
     let resp = reqwest.get(url)
-        .send()?
-        .json::<UrbanList>()?;
+        .send()
+        .await?
+        .json::<UrbanList>()
+        .await?;
 
     if resp.list.len() == 0 {
-        msg.channel_id.say(&ctx, format!("The term '{}' has no Urban Definitions", term))?;
+        msg.channel_id.say(&ctx, format!("The term '{}' has no Urban Definitions", term)).await?;
     } else {
         let choice = &resp.list[0];
         let parsed_definition = &choice.definition.replace("[", "").replace("]", "");
@@ -91,9 +93,9 @@ fn urban(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                 e
             });
             m
-        }) {
+        }).await {
             if "Embed too large.".to_string() == why.to_string() {
-                msg.channel_id.say(&ctx, &choice.permalink)?;
+                msg.channel_id.say(&ctx, &choice.permalink).await?;
             } else {
                 return Err(CommandError(why.to_string()));
             }
@@ -108,7 +110,7 @@ fn urban(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 #[command]
 #[aliases(trans)]
 #[min_args(2)]
-fn translate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn translate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
     let mut dest = args.single::<String>()?;
     let args_text = args.rest();
 
@@ -123,12 +125,14 @@ fn translate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult 
                 .arg("/C")
                 .arg(format!("./translate.py \"{}\" {}", &args_text, dest).as_str())
                 .output()
+                .await
                 .expect("failed to execute process")
     } else {
         Command::new("sh")
                 .arg("-c")
                 .arg(format!("./translate.py \"{}\" {}", &args_text, dest).as_str())
                 .output()
+                .await
                 .expect("failed to execute process")
     };
 
@@ -146,7 +150,7 @@ fn translate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult 
             e
         });
         m
-    })?;
+    }).await?;
     Ok(())
 }
 
@@ -156,10 +160,10 @@ fn translate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult 
 #[command]
 #[min_args(1)]
 #[aliases(ddg, duck, duckduckgo, search, better_than_google, betterthangoogle)]
-fn duck_duck_go(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn duck_duck_go(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let url = Url::parse_with_params("https://lmddgtfy.net/",
                                      &[("q", args.message())])?;
-    &msg.channel_id.say(&ctx, url)?;
+    &msg.channel_id.say(&ctx, url).await?;
 
     Ok(())
 }
@@ -171,22 +175,22 @@ fn duck_duck_go(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 /// You can decrypt the message with .decrypt
 #[command]
 #[min_args(1)]
-fn encrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn encrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let message = args.message();
     let bytes = message.as_bytes();
     let encrypted_bytes = bytes.iter().map(|b| format!("{}", b)).collect::<String>();
     let encrypted_message = encrypted_bytes.parse::<u128>()? << 1;
-    &msg.channel_id.say(&ctx, format!("`{:X}`", encrypted_message))?;
+    &msg.channel_id.say(&ctx, format!("`{:X}`", encrypted_message)).await?;
     Ok(())
 }
 /// Decrypts and encrypted message. **NOT WORKING**
 /// Usage: `.decrypt FBACB56A78BAFCD8239012F`
 #[command]
-fn decrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn decrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let message = args.message();
     let bytes = message.as_bytes();
     let encrypted_bytes = bytes.iter().map(|b| format!("{}", b)).collect::<String>();
     let encrypted_message = encrypted_bytes.parse::<u128>()? >> 1;
-    &msg.channel_id.say(&ctx, format!("`{:X}`", encrypted_message))?;
+    &msg.channel_id.say(&ctx, format!("`{:X}`", encrypted_message)).await?;
     Ok(())
 }
