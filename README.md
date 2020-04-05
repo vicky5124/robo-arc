@@ -3,7 +3,7 @@ Learning Rust project. Yes, im very original and full of ideas, so im remaking w
 
 ![Bot profile picture](PFP.png "Bot's profile picture")
 
-This bot is made using [serenity.rs](https://github.com/serenity-rs/serenity/), a sync discord api wrapper for [Rust](https://www.rust-lang.org/)
+This bot is made using [serenity.rs](https://github.com/serenity-rs/serenity/) (currently using the development release [serenity.await](https://github.com/Lakelezz/serenity/blob/await/)), an async discord api wrapper for [Rust](https://www.rust-lang.org/)
 
 ## __Running the bot for yourself__
 
