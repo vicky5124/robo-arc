@@ -7,10 +7,7 @@ use std::{
     fs::File,
     io::prelude::*,
     sync::Arc,
-    process::{
-        Stdio,
-        id,
-    },
+    process::id,
 };
 use serenity::{
     prelude::{
@@ -251,7 +248,7 @@ async fn prefix(ctx: &mut Context, msg: &Message) -> CommandResult {
         let db_conn = data_read.get::<DatabaseConnection>().unwrap();
         // Read the configured prefix of the guild from the database.
         let db_prefix = {
-            let mut db_conn = db_conn.write().await;
+            let db_conn = db_conn.write().await;
             db_conn.query("SELECT prefix FROM prefixes WHERE guild_id = $1",
                          &[&gid]).await.expect("Could not query the database.")
         };
@@ -278,75 +275,29 @@ async fn prefix(ctx: &mut Context, msg: &Message) -> CommandResult {
 #[aliases(info)]
 async fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
     let pid = id().to_string();
+    println!("{}", &pid);
 
-    let mut full_mem = String::new();
-    let mut reasonable_mem = String::new();
+    let full_stdout = Command::new("sh")
+            .arg("-c")
+            .arg(format!("./full_memory.sh {}", &pid).as_str())
+            .output()
+            .await
+            .expect("failed to execute process");
+    let reasonable_stdout = Command::new("sh")
+            .arg("-c")
+            .arg(format!("./reasonable_memory.sh {}", &pid).as_str())
+            .output()
+            .await
+            .expect("failed to execute process");
 
-    //let mut stdout = Command::new("pmap")
-    //    .arg(&pid)
-    //    //.arg(" | tail -n 1 | awk '/[0-9]K/{print $2}'")
-    //    .stdout(Stdio::piped())
-    //    .spawn()?;
+    let mut full_mem = String::from_utf8(full_stdout.stdout).unwrap();
+    let mut reasonable_mem = String::from_utf8(reasonable_stdout.stdout).unwrap();
 
-    //if let Some(pmap_out) = stdout.stdout.take() {
-    //    let mut tail = Command::new("tail")
-    //        .arg("-n 1")
-    //        .stdin(pmap_out)
-    //        .stdout(Stdio::piped())
-    //        .spawn()?;
-    //    stdout.await?;
+    full_mem.pop();
+    full_mem.pop();
+    reasonable_mem.pop();
+    reasonable_mem.pop();
 
-    //    if let Some(tail_out) = tail.stdout.take() {
-    //        let awk = Command::new("awk")
-    //            .arg("/[0-9]K/{print $2}")
-    //            .stdin(tail_out)
-    //            .stdout(Stdio::piped())
-    //            .spawn()?;
-    //        let awk_stdout = awk.wait_with_output().await?;
-    //        tail.await?;
-    //        full_mem = String::from_utf8(awk_stdout.stdout).unwrap();
-    //        full_mem.pop();
-    //        full_mem.pop();
-    //    }
-    //}
-
-    //let mut stdout = Command::new("pmap")
-    //    .arg(&pid)
-    //    //.arg(" | tail -n 1 | awk '/[0-9]K/{print $2}'")
-    //    .stdout(Stdio::piped())
-    //    .spawn()?;
-
-    //if let Some(pmap_out) = stdout.stdout.take() {
-    //    let mut head = Command::new("head")
-    //        .arg("-n 2")
-    //        .stdin(pmap_out)
-    //        .stdout(Stdio::piped())
-    //        .spawn()?;
-
-    //    stdout.await?;
-
-    //    if let Some(head_out) = head.stdout.take() {
-    //        let mut tail = Command::new("tail")
-    //            .arg("-n 1")
-    //            .stdin(head_out)
-    //            .stdout(Stdio::piped())
-    //            .spawn()?;
-    //        head.await?;
-
-    //        if let Some(tail_out) = tail.stdout.take() {
-    //            let awk = Command::new("awk")
-    //                .arg("/[0-9]K/{print $2}")
-    //                .stdin(tail_out)
-    //                .stdout(Stdio::piped())
-    //                .spawn()?;
-    //            let awk_stdout = awk.wait_with_output().await?;
-    //            tail.await?;
-    //            reasonable_mem = String::from_utf8(awk_stdout.stdout).unwrap();
-    //            reasonable_mem.pop();
-    //            reasonable_mem.pop();
-    //        }
-    //    }
-    //}
     let cache = &ctx.cache.read().await;
     let current_user = &ctx.http.get_current_user().await?;
     let app_info = &ctx.http.get_current_application_info().await?;
