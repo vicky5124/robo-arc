@@ -274,7 +274,6 @@ async fn prefix(ctx: &mut Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases(info)]
 async fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
-    let pid = id().to_string();
     println!("{}", &pid);
 
     let full_stdout = Command::new("sh")
