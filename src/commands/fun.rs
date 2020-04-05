@@ -120,21 +120,12 @@ async fn translate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandR
         _ => dest,
     };
 
-    let output = if cfg!(target_os = "windows") {
-        Command::new("cmd")
-                .arg("/C")
-                .arg(format!("./translate.py \"{}\" {}", &args_text, dest).as_str())
-                .output()
-                .await
-                .expect("failed to execute process")
-    } else {
-        Command::new("sh")
-                .arg("-c")
-                .arg(format!("./translate.py \"{}\" {}", &args_text, dest).as_str())
-                .output()
-                .await
-                .expect("failed to execute process")
-    };
+    let output = Command::new("sh")
+            .arg("-c")
+            .arg(format!("./translate.py \"{}\" {}", &args_text, dest).as_str())
+            .output()
+            .await
+            .expect("failed to execute process");
 
     let text = String::from_utf8_lossy(&output.stdout);
     let resp = text.split("'").nth(1).unwrap();
