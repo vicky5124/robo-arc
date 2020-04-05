@@ -214,7 +214,7 @@ checksum = "0dbbb57365263e881e805dc77d94697c9118fd94d8da011240555aa7b23445bd"
 [[package]]
 name = "command_attr"
 version = "0.1.7"
-source = "git+https://github.com/Lakelezz/serenity/?branch=await#0c83785737532386104f196d490f9898c5271f6d"
+source = "git+https://github.com/Lakelezz/serenity/?branch=await#375de26a5e85b165387d8920ddfd4a2ab440c8ba"
 dependencies = [
  "futures",
  "proc-macro2",
@@ -306,9 +306,9 @@ dependencies = [
 
 [[package]]
 name = "deflate"
-version = "0.8.3"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "050ef6de42a33903b30a7497b76b40d3d58691d4d3eec355348c122444a388f0"
+checksum = "e7e5d2a2273fed52a7f947ee55b092c4057025d7a3e04e5ecdbd25d6c3fb1bd7"
 dependencies = [
  "adler32",
  "byteorder",
@@ -1430,9 +1430,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.50"
+version = "1.0.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78a7a12c167809363ec3bd7329fc0a3369056996de43c4b37ef3cd54a6ce4867"
+checksum = "da07b57ee2623368351e9a0488bb0b261322a15a6e0ae53e243cbdc0f4208da9"
 dependencies = [
  "itoa",
  "ryu",
@@ -1454,7 +1454,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.8.0"
-source = "git+https://github.com/Lakelezz/serenity/?branch=await#0c83785737532386104f196d490f9898c5271f6d"
+source = "git+https://github.com/Lakelezz/serenity/?branch=await#375de26a5e85b165387d8920ddfd4a2ab440c8ba"
 dependencies = [
  "async-trait",
  "async-tungstenite",
