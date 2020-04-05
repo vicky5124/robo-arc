@@ -349,7 +349,7 @@ pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
 
     let author_id = msg.author.id.as_u64().clone() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
     let data ={
-        let mut client = client.write().await;
+        let client = client.write().await;
         client.query("SELECT best_boy, booru FROM best_bg WHERE user_id = $1",
                      &[&author_id]).await?
     };

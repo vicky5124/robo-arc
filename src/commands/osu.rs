@@ -410,7 +410,7 @@ async fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> Com
 
     let author_id = msg.author.id.as_u64().clone() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
     let data ={
-        let mut client = client.write().await;
+        let client = client.write().await;
         client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
                      &[&author_id]).await? // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
     };
@@ -519,7 +519,7 @@ Short recent? '{}'```",
     if empty_data {
         // inserts the data because the user is new.
         {
-            let mut client = client.write().await;
+            let client = client.write().await;
             client.execute(
                 "INSERT INTO osu_user (osu_id, osu_username, pp, mode, short_recent, discord_id) VALUES ($1, $2, $3, $4, $5, $6)",
                 &[&user_data.osu_id, &user_data.name, &user_data.pp.unwrap(), &user_data.mode.unwrap(), &user_data.short_recent.unwrap(), &author_id]
@@ -529,7 +529,7 @@ Short recent? '{}'```",
     } else {
         // updates the database with the new user data.
         {
-            let mut client = client.write().await;
+            let client = client.write().await;
             client.execute(
                 "UPDATE osu_user SET osu_id = $1, osu_username = $2, pp = $3, mode = $4, short_recent = $5 WHERE discord_id = $6",
                 &[&user_data.osu_id, &user_data.name, &user_data.pp.unwrap(), &user_data.mode.unwrap(), &user_data.short_recent.unwrap(), &author_id]
@@ -603,7 +603,7 @@ async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRes
     if arg_user == "" {
         let author_id = msg.author.id.as_u64().clone() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
         {
-            let mut client = client.write().await;
+            let client = client.write().await;
             data = client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
                                 &[&author_id]).await?; // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
 
@@ -613,7 +613,7 @@ async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRes
 
     } else {
         {
-            let mut client = client.write().await;
+            let client = client.write().await;
             data = client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE osu_username = $1", // query the SQL to the database.
                                 &[&arg_user]).await?;
         }
@@ -663,7 +663,7 @@ async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRes
     // Clone the http cache from content
     // Clone the message
     let http = ctx.http.clone();
-    let msg = msg.clone();
+    //let msg = msg.clone();
 
     // Group all the needed data to EventData
     let mut event_data = EventData::default();
@@ -674,7 +674,7 @@ async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRes
     // Build the initial recent embed
     short_recent_builder(http.clone(), &event_data, bot_msg.clone(), 0).await?;
 
-    let mut timeout = 0;
+    //let mut timeout = 0;
 
     //// Add left and right reactions, to make the life easier for the user using the event.
     //bot_msg.react(&ctx, "⬅️")?;

@@ -46,7 +46,8 @@ async fn grayscale(image_vec: &Vec<u8>) -> Result<Vec<u8>, Box<dyn std::error::E
         // Save the image as “fractal.png”, the format is deduced from the path
         // imgbuf.save("grayscale.png")?;
         image::DynamicImage::ImageRgba8(imgbuf)
-            .write_to(&mut *gray_bytes_clone.lock().unwrap(), image::ImageOutputFormat::Png);
+            .write_to(&mut *gray_bytes_clone.lock().unwrap(), image::ImageOutputFormat::Png)
+            .expect("There was an error writing the image.");
     });
 
     let result = gray_bytes.lock().unwrap();

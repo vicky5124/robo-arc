@@ -28,7 +28,7 @@ async fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: St
     let user_id = msg.author.id.0 as i64;
 
     let data = {
-        let mut client = client.write().await;
+        let client = client.write().await;
         client.query("SELECT best_boy, best_girl FROM best_bg WHERE user_id = $1", &[&user_id]).await?
     };
 
@@ -37,7 +37,7 @@ async fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: St
             // insert +1boy
             tags += " 1boy";
 
-            let mut client = client.write().await;
+            let client = client.write().await;
             client.execute(
                 "INSERT INTO best_bg (best_boy, user_id) VALUES ($1, $2)",
                 &[&tags, &user_id]
@@ -47,7 +47,7 @@ async fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: St
             // insert +1girl
             tags += " 1girl";
 
-            let mut client = client.write().await;
+            let client = client.write().await;
             client.execute(
                 "INSERT INTO best_bg (best_girl, user_id) VALUES ($1, $2)",
                 &[&tags, &user_id]
@@ -58,7 +58,7 @@ async fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: St
         // update +1boy
         tags += " 1boy";
 
-        let mut client = client.write().await;
+        let client = client.write().await;
         client.execute(
             "UPDATE best_bg SET best_boy = $1 WHERE user_id = $2",
             &[&tags, &user_id]
@@ -68,7 +68,7 @@ async fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: St
         // update +1girl
         tags += " 1girl";
 
-        let mut client = client.write().await;
+        let client = client.write().await;
         client.execute(
             "UPDATE best_bg SET best_girl = $1 WHERE user_id = $2",
             &[&tags, &user_id]
@@ -114,7 +114,7 @@ async fn booru(ctx: &mut Context, msg: &Message, raw_args: Args) -> CommandResul
     let user_id = msg.author.id.0 as i64;
 
     let data = {
-        let mut client = client.write().await;
+        let client = client.write().await;
         client.query("SELECT best_boy, best_girl FROM best_bg WHERE user_id = $1", &[&user_id]).await?
     };
 
@@ -123,7 +123,7 @@ async fn booru(ctx: &mut Context, msg: &Message, raw_args: Args) -> CommandResul
             msg.reply(&ctx, "Please, specify the booru to set as your default.").await?;
             return Ok(());
         }
-        let mut client = client.write().await;
+        let client = client.write().await;
         client.execute(
             "INSERT INTO booru (booru, user_id) VALUES ($1, $2)",
             &[&booru, &user_id]
@@ -133,7 +133,7 @@ async fn booru(ctx: &mut Context, msg: &Message, raw_args: Args) -> CommandResul
     } else {
         if booru.as_str() == "" {return Ok(());}
 
-        let mut client = client.write().await;
+        let client = client.write().await;
         client.execute(
             "UPDATE best_bg SET booru = $1 WHERE user_id = $2",
             &[&booru, &user_id]
@@ -166,7 +166,7 @@ async fn annoy(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
     let channel_id = msg.channel_id.0 as i64;
 
     let data = {
-        let mut client = client.write().await;
+        let client = client.write().await;
         client.query("SELECT channel_id FROM annoyed_channels WHERE channel_id = $1", &[&channel_id]).await?
     };
 
@@ -174,7 +174,7 @@ async fn annoy(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
         for row in data {
             if row.get::<_, i64>(0) == channel_id {
                 {
-                    let mut client = client.write().await;
+                    let client = client.write().await;
                     client.execute(
                         "DELETE FROM annoyed_channels WHERE channel_id IN ($1)",
                         &[&channel_id]
@@ -187,7 +187,7 @@ async fn annoy(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
 
     } else {
         {
-            let mut client = client.write().await;
+            let client = client.write().await;
             client.execute(
                 "INSERT INTO annoyed_channels (channel_id) VALUES ($1)",
                 &[&channel_id]
@@ -198,7 +198,7 @@ async fn annoy(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
     }
 
     {
-        let mut db_client = client.write().await;
+        let db_client = client.write().await;
         let raw_annoyed_channels = {
             db_client.query("SELECT channel_id from annoyed_channels", &[]).await?
         };
@@ -245,18 +245,18 @@ async fn prefix(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let guild_id = msg.guild_id.unwrap().0 as i64;
 
     let data = {
-        let mut client = client.write().await;
+        let client = client.write().await;
         client.query("SELECT prefix FROM prefixes WHERE guild_id = $1", &[&guild_id]).await?
     };
 
     if data.is_empty() {
-        let mut client = client.write().await;
+        let client = client.write().await;
         client.execute(
             "INSERT INTO prefixes (guild_id, prefix) VALUES ($1, $2)",
             &[&guild_id, &prefix]
         ).await?;
     } else {
-        let mut client = client.write().await;
+        let client = client.write().await;
         client.execute(
             "UPDATE prefixes SET prefix = $2 WHERE guild_id = $1",
             &[&guild_id, &prefix]

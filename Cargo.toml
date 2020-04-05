@@ -24,7 +24,7 @@ futures = "0.3.4" # https://github.com/rust-lang/futures-rs
 futures-util = "0.3.4" # https://github.com/rust-lang/futures-rs
 
 [dependencies.tokio]
-version = "0.2.13"
+version = "=0.2.13"
 features = ["full"]
 
 # https://github.com/serenity-rs/serenity
