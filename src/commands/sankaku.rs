@@ -3,11 +3,7 @@ use crate::{
     Tokens,
 };
 
-use std::{
-    borrow::Cow,
-    //io::Read,
-};
-use futures_util::StreamExt;
+use std::borrow::Cow;
 
 use serenity::{
     prelude::Context,
@@ -120,19 +116,14 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
 
     let sample_url = &format!("https:{}", &choice.sample_url).to_owned()[..];
     let file_url = &format!("https:{}", &choice.file_url).to_owned()[..];
-    let mut resp = reqwest.get(sample_url)
+    let buf = reqwest.get(sample_url)
         .headers(headers.clone())
         .send()
         .await?
-        .bytes_stream();
-
-    //let mut buf: Vec<u8> = vec![];
-    //&resp.read_to_end(&mut buf)?;
-    let mut buf: Vec<u8> = Vec::new();
-
-    while let Some(item) = resp.next().await {
-        buf.push(item?.as_ref()[0]);
-    }
+        .bytes()
+        .await?
+        .into_iter()
+        .collect::<Vec<u8>>();
 
     let fullsize_tagless = &choice.file_url.split("?").nth(0).unwrap();
     let fullsize_split = fullsize_tagless.split("/").collect::<Vec<&str>>();
@@ -260,17 +251,15 @@ pub async fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
     let sample_url = &choice.sample_url;
     let file_url = &choice.file_url;
 
-    let mut resp = reqwest.get(sample_url)
+    let buf = reqwest.get(sample_url)
         .headers(headers.clone())
         .send()
         .await?
-        .bytes_stream();
+        .bytes()
+        .await?
+        .into_iter()
+        .collect::<Vec<u8>>();
 
-    let mut buf: Vec<u8> = Vec::new();
-
-    while let Some(item) = resp.next().await {
-        buf.push(item?.as_ref()[0]);
-    }
 
     let fullsize_tagless = &choice.file_url.split("?").nth(0).unwrap();
     let fullsize_split = fullsize_tagless.split("/").collect::<Vec<&str>>();

@@ -36,7 +36,6 @@ version = "0.1.0-alpha"
 dependencies = [
  "bitflags",
  "futures",
- "futures-util",
  "image",
  "log",
  "num-format",
