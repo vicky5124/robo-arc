@@ -1,3 +1,15 @@
+# 0.1.1-alpha
+
+### Commands
+- ban:
+  Fixed api error.
+- recent:
+  Added pagination back.
+- SafeBooru, FurryBooru, RealBooru:
+  Fixed file extension.
+- Danbooru:
+  Fixed gold content.
+
 # 0.1.0-alpha
 
 # **ASYNC!**
