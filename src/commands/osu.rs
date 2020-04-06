@@ -11,7 +11,10 @@ use serenity::{
     http::Http,
     utils::Colour,
     prelude::Context,
-    model::channel::Message,
+    model::channel::{
+        Message,
+        ReactionType,
+    },
     framework::standard::{
         Args,
         Delimiter,
@@ -23,6 +26,7 @@ use serenity::{
 use std::{
     sync::Arc,
     collections::HashSet,
+    time::Duration,
 };
 
 // Used to format the numbers on the embeds.
@@ -660,112 +664,49 @@ async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRes
         return Ok(());
     }
 
-    // Clone the http cache from content
-    // Clone the message
-    let http = ctx.http.clone();
-    //let msg = msg.clone();
-
     // Group all the needed data to EventData
     let mut event_data = EventData::default();
     event_data.user_db_data = Some(user_data);
-    event_data.user_recent_raw = Some(user_recent_raw);
+    event_data.user_recent_raw = Some(user_recent_raw.clone());
     event_data.osu_key = Some(osu_key);
 
+    let mut page = 0;
+
     // Build the initial recent embed
-    short_recent_builder(http.clone(), &event_data, bot_msg.clone(), 0).await?;
+    short_recent_builder(ctx.http.clone(), &event_data, bot_msg.clone(), page).await?;
 
-    //let mut timeout = 0;
-
-    //// Add left and right reactions, to make the life easier for the user using the event.
-    //bot_msg.react(&ctx, "⬅️")?;
-    //bot_msg.react(&ctx, "➡️")?;
-
-    //let left = ReactionType::Unicode(String::from("⬅️"));
-    //let right = ReactionType::Unicode(String::from("➡️"));
- 
-    //// Start the left and right events
-    //dispatcher.write()
-    //    .add_fn(
-    //        DispatchEvent::ReactEvent(bot_msg.id, left.clone(), false),
-    //        left_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent", event_data.clone())
-    //    );
-    //dispatcher.write()
-    //    .add_fn(
-    //        DispatchEvent::ReactEvent(bot_msg.id, right.clone(), false),
-    //        right_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent", event_data.clone())
-    //    );
-    //
-    //// Finish the events after a timeout.
-    //loop {
-    //    thread::sleep(std::time::Duration::from_secs(1));
-    //    timeout += 1;
-    //    if timeout == 500 {
-    //        break;
-    //    }
-    //}
-    //dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, left.clone(), true));
-    //dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, right.clone(), true));
-
-    //// Clear the reactions of the message if the message was not sent on a DM
-    //if msg.guild_id != None{
-    //    let _ = bot_msg.delete_reactions(&ctx);
-    //};
-
-    Ok(())
-}
-
-/*
-#[command]
-#[owners_only]
-#[aliases("add")]
-pub fn react(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    let args = args.rest().to_string();
-
-    let dispatcher = {
-        let mut ctx = ctx.data.write();
-        ctx.get_mut::<DispatcherKey>().expect("Expected Dispatcher.").clone()
-    };
-
-    let http = ctx.http.clone();
-    let msg = msg.clone();
-
-    let bot_msg = msg.channel_id.say(&http, &args)?;
-
-    let mut timeout = 0;
-
-    bot_msg.react(&ctx, "⬅️")?;
-    bot_msg.react(&ctx, "➡️")?;
+    // Add left and right reactions, to make the life easier for the user using the event.
 
     let left = ReactionType::Unicode(String::from("⬅️"));
     let right = ReactionType::Unicode(String::from("➡️"));
 
-    let event_data = EventData::default();
-
-    dispatcher.write()
-        .add_fn(
-            DispatchEvent::ReactEvent(bot_msg.id, left.clone(), false),
-            left_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent", event_data.clone())
-        );
-    dispatcher.write()
-        .add_fn(
-            DispatchEvent::ReactEvent(bot_msg.id, right.clone(), false),
-            right_reaction_event(http.clone(), bot_msg.channel_id, ctx.data.clone(), "recent", event_data.clone())
-        );
+    bot_msg.react(&ctx, left).await?;
+    bot_msg.react(&ctx, right).await?;
 
     loop {
-        thread::sleep(std::time::Duration::from_secs(1));
-        timeout += 1;
-        if timeout == 500 {
-            break;
-        }
-    }
-    dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, left.clone(), true));
-    dispatcher.write().dispatch_event(&DispatchEvent::ReactEvent(bot_msg.id, right.clone(), true));
+        if let Some(reaction) = &bot_msg.await_reaction(&ctx).timeout(Duration::from_secs(20)).await {
+            let emoji = &reaction.as_inner_ref().emoji;
 
-    if msg.guild_id != None{
-        bot_msg.delete_reactions(&ctx)?;
-    };
+            let _ = match emoji.as_data().as_str() {
+                "⬅️" => { 
+                    if page != 0 {
+                        page -= 1;
+                    }
+                },
+                "➡️" => { 
+                    if page != user_recent_raw.len() - 1 {
+                        page += 1;
+                    }
+                },
+                _ => (),
+            };
+            short_recent_builder(ctx.http.clone(), &event_data, bot_msg.clone(), page).await?;
+            reaction.as_inner_ref().delete(&ctx).await?;
+        } else {
+            &bot_msg.delete_reactions(&ctx).await?;
+            break
+        };
+    }
 
     Ok(())
 }
-*/
