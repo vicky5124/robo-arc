@@ -17,6 +17,7 @@ use serenity::{
     model::{
         channel::Message,
         Permissions,
+        channel::ReactionType,
     },
     client::bridge::gateway::ShardId,
     framework::standard::{
@@ -149,19 +150,26 @@ async fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
 #[command]
 #[help_available(false)] // makes it not show up on the help menu
 #[owners_only] // to only allow the owner of the bot to use this command
-#[min_args(3)] // Sets the minimum ammount of arguments the command requires to be ran. This is used to trigger the `NotEnoughArguments` error.
+//#[min_args(3)] // Sets the minimum ammount of arguments the command requires to be ran. This is used to trigger the `NotEnoughArguments` error.
 // Testing command, please ignore.
-async fn test(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
-    source(&mut ctx.clone(), &msg.clone(), args.clone()).await?;
-    std::thread::sleep(std::time::Duration::from_secs(50));
-    let x = args.single::<String>()?;
-    let y = args.single::<i32>()?;
-    let z = args.single::<i32>()?;
-    
-    let multiplied = y * z;
-    msg.channel_id.say(&ctx, format!("{} nice: {}", x, multiplied)).await?;
-    let f = vec![123; 1000];
-    msg.channel_id.say(&ctx, format!("{:?}", &f)).await?;
+async fn test(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
+    let m = &msg.channel_id.say(&ctx, "test").await?;
+
+    let left = ReactionType::Unicode(String::from("⬅️"));
+    let right = ReactionType::Unicode(String::from("➡️"));
+
+    m.react(&ctx, left).await?;
+    m.react(&ctx, right).await?;
+    //source(&mut ctx.clone(), &msg.clone(), args.clone()).await?;
+    //std::thread::sleep(std::time::Duration::from_secs(50));
+    //let x = args.single::<String>()?;
+    //let y = args.single::<i32>()?;
+    //let z = args.single::<i32>()?;
+    //
+    //let multiplied = y * z;
+    //msg.channel_id.say(&ctx, format!("{} nice: {}", x, multiplied)).await?;
+    //let f = vec![123; 1000];
+    //msg.channel_id.say(&ctx, format!("{:?}", &f)).await?;
 
     Ok(())
 }
@@ -274,7 +282,7 @@ async fn prefix(ctx: &mut Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases(info)]
 async fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
-    println!("{}", &pid);
+    let pid = id().to_string();
 
     let full_stdout = Command::new("sh")
             .arg("-c")
