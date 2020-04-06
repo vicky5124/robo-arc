@@ -267,10 +267,10 @@ async fn get_mods_short(value: u32) -> String {
 
 
 // This function simply calls the osu! api to get the id of the user from a username.
-async fn get_osu_id(name: &String, osu_key: &String) -> Result<i32, Box<dyn std::error::Error>> {
+async fn get_osu_id(name: &str, osu_key: &str) -> Result<i32, Box<dyn std::error::Error>> {
     let resp = get_osu_user(&name, osu_key).await?;
 
-    if resp.len() != 0 {
+    if !resp.is_empty() {
         let id: i32 = resp[0].user_id.trim().parse()?;
         Ok(id)
     } else {
@@ -280,7 +280,7 @@ async fn get_osu_id(name: &String, osu_key: &String) -> Result<i32, Box<dyn std:
 
 
 // Requests to the api the user data
-async fn get_osu_user(name: &String, osu_key: &String) -> Result<Vec<OsuUserData>, Box<dyn std::error::Error>> {
+async fn get_osu_user(name: &str, osu_key: &str) -> Result<Vec<OsuUserData>, Box<dyn std::error::Error>> {
     let re = Regex::new("[^0-9A-Za-z\\[\\]'_ ]").unwrap();
     let mut sanitized_name = re.replace_all(name, "").into_owned();
     sanitized_name = sanitized_name.replace(" ", "%20");
@@ -294,7 +294,7 @@ async fn get_osu_user(name: &String, osu_key: &String) -> Result<Vec<OsuUserData
 }
 
 // Requests to the api the recent plays of a user
-async fn get_osu_user_recent(user_id: i32, osu_key: &String) -> Result<Vec<OsuUserRecentData>, Box<dyn std::error::Error>> {
+async fn get_osu_user_recent(user_id: i32, osu_key: &str) -> Result<Vec<OsuUserRecentData>, Box<dyn std::error::Error>> {
     let url = format!("https://osu.ppy.sh/api/get_user_recent?k={}&u={}&type=id", osu_key, user_id);
     let resp = reqwest::get(&url)
         .await?
@@ -333,13 +333,11 @@ async fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: 
     let attempts = index;
     let mods: String = get_mods_short(user_recent.enabled_mods.parse()?).await;
 
-    let rating_url: String;
-
-    if user_recent.rank == "F" {
-        rating_url = String::from("https://5124.mywire.org/HDD/Downloads/BoneF.png");
+    let rating_url = if user_recent.rank == "F" {
+        String::from("https://5124.mywire.org/HDD/Downloads/BoneF.png")
     } else {
-        rating_url = format!("https://s.ppy.sh/images/{}.png", user_recent.rank.to_uppercase());
-    }
+        format!("https://s.ppy.sh/images/{}.png", user_recent.rank.to_uppercase())
+    };
 
     bot_msg.clone().edit(http.clone(), |m| { // say method doesn't work for the message builder.
         m.content("");
@@ -412,7 +410,7 @@ async fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> Com
     let mut data = ctx.data.write().await; // set mutable global data.
     client = data.get_mut::<DatabaseConnection>().unwrap(); // get the database connection from the global data.
 
-    let author_id = msg.author.id.as_u64().clone() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
+    let author_id = *msg.author.id.as_u64() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
     let data ={
         let client = client.write().await;
         client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
@@ -438,7 +436,7 @@ async fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> Com
     }
     
     // if there where arguments on the command (aka the user wants to modify a value)
-    if arguments.len() > 0 {
+    if !arguments.is_empty() {
         // Transforms the given arguments as a vector
         let args = arguments.raw_quoted().collect::<Vec<&str>>();
         
@@ -447,7 +445,7 @@ async fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> Com
             // if the argument is the keyword PP
             if arg.starts_with("pp=") {
                 // Split the argument on the first = and get everything after it.
-                let x: &str = arg.split("=").nth(1).unwrap();
+                let x: &str = arg.split('=').nth(1).unwrap();
                 // Match the text after =
                 user_data.pp = match x {
                     // if x == "n" || x == "no" ... {user_data.pp = Some(false)}
@@ -458,7 +456,7 @@ async fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> Com
 
             // if the argument starts with the keyword short_recent OR recent
             } else if arg.starts_with("short_recent=") || arg.starts_with("recent=") { 
-                let x: &str = arg.split("=").nth(1).unwrap();
+                let x: &str = arg.split('=').nth(1).unwrap();
                 user_data.short_recent = match x {
                     "n" | "no" | "false" | "0" => Some(false),
                     _ => Some(true)
@@ -509,15 +507,15 @@ Short recent? '{}'```",
     // applies the default values in case of being not specified.
     user_data.pp = match &user_data.pp {
         None => Some(true),
-        Some(b) => Some(b.clone()),
+        Some(b) => Some(*b),
     };
     user_data.mode = match &user_data.mode {
         None => Some(0),
-        Some(b) => Some(b.clone()),
+        Some(b) => Some(*b),
     };
     user_data.short_recent = match &user_data.short_recent {
         None => Some(true),
-        Some(b) => Some(b.clone()),
+        Some(b) => Some(*b),
     };
 
     if empty_data {
@@ -578,7 +576,7 @@ Short recent? '{}'```",
 #[aliases("rs", "rc")]
 async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
     let mut arg_user = String::from("");
-    if arguments.len() > 0 {
+    if !arguments.is_empty() {
         let args = arguments.raw_quoted().collect::<Vec<&str>>();
         for i in args {
             arg_user += &format!("{} ", i).to_owned()[..];
@@ -605,7 +603,7 @@ async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRes
     let data;
 
     if arg_user == "" {
-        let author_id = msg.author.id.as_u64().clone() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
+        let author_id = *msg.author.id.as_u64() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
         {
             let client = client.write().await;
             data = client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
@@ -656,7 +654,7 @@ async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRes
 
     let user_recent_raw = get_osu_user_recent(user_data.osu_id, &osu_key).await?;
 
-    if user_recent_raw.len() < 1 {
+    if user_recent_raw.is_empty() {
         bot_msg.clone().edit(&ctx, |m| {
             m.content(format!("The user **{}** has not played in the last 24 hours.", user_data.name));
             m
@@ -687,7 +685,7 @@ async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRes
         if let Some(reaction) = &bot_msg.await_reaction(&ctx).timeout(Duration::from_secs(20)).await {
             let emoji = &reaction.as_inner_ref().emoji;
 
-            let _ = match emoji.as_data().as_str() {
+            match emoji.as_data().as_str() {
                 "⬅️" => { 
                     if page != 0 {
                         page -= 1;
@@ -699,11 +697,12 @@ async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRes
                     }
                 },
                 _ => (),
-            };
+            }
+
             short_recent_builder(ctx.http.clone(), &event_data, bot_msg.clone(), page).await?;
             reaction.as_inner_ref().delete(&ctx).await?;
         } else {
-            &bot_msg.delete_reactions(&ctx).await?;
+            bot_msg.delete_reactions(&ctx).await?;
             break
         };
     }

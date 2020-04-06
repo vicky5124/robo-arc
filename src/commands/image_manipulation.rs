@@ -20,7 +20,7 @@ use serenity::{
 };
 use tokio::task::block_in_place;
 
-async fn grayscale(image_vec: &Vec<u8>) -> Result<Vec<u8>, Box<dyn std::error::Error>>{
+async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error>>{
     // Load the image as a buffer.
     let mut imgbuf = image::load_from_memory(&image_vec)?
         .into_rgba();
@@ -77,7 +77,7 @@ async fn pride(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
                 filename = &x.filename;
 
                 let mut file = File::create(filename)?;
-                file.write(&bytes)?;
+                file.write_all(&bytes)?;
 
                 (x.url.to_owned(), bytes)
             }

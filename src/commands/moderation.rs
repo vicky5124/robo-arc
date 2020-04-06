@@ -31,7 +31,7 @@ async fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Me
             Ok(m) => Ok(m.to_owned()),
             Err(why) => Err(why.to_string()),
         }
-    } else if member_name.starts_with("<@") && member_name.ends_with(">") {
+    } else if member_name.starts_with("<@") && member_name.ends_with('>') {
         let re = Regex::new("[<@!>]").unwrap();
         let member_id = re.replace_all(member_name, "").into_owned();
         let member = &msg.guild_id.unwrap().member(&ctx, UserId(member_id.parse::<u64>().unwrap())).await;
@@ -43,17 +43,17 @@ async fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Me
     } else {
         let guild = &msg.guild(&ctx).await.unwrap();
         let rguild = &guild.read().await;
-        let member_name = member_name.split("#").nth(0).unwrap();
+        let member_name = member_name.split("#").next().unwrap();
 
-        for (_,m) in &rguild.members {
+        for m in rguild.members.values() {
             if m.display_name().await == std::borrow::Cow::Borrowed(member_name) ||
-                m.user.read().await.name == member_name.to_string()
+                m.user.read().await.name == member_name
             {
                 members.push(m);
             }
         }
 
-        if &members.len() == &0 {
+        if members.is_empty() {
             let similar_members = &rguild.members_containing(&member_name, false, false).await;
 
             let mut members_string =  stream::iter(similar_members.iter())
@@ -67,7 +67,7 @@ async fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Me
                 }).await;
 
             let message = {
-                if members_string == "".to_string() {
+                if members_string == "" {
                     format!("No member named '{}' was found.", member_name)
                 } else {
                     members_string.pop();
@@ -75,7 +75,7 @@ async fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Me
                 }
             };
             Err(message)
-        } else if &members.len() == &1 {
+        } else if members.len() == 1 {
             Ok(members[0].to_owned())
         } else {
             let mut members_string =  stream::iter(members.iter())
@@ -110,9 +110,9 @@ async fn kick(mut ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
     match member {
         Ok(m) => {
             m.kick(&ctx).await?;
-            &msg.reply(&ctx, format!("Successfully kicked member `{}#{}`", m.user.read().await.name, m.user.read().await.discriminator)).await?;
+            msg.reply(&ctx, format!("Successfully kicked member `{}#{}`", m.user.read().await.name, m.user.read().await.discriminator)).await?;
         },
-        Err(why) => {&msg.reply(&ctx, why.to_string()).await?;},
+        Err(why) => {msg.reply(&ctx, why.to_string()).await?;},
     }
 
     Ok(())
@@ -132,9 +132,9 @@ async fn ban(mut ctx: &mut Context, msg: &Message, args: Args) -> CommandResult 
     match member {
         Ok(m) => {
             m.ban(&ctx, &1).await?;
-            &msg.reply(&ctx, format!("Successfully banned member `{}#{}`", m.user.read().await.name, m.user.read().await.discriminator)).await?;
+            msg.reply(&ctx, format!("Successfully banned member `{}#{}`", m.user.read().await.name, m.user.read().await.discriminator)).await?;
         },
-        Err(why) => {&msg.reply(&ctx, why.to_string()).await?;},
+        Err(why) => {msg.reply(&ctx, why.to_string()).await?;},
     }
 
     Ok(())
@@ -152,7 +152,7 @@ async fn ban(mut ctx: &mut Context, msg: &Message, args: Args) -> CommandResult 
 async fn clear(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
     let num = args.single::<u64>();
     match num {
-        Err(_) => {&msg.channel_id.say(&ctx, "The value provided was not a valid number").await?;},
+        Err(_) => {msg.channel_id.say(&ctx, "The value provided was not a valid number").await?;},
         Ok(n) => {
             let channel = &msg.channel(&ctx).await.unwrap().guild().unwrap();
 

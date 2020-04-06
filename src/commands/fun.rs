@@ -70,7 +70,7 @@ async fn urban(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         .json::<UrbanList>()
         .await?;
 
-    if resp.list.len() == 0 {
+    if resp.list.is_empty() {
         msg.channel_id.say(&ctx, format!("The term '{}' has no Urban Definitions", term)).await?;
     } else {
         let choice = &resp.list[0];
@@ -89,12 +89,12 @@ async fn urban(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                 e.url(&choice.permalink);
                 e.description(format!("submitted by **{}**\n\n:thumbsup: **{}** ┇ **{}** :thumbsdown:\n", &choice.author, &choice.thumbs_up, &choice.thumbs_down));
                 e.fields(fields);
-                e.timestamp(choice.clone().written_on.to_owned());
+                e.timestamp(choice.clone().written_on);
                 e
             });
             m
         }).await {
-            if "Embed too large.".to_string() == why.to_string() {
+            if "Embed too large." == why.to_string() {
                 msg.channel_id.say(&ctx, &choice.permalink).await?;
             } else {
                 return Err(CommandError(why.to_string()));
@@ -128,7 +128,7 @@ async fn translate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandR
             .expect("failed to execute process");
 
     let text = String::from_utf8_lossy(&output.stdout);
-    let resp = text.split("'").nth(1).unwrap();
+    let resp = text.split('\'').nth(1).unwrap();
 
     let fields = vec![
         ("Original Text", &args_text, false),
@@ -154,7 +154,7 @@ async fn translate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandR
 async fn duck_duck_go(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let url = Url::parse_with_params("https://lmddgtfy.net/",
                                      &[("q", args.message())])?;
-    &msg.channel_id.say(&ctx, url).await?;
+    msg.channel_id.say(&ctx, url).await?;
 
     Ok(())
 }
@@ -171,7 +171,7 @@ async fn encrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult 
     let bytes = message.as_bytes();
     let encrypted_bytes = bytes.iter().map(|b| format!("{}", b)).collect::<String>();
     let encrypted_message = encrypted_bytes.parse::<u128>()? << 1;
-    &msg.channel_id.say(&ctx, format!("`{:X}`", encrypted_message)).await?;
+    msg.channel_id.say(&ctx, format!("`{:X}`", encrypted_message)).await?;
     Ok(())
 }
 /// Decrypts and encrypted message. **NOT WORKING**
@@ -182,6 +182,6 @@ async fn decrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult 
     let bytes = message.as_bytes();
     let encrypted_bytes = bytes.iter().map(|b| format!("{}", b)).collect::<String>();
     let encrypted_message = encrypted_bytes.parse::<u128>()? >> 1;
-    &msg.channel_id.say(&ctx, format!("`{:X}`", encrypted_message)).await?;
+    msg.channel_id.say(&ctx, format!("`{:X}`", encrypted_message)).await?;
     Ok(())
 }

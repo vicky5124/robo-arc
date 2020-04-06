@@ -34,7 +34,7 @@ pub async fn obtain_tags_unsafe(raw_args: Args) -> Vec<String> {
         }
     }
     // convert the tags vector type from Vec<&str> to Vec<String>
-    tags.iter().map(|x| x.to_string()).collect()
+    tags.iter().map(|x| (*x).to_string()).collect()
 }
 
 // This function parses the arguments for safe content on booru commands and returns a lit of the tags.
@@ -51,11 +51,11 @@ pub async fn obtain_tags_safe(raw_args: Args) -> Vec<String> {
         // we also block -rating: because you can't search "rating:Safe -rating:Sage" in most
         // boorus. It just crashes the search.
         if !arg.starts_with("rating:") || !arg.starts_with("-rating:") {
-            &tags.push(arg);
+            tags.push(arg);
         }
     }
     // transform trags into Vec<String>
-    tags.iter().map(|x| x.to_string()).collect()
+    tags.iter().map(|x| (*x).to_string()).collect()
 }
 
 // This function removes any illegal tags for not SFW content from the tags.

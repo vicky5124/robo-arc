@@ -372,7 +372,7 @@ impl EventHandler for Handler {
             // remove the prefix from the message content
             let command = msg.content.replacen(&prefix, "", 1);
             // split the message words into a Vector
-            let words = command.split(" ").collect::<Vec<&str>>();
+            let words = command.split(' ').collect::<Vec<&str>>();
             // get the first item of the Vector, aka the command name.
             // and everything after it.
             let (command_name, parameters) = &words.split_first().unwrap();
@@ -394,7 +394,7 @@ impl EventHandler for Handler {
                 // transform the parameters into a string
                 let mut parameters_str = parameters.iter().map(|word| format!(" {}", word)).collect::<String>();
                 // if there are parameters
-                if parameters_str != "".to_string() {
+                if parameters_str != "" {
                     // remove the first space on the string, created by the previous function
                     parameters_str = parameters_str.chars().next().map(|c| &parameters_str[c.len_utf8()..]).unwrap().to_string();
                 }
@@ -448,7 +448,7 @@ impl EventHandler for Handler {
 
         // Check if the channel is on the list of channels that can be annoyed
         let annoyed_channels = data_read.get::<AnnoyedChannels>();
-        let annoy = if annoyed_channels.as_ref().unwrap().contains(&msg.channel_id.0) {true} else {false};
+        let annoy = annoyed_channels.as_ref().unwrap().contains(&msg.channel_id.0);
 
         match add_reaction.emoji {
             // Matches custom emojis.

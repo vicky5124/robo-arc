@@ -50,12 +50,11 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
 
     let channel = &ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
     // Checks if the command was invoked on a DM
-    let dm_channel: bool;
-    if msg.guild_id == None {
-        dm_channel = true;
+    let dm_channel = if msg.guild_id == None {
+        true
     } else {
-        dm_channel = false;
-    }
+        false
+    };
 
     let raw_tags = {
         if channel.is_nsfw().await || dm_channel {
@@ -91,7 +90,7 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
         .json::<Vec::<SankakuData>>()
         .await?;
 
-    if resp.len() == 0 {
+    if resp.is_empty() {
         msg.channel_id.say(&ctx, "No posts match the provided tags.").await?;
         return Ok(());
     }
@@ -104,10 +103,10 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
             let x = &resp[r];
             y += 1;
             // 8MB
-            if &x.file_size < &8_000_000 {
+            if x.file_size < 8_000_000 {
                 choice = x;
                 break;
-            } else if &y > &(&resp.len()*2) {
+            } else if y > (&resp.len()*2) {
                 msg.channel_id.say(&ctx, "All the content matching the requested tags is too big to be sent.").await?;
                 return Ok(());
             }
@@ -125,13 +124,13 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
         .into_iter()
         .collect::<Vec<u8>>();
 
-    let fullsize_tagless = &choice.file_url.split("?").nth(0).unwrap();
-    let fullsize_split = fullsize_tagless.split("/").collect::<Vec<&str>>();
+    let fullsize_tagless = &choice.file_url.split('?').nth(0).unwrap();
+    let fullsize_split = fullsize_tagless.split('/').collect::<Vec<&str>>();
     let filename = fullsize_split.get(6).unwrap();
 
     let attachment = AttachmentType::Bytes {
         data: Cow::from(buf),
-        filename: filename.to_string(),
+        filename: (*filename).to_string(),
     };
 
     let rating = match &choice.rating[..]{
@@ -149,8 +148,8 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
     ];
 
     let source_md = format!("[Here]({})", &choice.source.as_ref().unwrap());
-    if &choice.source.as_ref().unwrap() != &&"".to_string() {
-        &fields.push(("Source", &source_md, true));
+    if choice.source.as_ref().unwrap() != &"".to_string() {
+        fields.push(("Source", &source_md, true));
     }
 
 
@@ -175,12 +174,11 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
 pub async fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let channel = &ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
     // Checks if the command was invoked on a DM
-    let dm_channel: bool;
-    if msg.guild_id == None {
-        dm_channel = true;
+    let dm_channel = if msg.guild_id == None {
+        true
     } else {
-        dm_channel = false;
-    }
+        false
+    };
 
     let raw_tags = {
         if channel.is_nsfw().await || dm_channel {
@@ -219,13 +217,13 @@ pub async fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
     let resp = match raw_resp {
         Ok(x) => x,
         Err(_) => {
-            &msg.reply(&ctx, "There's a 4 tag limit to the requests.\nWhat counts as a tag? Most of the tags that have `:` on the name don't count as a tag.");
+            msg.reply(&ctx, "There's a 4 tag limit to the requests.\nWhat counts as a tag? Most of the tags that have `:` on the name don't count as a tag.").await?;
             return Ok(());
         }
     };
 
 
-    if resp.len() == 0 {
+    if resp.is_empty() {
         msg.channel_id.say(&ctx, "No posts match the provided tags.").await?;
         return Ok(());
     }
@@ -238,10 +236,10 @@ pub async fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
             let x = &resp[r];
             y += 1;
             // 8MB
-            if &x.file_size < &8_000_000 {
+            if x.file_size < 8_000_000 {
                 choice = x;
                 break;
-            } else if &y > &(&resp.len()*2) {
+            } else if y > (&resp.len()*2) {
                 msg.channel_id.say(&ctx, "All the content matching the requested tags is too big to be sent.").await?;
                 return Ok(());
             }
@@ -261,13 +259,13 @@ pub async fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
         .collect::<Vec<u8>>();
 
 
-    let fullsize_tagless = &choice.file_url.split("?").nth(0).unwrap();
-    let fullsize_split = fullsize_tagless.split("/").collect::<Vec<&str>>();
+    let fullsize_tagless = &choice.file_url.split('?').nth(0).unwrap();
+    let fullsize_split = fullsize_tagless.split('/').collect::<Vec<&str>>();
     let filename = fullsize_split.get(6).unwrap();
 
     let attachment = AttachmentType::Bytes {
         data: Cow::from(&buf),
-        filename: filename.to_string(),
+        filename: (*filename).to_string(),
     };
 
     let rating = match &choice.rating[..] {
@@ -288,7 +286,7 @@ pub async fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
     if let Some(s) = &choice.source {
         if s != &"".to_string() {
             text = format!("[Here]({})", &s);
-            &fields.push(("Source", &text, true));
+            fields.push(("Source", &text, true));
         }
     }
 

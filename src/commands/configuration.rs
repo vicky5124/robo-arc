@@ -231,8 +231,8 @@ async fn guild(_ctx: &mut Context, _msg: &Message, _args: Args) -> CommandResult
 #[command]
 #[min_args(1)]
 async fn prefix(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    if args.len() < 1 {
-        &msg.reply(&ctx, "Invalid prefix was given").await?;
+    if args.is_empty() {
+        msg.reply(&ctx, "Invalid prefix was given").await?;
         return Ok(());
     }
     let prefix = args.message();
@@ -266,6 +266,6 @@ async fn prefix(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let content_safe_options = ContentSafeOptions::default();
     let bad_success_message = format!("Successfully changed your prefix to `{}`", prefix);
     let success_message = content_safe(&ctx, bad_success_message, &content_safe_options).await;
-    &msg.reply(&ctx, success_message).await?;
+    msg.reply(&ctx, success_message).await?;
     Ok(())
 }
