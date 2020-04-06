@@ -527,7 +527,7 @@ async fn after(ctx: &mut Context, msg: &Message, cmd_name: &str, error: CommandR
     // error is the command result.
     // inform the user about an error when it happens.
     if let Err(why) = &error {
-        eprintln!("Error while ruiing {}:\n{:?}", &cmd_name, &error);
+        eprintln!("Error while running {}:\n{:?}", &cmd_name, &error);
         let err = why.0.to_string();
         let _ = msg.channel_id.say(&ctx, &err).await;
     }
