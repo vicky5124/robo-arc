@@ -31,11 +31,11 @@ features = ["full"]
 git = "https://github.com/Lakelezz/serenity/"
 branch = "await"
 default-features = false
-features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "native_tls_backend", "absolute_ratelimits"]
+features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "native_tls_backend", "absolute_ratelimits", "collector"]
 
 # https://github.com/seanmonstar/reqwest
 [dependencies.reqwest]
-version = "0.10.4"
+version = "*"
 features = ["json"]
 
 # https://github.com/serde-rs/serde
