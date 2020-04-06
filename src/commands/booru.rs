@@ -53,7 +53,7 @@ struct Post {
     source: Option<String>,
     rating: String,
     sample_url: Option<String>,
-    file_url: String,
+    file_url: Option<String>,
 }
 
 // defining the Posts vector to Deserialize the requested xml list.
@@ -68,12 +68,7 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
 
     let channel = &ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
     // Checks if the command was invoked on a DM
-    let dm_channel: bool;
-    if msg.guild_id == None {
-        dm_channel = true;
-    } else {
-        dm_channel = false;
-    }
+    let dm_channel = if msg.guild_id == None { true } else { false };
 
     // Obtains a list of tags from the arguments.
     let raw_tags = {
@@ -127,10 +122,18 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
     let choice = &xml.post[r];
 
     // define both url types.
-    let full_size = &choice.file_url; // full size image
+    let full_size = if booru.url != "danbooru.donmai.us" {
+        (*choice.file_url.as_ref().unwrap()).to_string() // full size image
+    } else {
+        (*choice.file_url.as_ref().unwrap_or(&"https://5124.mywire.org/HDD/nope.jpg".to_string())).to_string() // full size image
+    };
     // sample size image, return fullsize if there's no sample.
     let sample_size = if let Some(u) = &choice.sample_url {
-        u.to_owned()
+        if booru.url == "furry.booru.org" || booru.url == "realbooru.com" || booru.url == "safebooru.org" {
+            u.replace(".png",  ".jpg")
+        } else {
+            u.to_owned()
+        }
     } else {
         full_size.clone()
     };
@@ -160,7 +163,7 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
     if let Some(s) = &choice.source {
         if s != &"".to_string() {
             text = format!("[Here]({})", &s);
-            &fields.push(("Source", &text, true));
+            fields.push(("Source", &text, true));
         }
     }
 
@@ -245,7 +248,7 @@ pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandR
     let boorus = data.get::<BooruList>().unwrap();
 
     // get the author_id as a signed 64 bit int, because that's what the database asks for.
-    let author_id = msg.author.id.as_u64().clone() as i64; 
+    let author_id = *msg.author.id.as_u64() as i64; 
 
     // read from the database, and obtain the best girl and booru from the user.
     let data ={
@@ -257,7 +260,7 @@ pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandR
 
     // if the data is not empty, aka if the user is on the database already, tell them to get one.
     if data.is_empty() {
-        &msg.reply(&ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`").await?;
+        msg.reply(&ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`").await?;
         return Ok(());
     }
 
@@ -268,7 +271,7 @@ pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandR
 
     // if the user had only a configured booru, but not a best girl, tell the user to get a best girl.
     if tags == None {
-        &msg.reply(&ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`").await?;
+        msg.reply(&ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`").await?;
         return Ok(());
     }
 
@@ -283,7 +286,7 @@ pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandR
 
     {
         // get the first tag from the tags.
-        let mut name = tags.split(" ").collect::<Vec<&str>>().first().unwrap().to_string();
+        let mut name = (*tags.split(' ').collect::<Vec<&str>>().first().unwrap()).to_string();
         // if the tag has a copyright, format it as such.
         name = name.replace("_(", " from ");
         // remove the last ) in case of having a copyright.
@@ -293,7 +296,7 @@ pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandR
         // add an exclamation mark to the end.
         name += "!";
         // output should look like "Kou from granblue fantasy!" from the original "koy_(granblue_fantasy)"
-        &msg.channel_id.say(&ctx, capitalize_first(&name).await).await?;
+        msg.channel_id.say(&ctx, capitalize_first(&name).await).await?;
     }
 
     // combine the command arguments with the saved tags on the database.
@@ -327,7 +330,7 @@ pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandR
         get_booru(&mut ctx.clone(), &msg, &b, args_tags).await?;
     // else, the booru they have configured is not supported, so we default to chan.
     } else {
-        &msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan").await?;
+        msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan").await?;
         chan(&mut ctx.clone(), &msg, args_tags).await?;
     }
 
@@ -347,7 +350,7 @@ pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
     let commands = data.get::<BooruCommands>();
     let boorus = data.get::<BooruList>().unwrap();
 
-    let author_id = msg.author.id.as_u64().clone() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
+    let author_id = *msg.author.id.as_u64() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
     let data ={
         let client = client.write().await;
         client.query("SELECT best_boy, booru FROM best_bg WHERE user_id = $1",
@@ -356,7 +359,7 @@ pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
     let (tags, mut booru);
 
     if data.is_empty() { // if the data is not empty, aka if the user is on the database already
-        &msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`.conf user best_boy your_best_boy_tag`").await?;
+        msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`.conf user best_boy your_best_boy_tag`").await?;
         return Ok(());
     } else {
         let row = data.first().unwrap();
@@ -364,7 +367,7 @@ pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
         booru = row.get::<_, Option<&str>>(1);
 
         if tags == None {
-            &msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`.conf user best_boy your_best_boy_tag`").await?;
+            msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`.conf user best_boy your_best_boy_tag`").await?;
             return Ok(());
         }
 
@@ -376,12 +379,12 @@ pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
     let booru = booru.unwrap();
 
     {
-        let mut name = tags.split(" ").collect::<Vec<&str>>().first().unwrap().to_string();
+        let mut name = tags.split(' ').collect::<Vec<&str>>().first().unwrap().to_string();
         name = name.replace("_(", " from ");
         name = name.replace(")", "");
         name = name.replace("_", " ");
         name += "!";
-        &msg.channel_id.say(&ctx, capitalize_first(&name).await).await?;
+        msg.channel_id.say(&ctx, capitalize_first(&name).await).await?;
     }
 
     let a = args.message();
@@ -407,7 +410,7 @@ pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
         };
         get_booru(&mut ctx.clone(), &msg.clone(), &b, args_tags).await?;
     } else {
-        &msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan").await?;
+        msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan").await?;
         chan(&mut ctx.clone(), &msg, args_tags).await?;
     }
 
