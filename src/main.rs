@@ -43,10 +43,19 @@ use std::{
 
 use tokio::sync::Mutex;
 
-use tracing::{info, Level};
+use tracing::{
+    // Log macros.
+    info,
+    trace,
+    error,
+    // Others
+    Level,
+    instrument
+};
 use tracing_subscriber::FmtSubscriber;
 use tracing_log::LogTracer;
-use log;
+//use tracing_futures::Instrument;
+//use log;
 
 use tokio_postgres::Client as PgClient; // PostgreSQL Client struct.
 use toml::Value; // To parse the data of .toml files
@@ -540,19 +549,31 @@ async fn on_dispatch_error(ctx: &mut Context, msg: &Message, error: DispatchErro
         },
         // eprint prints to stderr rather than stdout.
         _ => {
+            error!("Unhandled dispatch error: {:?}", error);
             eprintln!("An unhandled dispatch error has occurred:");
             eprintln!("{:?}", error);
         }
     }
 }
 
-// This lambda/closure function executes every time a command finishes executing.
+// This function executes before a command is called.
+#[hook]
+async fn before(_ctx: &mut Context, msg: &Message, cmd_name: &str) -> bool {
+    info!("Running command: {}", &cmd_name);
+    trace!("Message: {}", &msg.content);
+    true
+}
+
+// This function executes every time a command finishes executing.
 // It's used here to handle errors that happen in the middle of the command.
 #[hook]
 async fn after(ctx: &mut Context, msg: &Message, cmd_name: &str, error: CommandResult) {
     // error is the command result.
     // inform the user about an error when it happens.
     if let Err(why) = &error {
+        error!("Error while running command {}", &cmd_name);
+        error!("Error {:?}", &error);
+
         eprintln!("Error while running {}:\n{:?}", &cmd_name, &error);
         let err = why.0.to_string();
         let _ = msg.channel_id.say(&ctx, &err).await;
@@ -566,6 +587,7 @@ async fn after(ctx: &mut Context, msg: &Message, cmd_name: &str, error: CommandR
 
 #[hook]
 async fn dynamic_prefix(ctx: &mut Context, msg: &Message) -> Option<String> { // Custom per guild prefixes.
+    info!("Dynamic prefix call.");
     // obtain the guild id of the command message.
     let guild_id = &msg.guild_id;
 
@@ -609,6 +631,7 @@ async fn dynamic_prefix(ctx: &mut Context, msg: &Message) -> Option<String> { //
 // This main function is a little special, as it returns Result
 // which allows ? to be used for error handling.
 #[tokio::main(core_threads=8)]
+#[instrument]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Opens the config.toml file and reads it's content
     let mut file = File::open("config.toml")?;
@@ -620,7 +643,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     if configuration["enable_tracing"].as_bool().unwrap() {
         LogTracer::init()?;
-        log::trace!("test log");
+        trace!("test log");
         // obtains the tracing level from the config
         let base_level = configuration["trace_level"].as_str().unwrap();
         let level = match base_level {
@@ -632,13 +655,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             _ => Level::TRACE,
         };
 
+        info!("Tracer initialized.");
+
         let subscriber = FmtSubscriber::builder()
             .with_max_level(level)
             .finish();
         tracing::subscriber::set_global_default(subscriber)?;
 
-        let number_of_yaks = 3;
-        info!(number_of_yaks, "Preparing to shave taks...");
+        info!("Subscriber initialized.");
     }
 
     // obtains the discord token from the config
@@ -670,8 +694,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .with_whitespace(true) // Allow a whitespace between the prefix and the command name.
             .owners(owners) // Defines the owners, this can be later used to make owner specific commands.
             .case_insensitivity(true) // Makes the prefix and command be case insensitive.
+            .blocked_users(vec![UserId(135423120268984330)].into_iter().collect())
         )
         .on_dispatch_error(on_dispatch_error)
+        .before(before)
         .after(after)
 
         .group(&META_GROUP) // Load `Meta` command group
