@@ -130,13 +130,19 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
     // sample size image, return fullsize if there's no sample.
     let sample_size = if let Some(u) = &choice.sample_url {
         if booru.url == "furry.booru.org" || booru.url == "realbooru.com" || booru.url == "safebooru.org" {
-            u.replace(".png",  ".jpg")
+            let status = reqwest::get(u).await?.status();
+            if status == 404 {
+                u.replace(".png",  ".jpg")
+            } else {
+                u.to_owned()
+            }
         } else {
             u.to_owned()
         }
     } else {
         full_size.clone()
     };
+    println!("{}", sample_size);
     
     // Sets the score the post has. this score is basically how many favorites the post has.
     let mut score = &choice.score.as_str()[..];
