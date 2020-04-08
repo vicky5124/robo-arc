@@ -212,7 +212,7 @@ struct AllBoorus;
 // This group contains all the commands that manipulate images.
 #[group("Image Manipulation")]
 #[description = "All the image manipulaiton based commands."]
-#[commands(pride)]
+#[commands(pride, gray)]
 struct ImageManipulation;
 
 // The FUN command group.
@@ -333,119 +333,8 @@ impl EventHandler for Handler {
             return;
         }
 
-        // This is where i basically make a small command framework
-        // this is to run the booru commands on the "boorus.json" file.
-        // I shoul reimplement this using:
-        // StandardFramework::before()
-        // StandardFramework::unrecognised_command()
-
         // Read the global data lock
         let data_read = ctx.data.read().await;
-        // Read the cache lock
-        let cache = ctx.cache.read().await;
-        // obtain the id of the guild.
-        let guild_id = &msg.guild_id;
-        // get the ID of the bot.
-        let bot_id = cache.user.id.as_u64();
-
-        // obtain the mention strings of the bot.
-        // one with a space after the mention, another one without it.
-        let bot_mention = format!("<@!{}>", bot_id);
-        let bot_mention_spaced = format!("<@!{}> ", bot_id);
-        let bot_mention_pure = format!("<@{}>", bot_id);
-        let bot_mention_spaced_pure = format!("<@{}> ", bot_id);
-
-        // Here's where i obtain the prefix used for the command.
-        let prefix;
-
-        // if the message starts with any of the 2 bot mentions
-        // set the prefix to the mentions
-        if msg.content.starts_with(bot_mention_spaced.as_str()) {
-            prefix = bot_mention_spaced;
-        } else if msg.content.starts_with(bot_mention_spaced_pure.as_str()) {
-            prefix = bot_mention_spaced_pure;
-        } else if msg.content.starts_with(bot_mention.as_str()) {
-            prefix = bot_mention;
-        } else if msg.content.starts_with(bot_mention_pure.as_str()) {
-            prefix = bot_mention_pure;
-        // else, obtain the custom prefix of the guild
-        } else if let Some(id) = guild_id {
-            // obtain the id of the guild as an i64, because the id is stored as a u64, which is
-            // not compatible with the postgre datbase types.
-            let gid = id.0 as i64;
-
-            // Obtain the database connection.
-            let db_conn = data_read.get::<DatabaseConnection>().unwrap();
-            // Read the configured prefix of the guild from the database.
-            let db_prefix = {
-                let db_conn = db_conn.write().await;
-                db_conn.query("SELECT prefix FROM prefixes WHERE guild_id = $1",
-                    &[&gid])
-                    .await
-                    .expect("Could not query the database.")
-            };
-            // If the guild doesn't have a configured prefix, return the default prefix.
-            if db_prefix.is_empty() {
-                prefix = ".".to_string();
-            // Else, just read the value that was stored on the database and return it.
-            } else {
-                let row = db_prefix.first().unwrap();
-                let p = row.get::<_, Option<&str>>(0);
-                prefix = p.unwrap().to_string();
-            }
-        // If the message was sent on a dm, there's no guild, so just return the default prefix.
-        } else {
-            prefix = ".".to_string();
-        }
-
-        // Get the list of booru commands and the data of the json.
-        let commands = data_read.get::<BooruCommands>();
-        let boorus = data_read.get::<BooruList>().unwrap();
-
-        // if the message content starts with a prefix of the guild
-        if msg.content.starts_with(&prefix) {
-            // remove the prefix from the message content
-            let command = msg.content.replacen(&prefix, "", 1);
-            // split the message words into a Vector
-            let words = command.split(' ').collect::<Vec<&str>>();
-            // get the first item of the Vector, aka the command name.
-            // and everything after it.
-            let (command_name, parameters) = &words.split_first().unwrap();
-
-            // if the command invoked is on the list of booru commands
-            // (obtained from "global" data)
-            if commands.as_ref().unwrap().contains(&(**command_name).to_string()){
-                let booru: Booru = {
-                    // Get the Booru default values
-                    let mut x = Booru::default();
-                    // Set X to the data on the json matching the command invoked
-                    for b in boorus {
-                        if b.names.contains(&(**command_name).to_string()) {
-                            x = b.clone();
-                        }
-                    }
-                    x
-                };
-                // transform the parameters into a string
-                let mut parameters_str = parameters.iter().map(|word| format!(" {}", word)).collect::<String>();
-                // if there are parameters
-                if parameters_str != "" {
-                    // remove the first space on the string, created by the previous function
-                    parameters_str = parameters_str.chars().next().map(|c| &parameters_str[c.len_utf8()..]).unwrap().to_string();
-                }
-                // Create an Args delimiting the string with a space (' ')
-                let params = Args::new(&parameters_str, &[Delimiter::Single(' ')]);
-
-                // Call the booru function with the obtained data
-                let booru = get_booru(&mut ctx.clone(), &msg.clone(), &booru, params).await;
-                if let Err(why) = booru {
-                    // Handle any error that may occur.
-                    let why = why.to_string();
-                    let reason = format!("There was an error executing the command: {}", capitalize_first(&why).await);
-                    let _ = msg.channel_id.say(&ctx, reason).await;
-                }
-            }
-        }
 
         // Get the list of channels where the bot is allowed to be annoying
         let annoyed_channels = data_read.get::<AnnoyedChannels>();
@@ -581,9 +470,35 @@ async fn after(ctx: &mut Context, msg: &Message, cmd_name: &str, error: CommandR
 }
 
 // Small error event that triggers when a command doesn't exist.
-//.unrecognised_command(|_, _, unknown_command_name| {
-//    eprintln!("Could not find command named '{}'", unknown_command_name);
-//}
+#[hook]
+async fn unrecognised_command(ctx: &mut Context, msg: &Message, command_name: &str) {
+    let data_read = ctx.data.read().await;
+
+    let commands = data_read.get::<BooruCommands>();
+    let boorus = data_read.get::<BooruList>().unwrap();
+
+    if commands.as_ref().unwrap().contains(command_name) {
+        let booru: Booru = {
+            let mut x = Booru::default();
+            for b in boorus {
+                if b.names.contains(&command_name.to_string()) {
+                    x = b.clone();
+                }
+            }
+            x
+        };
+        let parameters = msg.content.split(command_name).nth(1).unwrap();
+        let params = Args::new(&parameters, &[Delimiter::Single(' ')]);
+
+        let booru = get_booru(&mut ctx.clone(), &msg.clone(), &booru, params).await;
+        if let Err(why) = booru {
+            // Handle any error that may occur.
+            let why = why.to_string();
+            let reason = format!("There was an error executing the command: {}", capitalize_first(&why).await);
+            let _ = msg.channel_id.say(&ctx, reason).await;
+        }
+    }
+}
 
 #[hook]
 async fn dynamic_prefix(ctx: &mut Context, msg: &Message) -> Option<String> { // Custom per guild prefixes.
@@ -622,7 +537,6 @@ async fn dynamic_prefix(ctx: &mut Context, msg: &Message) -> Option<String> { //
     // dynamic_prefix() needs an Option<String>
     Some(p)
 }
-
 
 
 
@@ -697,6 +611,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .blocked_users(vec![UserId(135423120268984330)].into_iter().collect())
         )
         .on_dispatch_error(on_dispatch_error)
+        .unrecognised_command(unrecognised_command)
         .before(before)
         .after(after)
 
