@@ -227,7 +227,70 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
 /// Inspired by -GN's [WaifuBot](https://github.com/isakvik/waifubot/)
 #[command]
 #[aliases("picture", "pic", "booru", "boorus")]
-pub async fn booru_command(_ctx: &mut Context, _msg: &Message, _args: Args) -> CommandResult {
+pub async fn booru_command(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    // open the context data lock in read mode.
+    let data = ctx.data.read().await;
+    // get the database connection from the context data.
+    let client = data.get::<DatabaseConnection>().unwrap();
+    // get the list of booru commands.
+    let commands = data.get::<BooruCommands>();
+    // get the data from "boorus.json"
+    let boorus = data.get::<BooruList>().unwrap();
+
+    // get the author_id as a signed 64 bit int, because that's what the database asks for.
+    let author_id = *msg.author.id.as_u64() as i64; 
+
+    // read from the database, and obtain the booru from the user.
+    let data ={
+        let client = client.write().await;
+        client.query("SELECT booru FROM best_bg WHERE user_id = $1",
+                     &[&author_id]).await?
+    };
+
+    // get the booru and tags from the database.
+    let row = data.first().unwrap();
+    let mut booru = row.get::<_, Option<&str>>(0);
+
+    // if the user doesn't have a configured default booru, default to sankaku.
+    if booru == None {
+        booru = Some("default");
+    }
+
+    // unwrap the option from tags and booru.
+    let booru = booru.unwrap();
+
+    // if the preffered booru is idol, invoke the idol command.
+    if booru == "idol" {
+        idol(&mut ctx.clone(), &msg, args).await?;
+    // if the preffered booru is sankaku or chan, invoke the chan command.
+    } else if booru == "sankaku" || booru == "chan" {
+        chan(&mut ctx.clone(), &msg, args).await?;
+    // if the command is a part of the boorus.json file, invoke the get_booru() function.
+    } else if commands.as_ref().unwrap().contains(&booru.to_string()) {
+        // obtain the rest of the data from the boorus.json file, of the specific booru.
+        let b: Booru = {
+            let mut x = Booru::default();
+
+            for b in boorus {
+                if b.names.contains(&booru.to_string()) {
+                    x = b.clone()
+                }
+            }
+            x
+        };
+        // invoke the get_booru command with the args and booru.
+        get_booru(&mut ctx.clone(), &msg, &b, args).await?;
+    // else, the booru they have configured is not supported or it's not configured, so we default to chan.
+    } else {
+        let msg = if booru == "default" {
+            msg.reply(&ctx, "No configured booru was found. Defaulting to SankakuChan").await?
+        } else {
+            msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan").await?
+        };
+        chan(&mut ctx.clone(), &msg, args).await?;
+        msg.delete(&ctx).await?;
+    }
+
     Ok(())
 }
 
