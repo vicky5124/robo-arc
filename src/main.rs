@@ -7,6 +7,7 @@
 
 mod utils; // Load the utils module
 mod commands; // Load the commands module
+mod notifications;
 
 // Import this 2 commands in specific with a different name
 // as they interfere with the configuration commands that are also being imported.
@@ -15,6 +16,8 @@ use commands::booru::{
     BEST_GIRL_COMMAND as BB_COMMAND,
 };
 use commands::meta::PREFIX_COMMAND as PREFIXES_COMMAND;
+
+use crate::notifications::notification_loop;
 
 use commands::booru::*; // Import everything from the booru module.
 use commands::sankaku::*; // Import everything from the sankaku booru module.
@@ -120,6 +123,7 @@ struct Tokens; // For the configuration found on "config.toml"
 struct AnnoyedChannels; // This is a HashSet of all the channels the bot is allowed to be annoyed on.
 struct BooruList; // This is a HashSet of all the boorus found on "boorus.json"
 struct BooruCommands; // This is a HashSet of all the commands/aliases found on "boorus.json"
+struct NotificationStatus; // This is the status of the thread checking for notifications.
 
 // Implementing a type for each structure
 // This is made to make a Map<Struct, TypeValue>
@@ -153,6 +157,9 @@ impl TypeMapKey for BooruCommands {
     type Value = HashSet<String>; 
 }
 
+impl TypeMapKey for NotificationStatus {
+    type Value = bool;
+}
 
 
 // The basic commands group is being defined here.
@@ -267,7 +274,6 @@ async fn my_help(
 }
 
 
-
 struct Handler; // Defines the handler to be used for events.
 
 #[async_trait]
@@ -283,7 +289,27 @@ impl EventHandler for Handler {
             OnlineStatus::Online
         ).await;
 
+        let status = {
+            let read_data = ctx.data.read().await;
+            read_data.get::<NotificationStatus>().unwrap().clone()
+        };
+
         println!("{} is ready to rock!", ready.user.name);
+
+        if !status {
+            let ctx = Arc::new(ctx);
+            let ctx_clone = Arc::clone(&ctx);
+            let notification_loop = tokio::spawn(async move {notification_loop(ctx_clone).await});
+            {
+                let mut data = ctx.data.write().await;
+                data.insert::<NotificationStatus>(true);
+            }
+            let _ = notification_loop.await;
+            {
+                let mut data = ctx.data.write().await;
+                data.insert::<NotificationStatus>(false);
+            }
+        }
     }
 
     // on_message event on d.py
@@ -672,6 +698,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
         // Add the tokens to the data.
         data.insert::<Tokens>(configuration);
+        // Add the current status of the notifications.
+        data.insert::<NotificationStatus>(false);
 
         {
             // Open the boorus.json file
