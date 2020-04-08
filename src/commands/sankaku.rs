@@ -50,11 +50,7 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
 
     let channel = &ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
     // Checks if the command was invoked on a DM
-    let dm_channel = if msg.guild_id == None {
-        true
-    } else {
-        false
-    };
+    let dm_channel = msg.guild_id == None;
 
     let raw_tags = {
         if channel.is_nsfw().await || dm_channel {
@@ -124,7 +120,7 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
         .into_iter()
         .collect::<Vec<u8>>();
 
-    let fullsize_tagless = &choice.file_url.split('?').nth(0).unwrap();
+    let fullsize_tagless = &choice.file_url.split('?').next().unwrap();
     let fullsize_split = fullsize_tagless.split('/').collect::<Vec<&str>>();
     let filename = fullsize_split.get(6).unwrap();
 
@@ -174,11 +170,7 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
 pub async fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let channel = &ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
     // Checks if the command was invoked on a DM
-    let dm_channel = if msg.guild_id == None {
-        true
-    } else {
-        false
-    };
+    let dm_channel = msg.guild_id == None;
 
     let raw_tags = {
         if channel.is_nsfw().await || dm_channel {
@@ -259,7 +251,7 @@ pub async fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
         .collect::<Vec<u8>>();
 
 
-    let fullsize_tagless = &choice.file_url.split('?').nth(0).unwrap();
+    let fullsize_tagless = &choice.file_url.split('?').next().unwrap();
     let fullsize_split = fullsize_tagless.split('/').collect::<Vec<&str>>();
     let filename = fullsize_split.get(6).unwrap();
 

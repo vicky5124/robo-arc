@@ -304,7 +304,7 @@ async fn get_osu_user_recent(user_id: i32, osu_key: &str) -> Result<Vec<OsuUserR
 }
 
 // Requests to the api the data of a beatmap
-async fn get_osu_beatmap(beatmap_id: &String, osu_key: &String) -> Result<Vec<OsuBeatmapData>, Box<dyn std::error::Error>> {
+async fn get_osu_beatmap(beatmap_id: &str, osu_key: &str) -> Result<Vec<OsuBeatmapData>, Box<dyn std::error::Error>> {
     let url = format!("https://osu.ppy.sh/api/get_beatmaps?k={}&b={}", osu_key, beatmap_id);
     let resp = reqwest::get(&url)
         .await?
@@ -463,7 +463,7 @@ async fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> Com
                 }
 
             } else if arg.starts_with("mode=") { 
-                let x: &str = arg.split("=").nth(1).unwrap();
+                let x: &str = arg.split('=').nth(1).unwrap();
                 user_data.mode = match x {
                     "0" | "std" | "standard" => Some(0),
                     "1" | "taiko" => Some(1),

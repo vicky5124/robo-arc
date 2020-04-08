@@ -43,7 +43,7 @@ async fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Me
     } else {
         let guild = &msg.guild(&ctx).await.unwrap();
         let rguild = &guild.read().await;
-        let member_name = member_name.split("#").next().unwrap();
+        let member_name = member_name.split('#').next().unwrap();
 
         for m in rguild.members.values() {
             if m.display_name().await == std::borrow::Cow::Borrowed(member_name) ||
@@ -161,7 +161,7 @@ async fn clear(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResul
 
             channel.read().await.delete_messages(&ctx, messages_ids).await?;
 
-            &msg.channel_id.say(&ctx, format!("Successfully deleted `{}` message", n)).await?;
+            msg.channel_id.say(&ctx, format!("Successfully deleted `{}` message", n)).await?;
         }
     }
     Ok(())

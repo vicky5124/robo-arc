@@ -414,13 +414,13 @@ impl EventHandler for Handler {
 
             // if the command invoked is on the list of booru commands
             // (obtained from "global" data)
-            if commands.as_ref().unwrap().contains(&command_name.to_string()){
+            if commands.as_ref().unwrap().contains(&(**command_name).to_string()){
                 let booru: Booru = {
                     // Get the Booru default values
                     let mut x = Booru::default();
                     // Set X to the data on the json matching the command invoked
                     for b in boorus {
-                        if b.names.contains(&command_name.to_string()) {
+                        if b.names.contains(&(**command_name).to_string()) {
                             x = b.clone();
                         }
                     }

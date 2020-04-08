@@ -68,7 +68,7 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
 
     let channel = &ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
     // Checks if the command was invoked on a DM
-    let dm_channel = if msg.guild_id == None { true } else { false };
+    let dm_channel = msg.guild_id == None;
 
     // Obtains a list of tags from the arguments.
     let raw_tags = {
@@ -379,7 +379,7 @@ pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
     let booru = booru.unwrap();
 
     {
-        let mut name = tags.split(' ').collect::<Vec<&str>>().first().unwrap().to_string();
+        let mut name = (*tags.split(' ').collect::<Vec<&str>>().first().unwrap()).to_string();
         name = name.replace("_(", " from ");
         name = name.replace(")", "");
         name = name.replace("_", " ");
