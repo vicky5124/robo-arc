@@ -48,11 +48,13 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
             for post in resp {
                 if !md5s.contains(&post.md5) {
                     for channel in &channels {
-                        ChannelId(*channel as u64).send_message(&ctx, |m|{
+                        if let Err(why) = ChannelId(*channel as u64).send_message(&ctx, |m|{
                             m.embed(|e| {
                                 e.image(post.sample_url.clone())
                             })
-                        }).await?;
+                        }).await {
+                            eprintln!("Error while sending message >>> {}", why);
+                        };
                     }
 
                     for webhook in &webhooks {
