@@ -86,6 +86,15 @@ CREATE TABLE public.prefixes (
     CONSTRAINT prefixes_pkey PRIMARY KEY (guild_id)
 )
 ```
+```sql
+CREATE TABLE public.new_posts (
+    booru_url text COLLATE pg_catalog."default" NOT NULL,
+    tags text COLLATE pg_catalog."default" NOT NULL,
+    webhook text[] COLLATE pg_catalog."default",
+    channel_id bigint[],
+    sent_md5 text[] COLLATE pg_catalog."default"
+)
+```
 
 ### __**Translate**__:
 
