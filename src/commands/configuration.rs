@@ -5,6 +5,7 @@ use crate::{
 use std::{
     sync::Arc,
     collections::HashSet,
+    time::Duration,
 };
 use serenity::{
     prelude::Context,
@@ -144,6 +145,7 @@ async fn booru(ctx: &mut Context, msg: &Message, raw_args: Args) -> CommandResul
     Ok(())
 }
 
+
 /// Configures the bot for the channel it was invoked on.
 ///
 /// Configurable aspects:
@@ -151,8 +153,93 @@ async fn booru(ctx: &mut Context, msg: &Message, raw_args: Args) -> CommandResul
 #[command]
 #[required_permissions(MANAGE_CHANNELS)]
 #[only_in("guilds")]
-#[sub_commands(annoy)]
-async fn channel(_ctx: &mut Context, _msg: &Message, _args: Args) -> CommandResult {
+#[sub_commands(annoy, notifications)]
+async fn channel(_ctx: &mut Context, _message: &Message, _args: Args) -> CommandResult {
+    Ok(())
+}
+
+#[derive(Default)]
+struct NewPosts<'a> {
+    booru_url: &'a str,
+    tags: &'a str,
+    remove_hook: bool,
+    hook: &'a str,
+    remove_channel: bool,
+    channel: u64,
+}
+
+/// Configure the notifications of the channel.
+/// WIP
+#[command]
+async fn notifications(ctx: &mut Context, message: &Message, _args: Args) -> CommandResult {
+    // TODO: change this to more defined presets lol
+    let mut msg = message.channel_id.send_message(&ctx, |m| {
+        m.content(format!("<@{}>", message.author.id));
+        m.embed(|e| {
+            e.title("Say the number of option that you want");
+            e.description("__Choose what notification type you want:__\n1: yande.re")
+        })
+    }).await?;
+    // change this to an enum when i add other services.
+    let mut data = NewPosts::default();
+    println!("1");
+    loop {
+        println!("2");
+        match message.author.await_reply(&ctx).timeout(Duration::from_secs(120)).await {
+            None => break,
+            Some(answ) => {
+                println!("3");
+                if answ.content == "1" {
+                    println!("4");
+                    data.booru_url = "yande.re";
+                    msg.edit(&ctx, |m| {
+                        m.content(format!("<@{}>", message.author.id));
+                        m.embed(|e| {
+                            e.title("Say the numbner of option that you want");
+                            e.description("__What delivery system do you want to use:__\n1: Webhook\n2: Bot")
+                        })
+                    }).await?;
+                    match message.author.await_reply(&ctx).timeout(Duration::from_secs(120)).await {
+                        None => break,
+                        Some(answ) => {
+                            if answ.content == "1" {
+                                msg.edit(&ctx, |m| {
+                                    m.content(format!("<@{}>", message.author.id));
+                                    m.embed(|e| {
+                                        e.title("Say the numbner of option that you want");
+                                        e.description("__What delivery system do you want to use:__\n1: Create hook.\n2: Remove current hook from this channel.")
+                                    })
+                                }).await?;
+                                match message.author.await_reply(&ctx).timeout(Duration::from_secs(120)).await {
+                                    None => break,
+                                    Some(answ) => {
+                                        msg.channel_id.say(&ctx, &answ.content).await?;
+                                        break;
+                                    },
+                                }
+                            } else if answ.content == "2" {
+                                msg.edit(&ctx, |m| {
+                                    m.content(format!("<@{}>", message.author.id));
+                                    m.embed(|e| {
+                                        e.title("Say the numbner of option that you want");
+                                        e.description("__What delivery system do you want to use:__\n1: Not yet implemented.")
+                                    })
+                                }).await?;
+                                break;
+                                //match message.author.await_reply(&ctx).timeout(Duration::from_secs(120)).await {
+                                //    None => break,
+                                //    Some(answ) => {
+                                //        msg.channel_id.say(&ctx, &answ.content).await?;
+                                //        break;
+                                //    },
+                                //}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     Ok(())
 }
 
