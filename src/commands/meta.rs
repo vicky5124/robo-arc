@@ -8,6 +8,7 @@ use std::{
     io::prelude::*,
     sync::Arc,
     process::id,
+    time::Duration,
 };
 use serenity::{
     prelude::{
@@ -153,13 +154,36 @@ async fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
 //#[min_args(3)] // Sets the minimum ammount of arguments the command requires to be ran. This is used to trigger the `NotEnoughArguments` error.
 // Testing command, please ignore.
 async fn test(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
-    let m = &msg.channel_id.say(&ctx, "test").await?;
+    //let guild_lock = msg.guild(&ctx.cache).await.unwrap();
+    //let guild = guild_lock.read().await;
+    //for role in guild.roles.values() {
+    //    msg.channel_id.say(&ctx.http, format!("{}", role.name)).await?;
+    //}
 
-    let left = ReactionType::Unicode(String::from("⬅️"));
-    let right = ReactionType::Unicode(String::from("➡️"));
+    let mut m = msg.channel_id.say(&ctx, "test 1").await?;
 
-    m.react(&ctx, left).await?;
-    m.react(&ctx, right).await?;
+    let _left = ReactionType::Unicode(String::from("⬅️"));
+    let _right = ReactionType::Unicode(String::from("➡️"));
+
+    //m.react(&ctx, left).await?;
+    //m.react(&ctx, right).await?;
+    
+    if let Some(answer) = msg.author.await_reply(&ctx).timeout(Duration::from_secs(120)).await {
+        if !answer.content.starts_with('<') {
+            m.edit(&ctx, |m| m.content("test 2")).await?;
+            if let Some(answer) = msg.author.await_reply(&ctx).timeout(Duration::from_secs(120)).await {
+                if !answer.content.starts_with('<') {
+                    m.edit(&ctx, |m| m.content("test 3")).await?;
+                }
+            } else {
+                return Ok(());
+            }
+        }
+    } else {
+        return Ok(());
+    }
+
+
     //source(&mut ctx.clone(), &msg.clone(), args.clone()).await?;
     //std::thread::sleep(std::time::Duration::from_secs(50));
     //let x = args.single::<String>()?;
