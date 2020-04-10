@@ -1,3 +1,17 @@
+# 0.1.2-alpha
+
+### Notifications
+- yande.re:
+  Added basic yande.re new post notifications.
+- booru_commands:
+  Implemented the picture command, that sends a picture from the perffered booru from the user.
+- all xml boorus:
+  Now they are case insensitive.
+- SafeBooru, FurryBooru, RealBooru:
+  Reixed file extension...
+- grayscale:
+  Renamed pride to grayscale.
+
 # 0.1.1-alpha
 
 ### Commands

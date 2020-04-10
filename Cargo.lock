@@ -32,12 +32,11 @@ checksum = "d663a8e9a99154b5fb793032533f6328da35e23aac63d5c152279aa8ba356825"
 
 [[package]]
 name = "arc_bot"
-version = "0.1.1-alpha"
+version = "0.1.2-alpha"
 dependencies = [
  "bitflags",
  "futures",
  "image",
- "log",
  "num-format",
  "qrcode",
  "quick-xml",

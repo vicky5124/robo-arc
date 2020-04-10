@@ -1,6 +1,6 @@
 [package]
 name = "arc_bot"
-version = "0.1.1-alpha"
+version = "0.1.2-alpha"
 authors = ["nitsuga5124 <nitsuga5124@gmail.com>"]
 edition = "2018"
 
@@ -19,7 +19,8 @@ qrcode = "0.12.0" # https://github.com/kennytm/qrcode-rust
 tracing = "0.1.13" # https://github.com/tokio-rs/tracing
 tracing-subscriber = "0.2.3" # https://github.com/tokio-rs/tracing
 tracing-log = "0.1.1" # https://github.com/tokio-rs/tracing
-log = "0.4.8" # https://github.com/rust-lang/log
+#tracing-futures = "0.2.3" # https://github.com/tokio-rs/tracing
+#log = "0.4.8" # https://github.com/rust-lang/log
 futures = "0.3.4" # https://github.com/rust-lang/futures-rs
 
 [dependencies.tokio]
