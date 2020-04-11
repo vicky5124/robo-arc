@@ -134,6 +134,9 @@ def rust_translate(self, text, dest, src='auto'):
 It's as simple as just running:
 
 ```bash
+export DATABASE_URL="postgres://`postgres_username`:`postgres_user_password`@`postgres_ip`:`postgres_port`/`postgres_database`"
+# example: postgres://postgres:123456@localhost:5432/arcbot
+# this values are the same as the ones you put on config.toml
 cargo run --release
 ```
 
