@@ -1,7 +1,7 @@
 /// This is the file containing all the osu! related commands.
 
 use crate::{
-    DatabaseConnection,
+    ConnectionPool,
     Tokens,
     MY_HELP,
     OSU_GROUP,
@@ -22,6 +22,10 @@ use serenity::{
         macros::command,
     },
 };
+
+use sqlx;
+//use futures::TryStreamExt;
+//use futures::stream::StreamExt;
 
 use std::{
     sync::Arc,
@@ -221,6 +225,14 @@ struct OsuUserDBData {
     short_recent: Option<bool>,
 }
 
+struct OsuUserRawDBData {
+    osu_id: i32, // 0
+    osu_username: String, // String::new()
+    mode: Option<i32>, // None
+    pp: Option<bool>,
+    short_recent: Option<bool>,
+}
+
 // Centralized data, to be used for the events.
 #[derive(Default, Clone)]
 pub struct EventData {
@@ -399,38 +411,31 @@ async fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: 
 #[command]
 #[aliases("osuc", "config_osu", "configosu", "configureosu", "configo", "setosu", "osuset", "set_osu", "osu_set")]
 async fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
-
-    let client;
     let osu_key = {
         let data = ctx.data.read().await; // set inmutable global data.
         let tokens = data.get::<Tokens>().unwrap().clone(); // get the tokens from the global data.
         tokens["osu"].as_str().unwrap().to_string()
     };
 
-    let mut data = ctx.data.write().await; // set mutable global data.
-    client = data.get_mut::<DatabaseConnection>().unwrap(); // get the database connection from the global data.
+    let data = ctx.data.write().await; // set mutable global data.
+    let pool = data.get::<ConnectionPool>().unwrap(); // get the database connection from the global data.
 
     let author_id = *msg.author.id.as_u64() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
-    let data ={
-        let client = client.write().await;
-        client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
-                     &[&author_id]).await? // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
-    };
+    let data = sqlx::query!("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
+                            author_id).fetch_optional(pool).boxed().await?; // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
     let empty_data: bool;
 
     let mut user_data = OsuUserDBData::default(); // generate a basic structure with the default values.
 
-    if !data.is_empty() { // if the data is not empty, aka if the user is on the database already
+    if let Some(row) = data { // if the data is not empty, aka if the user is on the database already
         empty_data = false;
         // Parses the database result into each of the pieces of data on the structure.
-        for row in data {
-            user_data.osu_id = row.get(0);
-            user_data.name = row.get(1);
-            user_data.old_name = user_data.name.clone();
-            user_data.mode = row.get(3);
-            user_data.pp = row.get(2);
-            user_data.short_recent = row.get(4);
-        }
+        user_data.osu_id = row.osu_id;
+        user_data.name = row.osu_username;
+        user_data.old_name = user_data.name.clone();
+        user_data.mode = row.mode;
+        user_data.pp = row.pp;
+        user_data.short_recent = row.short_recent;
     } else {
         empty_data = true;
     }
@@ -455,7 +460,7 @@ async fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> Com
                 }
 
             // if the argument starts with the keyword short_recent OR recent
-            } else if arg.starts_with("short_recent=") || arg.starts_with("recent=") { 
+            } else if arg.starts_with("short_recent=") || arg.starts_with("recent=") || arg.starts_with("short=") { 
                 let x: &str = arg.split('=').nth(1).unwrap();
                 user_data.short_recent = match x {
                     "n" | "no" | "false" | "0" => Some(false),
@@ -518,26 +523,11 @@ Short recent? '{}'```",
         Some(b) => Some(*b),
     };
 
-    if empty_data {
-        // inserts the data because the user is new.
-        {
-            let client = client.write().await;
-            client.execute(
-                "INSERT INTO osu_user (osu_id, osu_username, pp, mode, short_recent, discord_id) VALUES ($1, $2, $3, $4, $5, $6)",
-                &[&user_data.osu_id, &user_data.name, &user_data.pp.unwrap(), &user_data.mode.unwrap(), &user_data.short_recent.unwrap(), &author_id]
-            ).await?;
-        }
-
-    } else {
-        // updates the database with the new user data.
-        {
-            let client = client.write().await;
-            client.execute(
-                "UPDATE osu_user SET osu_id = $1, osu_username = $2, pp = $3, mode = $4, short_recent = $5 WHERE discord_id = $6",
-                &[&user_data.osu_id, &user_data.name, &user_data.pp.unwrap(), &user_data.mode.unwrap(), &user_data.short_recent.unwrap(), &author_id]
-            ).await?;
-        }
-    }
+    // Insert a row to the table, but if it conflicts, update the existing one.
+    sqlx::query!("INSERT INTO osu_user (osu_id, osu_username, pp, mode, short_recent, discord_id) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (discord_id) DO UPDATE SET osu_id = $1, osu_username = $2, pp = $3, mode = $4, short_recent = $5",
+        user_data.osu_id, user_data.name, user_data.pp.unwrap(), user_data.mode.unwrap(), user_data.short_recent.unwrap(), author_id)
+        .execute(pool)
+        .await?;
    
     // if the id obtained is 0, it means the user doesn't exist.
     if user_data.osu_id == 0 {
@@ -592,45 +582,29 @@ async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRes
     };
     
     // Obtain the client connection from the "global" data.
-    let client = {
-        let rdata = ctx.data.read().await;
-
-        Arc::clone(rdata.get::<DatabaseConnection>().expect("no database connection found")) // get the database connection from the global data.
-    };
+    let rdata = ctx.data.read().await;
+    let pool = rdata.get::<ConnectionPool>().expect("no database connection found"); // get the database connection from the global data.
 
     let mut user_data = OsuUserDBData::default(); // generate a basic structure with the default values.
 
-    let data;
 
-    if arg_user == "" {
+    let data = if arg_user == "" {
         let author_id = *msg.author.id.as_u64() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
-        {
-            let client = client.write().await;
-            data = client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
-                                &[&author_id]).await?; // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
-
-        }
         arg_user = msg.author.name.clone();
-
-
+        sqlx::query_as!(OsuUserRawDBData, "SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
+                            author_id).fetch_optional(pool).boxed().await? // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
     } else {
-        {
-            let client = client.write().await;
-            data = client.query("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE osu_username = $1", // query the SQL to the database.
-                                &[&arg_user]).await?;
-        }
+        sqlx::query_as!(OsuUserRawDBData, "SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE osu_username = $1", // query the SQL to the database.
+                            arg_user).fetch_optional(pool).boxed().await?
+    };
 
-    }
-
-    if !data.is_empty() { // if the data is not empty, aka if the user is on the database already
+    if let Some(x) = data { // if the data is not empty, aka if the user is on the database already
         // Parses the database result into each of the pieces of data on the structure.
-        for row in data {
-            user_data.osu_id = row.get(0);
-            user_data.name = row.get(1);
-            user_data.mode = row.get(3);
-            user_data.pp = row.get(2);
-            user_data.short_recent = row.get(4);
-        }
+            user_data.osu_id = x.osu_id;
+            user_data.name = x.osu_username;
+            user_data.mode = x.mode;
+            user_data.pp = x.pp;
+            user_data.short_recent = x.short_recent;
     } else {
         if arg_user == "" {
             msg.channel_id.say(&ctx, "It looks like you don't have a configured osu! username, consider configuring one with `n!osuc`").await?;

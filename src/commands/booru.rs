@@ -15,8 +15,12 @@ use crate::{
     Booru,
     BooruList,
     BooruCommands,
-    DatabaseConnection,
+    ConnectionPool,
 };
+
+use sqlx;
+use futures::TryStreamExt;
+use futures::stream::StreamExt;
 
 use serenity::{
     prelude::Context,
@@ -237,7 +241,7 @@ pub async fn booru_command(ctx: &mut Context, msg: &Message, args: Args) -> Comm
     // open the context data lock in read mode.
     let data = ctx.data.read().await;
     // get the database connection from the context data.
-    let client = data.get::<DatabaseConnection>().unwrap();
+    let pool = data.get::<ConnectionPool>().unwrap();
     // get the list of booru commands.
     let commands = data.get::<BooruCommands>();
     // get the data from "boorus.json"
@@ -247,19 +251,21 @@ pub async fn booru_command(ctx: &mut Context, msg: &Message, args: Args) -> Comm
     let author_id = *msg.author.id.as_u64() as i64; 
 
     // read from the database, and obtain the booru from the user.
-    let data ={
-        let client = client.write().await;
-        client.query("SELECT booru FROM best_bg WHERE user_id = $1",
-                     &[&author_id]).await?
-    };
+    let data = sqlx::query!("SELECT booru FROM best_bg WHERE user_id = $1", author_id)
+        .fetch_optional(pool)
+        .boxed()
+        .await?;
 
     // get the booru and tags from the database.
-    let row = data.first().unwrap();
-    let mut booru = row.get::<_, Option<&str>>(0);
+    let mut booru = if let Some(result) = data {
+        Some(result.booru.unwrap())
+    } else {
+        None
+    };
 
     // if the user doesn't have a configured default booru, default to sankaku.
     if booru == None {
-        booru = Some("default");
+        booru = Some("default".to_string());
     }
 
     // unwrap the option from tags and booru.
@@ -310,7 +316,7 @@ pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandR
     // open the context data lock in read mode.
     let data = ctx.data.read().await;
     // get the database connection from the context data.
-    let client = data.get::<DatabaseConnection>().unwrap();
+    let pool = data.get::<ConnectionPool>().unwrap();
     // get the list of booru commands.
     let commands = data.get::<BooruCommands>();
     // get the data from "boorus.json"
@@ -320,33 +326,31 @@ pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandR
     let author_id = *msg.author.id.as_u64() as i64; 
 
     // read from the database, and obtain the best girl and booru from the user.
-    let data ={
-        let client = client.write().await;
-        client.query("SELECT best_girl, booru FROM best_bg WHERE user_id = $1",
-                     &[&author_id]).await?
-    };
+    let data = sqlx::query!("SELECT best_girl, booru FROM best_bg WHERE user_id = $1", author_id)
+        .fetch(pool).boxed().try_next().await?;
+
     let (tags, mut booru);
 
     // if the data is not empty, aka if the user is on the database already, tell them to get one.
-    if data.is_empty() {
+    let row = if let Some(x) = data {
+        x
+    } else {
+        msg.reply(&ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`").await?;
+        return Ok(());
+    };
+
+    if row.best_girl == None {
         msg.reply(&ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`").await?;
         return Ok(());
     }
 
     // get the booru and tags from the database.
-    let row = data.first().unwrap();
-    tags = row.get::<_, Option<&str>>(0);
-    booru = row.get::<_, Option<&str>>(1);
-
-    // if the user had only a configured booru, but not a best girl, tell the user to get a best girl.
-    if tags == None {
-        msg.reply(&ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`").await?;
-        return Ok(());
-    }
+    tags = row.best_girl;
+    booru = row.booru;
 
     // if the user doesn't have a configured default booru, default to sankaku.
     if booru == None {
-        booru = Some("sankaku");
+        booru = Some("sankaku".to_string());
     }
 
     // unwrap the option from tags and booru.
@@ -370,8 +374,7 @@ pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandR
 
     // combine the command arguments with the saved tags on the database.
     let a = args.message();
-    let args_tags = format!("{} {}", a, tags);
-    tags = args_tags.as_str();
+    tags = format!("{} {}", a, tags);
 
     // create an Args object with the tags.
     let args_tags = Args::new(&tags, &[Delimiter::Single(' ')]);
@@ -413,60 +416,81 @@ pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandR
 #[command]
 #[aliases(bb, bestboy, husbando, husband)]
 pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    // This is the exact same as best_girl, so read the comments of that command instead.
-    let data = ctx.data.read().await; // set mutable global data.
-    let client = data.get::<DatabaseConnection>().unwrap(); // get the database connection from the global data.
+    // open the context data lock in read mode.
+    let data = ctx.data.read().await;
+    // get the database connection from the context data.
+    let pool = data.get::<ConnectionPool>().unwrap();
+    // get the list of booru commands.
     let commands = data.get::<BooruCommands>();
+    // get the data from "boorus.json"
     let boorus = data.get::<BooruList>().unwrap();
 
-    let author_id = *msg.author.id.as_u64() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
-    let data ={
-        let client = client.write().await;
-        client.query("SELECT best_boy, booru FROM best_bg WHERE user_id = $1",
-                     &[&author_id]).await?
-    };
+    // get the author_id as a signed 64 bit int, because that's what the database asks for.
+    let author_id = *msg.author.id.as_u64() as i64; 
+
+    // read from the database, and obtain the best boy and booru from the user.
+    let data = sqlx::query!("SELECT best_boy, booru FROM best_bg WHERE user_id = $1", author_id)
+        .fetch(pool).boxed().try_next().await?;
+
     let (tags, mut booru);
 
-    if data.is_empty() { // if the data is not empty, aka if the user is on the database already
+    // if the data is not empty, aka if the user is on the database already, tell them to get one.
+    let row = if let Some(x) = data {
+        x
+    } else {
         msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`.conf user best_boy your_best_boy_tag`").await?;
         return Ok(());
-    } else {
-        let row = data.first().unwrap();
-        tags = row.get::<_, Option<&str>>(0);
-        booru = row.get::<_, Option<&str>>(1);
+    };
 
-        if tags == None {
-            msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`.conf user best_boy your_best_boy_tag`").await?;
-            return Ok(());
-        }
-
-        if booru == None {
-            booru = Some("sankaku");
-        } 
+    if row.best_boy == None {
+        msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`.conf user best_boy your_best_boy_tag`").await?;
+        return Ok(());
     }
+
+    // get the booru and tags from the database.
+    tags = row.best_boy;
+    booru = row.booru;
+
+    // if the user doesn't have a configured default booru, default to sankaku.
+    if booru == None {
+        booru = Some("sankaku".to_string());
+    }
+
+    // unwrap the option from tags and booru.
     let mut tags = tags.unwrap();
     let booru = booru.unwrap();
 
     {
+        // get the first tag from the tags.
         let mut name = (*tags.split(' ').collect::<Vec<&str>>().first().unwrap()).to_string();
+        // if the tag has a copyright, format it as such.
         name = name.replace("_(", " from ");
+        // remove the last ) in case of having a copyright.
         name = name.replace(")", "");
+        // replace all the _ with spaces.
         name = name.replace("_", " ");
+        // add an exclamation mark to the end.
         name += "!";
+        // output should look like "Kou from granblue fantasy!" from the original "koy_(granblue_fantasy)"
         msg.channel_id.say(&ctx, capitalize_first(&name).await).await?;
     }
 
+    // combine the command arguments with the saved tags on the database.
     let a = args.message();
-    let args_tags = format!("{} {}", a, tags);
-    tags = args_tags.as_str();
+    tags = format!("{} {}", a, tags);
 
+    // create an Args object with the tags.
     let args_tags = Args::new(&tags, &[Delimiter::Single(' ')]);
 
+    // if the preffered booru is idol, invoke the idol command.
     if booru == "idol" {
         idol(&mut ctx.clone(), &msg, args_tags).await?;
+    // if the preffered booru is sankaku or chan, invoke the chan command.
     } else if booru == "sankaku" || booru == "chan" {
         chan(&mut ctx.clone(), &msg, args_tags).await?;
+    // if the command is a part of the boorus.json file, invoke the get_booru() function.
     } else if commands.as_ref().unwrap().contains(&booru.to_string()) {
+        // obtain the rest of the data from the boorus.json file, of the specific booru.
         let b: Booru = {
             let mut x = Booru::default();
 
@@ -477,7 +501,9 @@ pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
             }
             x
         };
-        get_booru(&mut ctx.clone(), &msg.clone(), &b, args_tags).await?;
+        // invoke the get_booru command with the args and booru.
+        get_booru(&mut ctx.clone(), &msg, &b, args_tags).await?;
+    // else, the booru they have configured is not supported, so we default to chan.
     } else {
         msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan").await?;
         chan(&mut ctx.clone(), &msg, args_tags).await?;

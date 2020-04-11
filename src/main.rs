@@ -28,7 +28,7 @@ use commands::fun::*; // Import everything from the fun module.
 use commands::moderation::*; // Import everything from the moderation module.
 use commands::configuration::*; // Import everything from the configuration module.
 
-use utils::database::get_database; // Obtain the get_database function from the utilities.
+use utils::database::obtain_pool; // Obtain the get_database function from the utilities.
 use utils::basic_functions::capitalize_first; // Obtain the capitalize_first function from the utilities.
 
 use std::{
@@ -57,7 +57,10 @@ use tracing_log::LogTracer;
 //use tracing_futures::Instrument;
 //use log;
 
-use tokio_postgres::Client as PgClient; // PostgreSQL Client struct.
+use sqlx::PgPool; // PostgreSQL Pool Structure
+use futures::TryStreamExt;
+use futures::stream::StreamExt;
+
 use toml::Value; // To parse the data of .toml files
 use serde_json; // To parse the data of .json files (where's serde_toml smh)
 use serde::Deserialize; // To deserialize data into structures
@@ -127,7 +130,7 @@ struct BooruRaw {
 // Defining the structures to be used for "global" data
 // this data is not really global, it's just shared with Context.data
 struct ShardManagerContainer; // Shard manager to use for the latency.
-struct DatabaseConnection; // The connection to the database, because having multiple connections is a bad idea.
+struct ConnectionPool; // The connection to the database, because having multiple connections is a bad idea.
 struct Tokens; // For the configuration found on "config.toml"
 struct AnnoyedChannels; // This is a HashSet of all the channels the bot is allowed to be annoyed on.
 struct BooruList; // This is a HashSet of all the boorus found on "boorus.json"
@@ -141,11 +144,12 @@ impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
 }
 
-impl TypeMapKey for DatabaseConnection {
+impl TypeMapKey for ConnectionPool {
     // RwLock (aka Read Write Lock) makes the data only modifyable by 1 thread at a time
     // So you can only have the lock open with write a single use at a time.
     // You can have multiple reads, but you can't read as soon as the lock is opened for writing.
-    type Value = Arc<RwLock<PgClient>>;
+    //type Value = Arc<RwLock<PgPool>>;
+    type Value = PgPool;
 }
 
 impl TypeMapKey for Tokens {
@@ -155,7 +159,7 @@ impl TypeMapKey for Tokens {
 }
 
 impl TypeMapKey for AnnoyedChannels {
-    type Value = HashSet<u64>;
+    type Value = RwLock<HashSet<u64>>;
 }
 
 impl TypeMapKey for BooruList {
@@ -337,9 +341,9 @@ impl EventHandler for Handler {
         let data_read = ctx.data.read().await;
 
         // Get the list of channels where the bot is allowed to be annoying
-        let annoyed_channels = data_read.get::<AnnoyedChannels>();
+        let annoyed_channels = data_read.get::<AnnoyedChannels>().unwrap();
         // if the channel the message was sent on is on the list
-        if annoyed_channels.as_ref().map(|set| set.contains(&msg.channel_id.0)).unwrap_or(false) {
+        if (annoyed_channels.read().await).contains(&msg.channel_id.0) {
             // NO U
             if msg.content == "no u" {
                 let _ = msg.reply(&ctx, "no u").await; // reply pings the user
@@ -371,8 +375,8 @@ impl EventHandler for Handler {
         let data_read = ctx.data.read().await;
 
         // Check if the channel is on the list of channels that can be annoyed
-        let annoyed_channels = data_read.get::<AnnoyedChannels>();
-        let annoy = annoyed_channels.as_ref().unwrap().contains(&msg.channel_id.0);
+        let annoyed_channels = data_read.get::<AnnoyedChannels>().unwrap();
+        let annoy = (annoyed_channels.read().await).contains(&msg.channel_id.0);
 
         match add_reaction.emoji {
             // Matches custom emojis.
@@ -514,22 +518,18 @@ async fn dynamic_prefix(ctx: &mut Context, msg: &Message) -> Option<String> { //
         // Open the context data lock in read mode.
         let data = ctx.data.read().await;
         // Obtain the database connection for the data.
-        let db_conn = data.get::<DatabaseConnection>().unwrap();
+        let pool = data.get::<ConnectionPool>().unwrap();
         // Obtain the configured prefix from the database
-        let db_prefix = {
-            let db_conn = db_conn.write().await;
-            db_conn.query("SELECT prefix FROM prefixes WHERE guild_id = $1",
-                         &[&gid]).await.expect("Could not query the database.")
-        };
-        // If the guild did nto configure a default prefix, return the default prefix.
-        if db_prefix.is_empty() {
-            p = ".".to_string();
-        // Else return the configured prefix.
+        let mut db_prefix = sqlx::query!("SELECT prefix FROM prefixes WHERE guild_id = $1", gid)
+            .fetch(pool)
+            .boxed();
+
+        p = if let Some(result) = db_prefix.try_next().await.expect("Could not query the database") {
+            result.prefix.unwrap_or(".".to_string()).to_string()
         } else {
-            let row = db_prefix.first().unwrap();
-            let prefix = row.get::<_, Option<&str>>(0);
-            p = prefix.unwrap().to_string();
-        }
+            ".".to_string()
+        };
+
     // If the command was invoked on a dm
     } else {
         p = ".".to_string();
@@ -633,8 +633,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut data = client.data.write().await;
 
         // Add the database connection to the data.
-        let db = get_database().await?;
-        data.insert::<DatabaseConnection>(Arc::clone(&Arc::new(RwLock::new(db))));
+        let pool = obtain_pool().await?;
+        data.insert::<ConnectionPool>(pool.clone());
         // Add the shard manager to the data.
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
         // Add the tokens to the data.
@@ -667,22 +667,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         {
-            // Obtain the database connection from the data.
-            let db_client = Arc::clone(data.get::<DatabaseConnection>().expect("no database connection found"));
             // obtain all the channels where the bot is allowed to be annoyed on from the db.
-            let raw_annoyed_channels = {
-                let db_client = db_client.write().await;
-                db_client.query("SELECT channel_id from annoyed_channels", &[]).await?
-            };
+            let mut raw_annoyed_channels = sqlx::query!("SELECT channel_id from annoyed_channels")
+                .fetch(&pool)
+                .boxed();
 
             // add every channel id from the db to a HashSet.
             let mut annoyed_channels = HashSet::new();
-            for row in raw_annoyed_channels {
-                annoyed_channels.insert(row.get::<_, i64>(0) as u64);
+            while let Some(row) = raw_annoyed_channels.try_next().await? {
+                annoyed_channels.insert(row.channel_id as u64);
             }
 
             // Insert the HashSet of annoyed channels to the data.
-            data.insert::<AnnoyedChannels>(annoyed_channels);
+            data.insert::<AnnoyedChannels>(RwLock::new(annoyed_channels));
         }
     }
 

@@ -1,20 +1,21 @@
 use crate::{
     ShardManagerContainer,
-    DatabaseConnection,
-    utils::database::get_database,
+    ConnectionPool,
+    utils::database::obtain_pool,
 };
 use std::{
     fs::File,
     io::prelude::*,
-    sync::Arc,
     process::id,
     time::Duration,
 };
+
+use sqlx;
+use futures::TryStreamExt;
+use futures::stream::StreamExt;
+
 use serenity::{
-    prelude::{
-        Context,
-        RwLock,
-    },
+    prelude::Context,
     model::{
         channel::Message,
         Permissions,
@@ -277,21 +278,16 @@ async fn prefix(ctx: &mut Context, msg: &Message) -> CommandResult {
         let gid = id.0 as i64;
 
         // Obtain the database connection.
-        let db_conn = data_read.get::<DatabaseConnection>().unwrap();
+        let pool = data_read.get::<ConnectionPool>().unwrap();
         // Read the configured prefix of the guild from the database.
-        let db_prefix = {
-            let db_conn = db_conn.write().await;
-            db_conn.query("SELECT prefix FROM prefixes WHERE guild_id = $1",
-                         &[&gid]).await.expect("Could not query the database.")
-        };
+        let db_prefix = sqlx::query!("SELECT prefix FROM prefixes WHERE guild_id = $1", gid)
+            .fetch(pool).boxed().try_next().await?;
         // If the guild doesn't have a configured prefix, return the default prefix.
-        if db_prefix.is_empty() {
+        if let None = db_prefix {
             prefix = ".".to_string();
         // Else, just read the value that was stored on the database and return it.
         } else {
-            let row = db_prefix.first().unwrap();
-            let p = row.get::<_, Option<&str>>(0);
-            prefix = p.unwrap().to_string();
+            prefix = db_prefix.unwrap().prefix.unwrap().to_string();
         }
     } else {
         prefix = ".".to_string();
@@ -387,7 +383,7 @@ async fn changelog(ctx: &mut Context, msg: &Message) -> CommandResult {
 #[owners_only]
 async fn reload_db(ctx: &mut Context, msg: &Message) -> CommandResult {
     let mut data = ctx.data.write().await;
-    data.insert::<DatabaseConnection>(Arc::clone(&Arc::new(RwLock::new(get_database().await?))));
+    data.insert::<ConnectionPool>(obtain_pool().await?);
     msg.channel_id.say(&ctx, "Ok.").await?;
     Ok(())
 }

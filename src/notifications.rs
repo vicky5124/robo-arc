@@ -1,8 +1,11 @@
-use crate::DatabaseConnection;
+use crate::ConnectionPool;
 use std::{
     time::Duration,
     sync::Arc,
 };
+use sqlx;
+use futures::TryStreamExt;
+use futures::stream::StreamExt;
 use serde::Deserialize;
 use reqwest::Url;
 
@@ -22,24 +25,23 @@ struct Post {
 
 async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
     let data_read = ctx.data.read().await;
-    let db = data_read.get::<DatabaseConnection>().unwrap();
+    let pool = data_read.get::<ConnectionPool>().unwrap();
 
-    let data ={
-        let client = db.write().await;
-        client.query("SELECT * FROM new_posts",
-                     &[]).await?
-    };
+    let mut data = sqlx::query!("SELECT * FROM new_posts")
+        .fetch(pool)
+        .boxed();
 
-    for i in data {
-        let base_url = i.get::<_, &str>(0);
-        let tags = i.get::<_, &str>(1);
-        let webhooks = i.get::<_, Option<Vec<&str>>>(2).unwrap_or(Vec::new());
-        let channels = i.get::<_, Option<Vec<i64>>>(3).unwrap_or(Vec::new());
-        let mut md5s = i.get::<_, Option<Vec<String>>>(4).unwrap();
+
+    while let Some(i) = data.try_next().await? {
+        let base_url = i.booru_url;
+        let tags = i.tags;
+        let webhooks = i.webhook.unwrap_or(Vec::new());
+        let channels = i.channel_id.unwrap_or(Vec::new());
+        let mut md5s = i.sent_md5.unwrap();
 
         if base_url == "yande.re" {
             let url = Url::parse_with_params("https://yande.re/post/index.json",
-                                             &[("tags", &tags), ("limit", &"100")])?;
+                                             &[("tags", &tags), ("limit", &"100".to_string())])?;
             let resp = reqwest::get(url)
                 .await?
                 .json::<Vec<Post>>()
@@ -74,13 +76,10 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
                     }
 
                     &md5s.push(post.md5);
-                    {
-                        let client = db.write().await;
-                        client.execute(
-                            "UPDATE new_posts SET sent_md5 = $1 WHERE booru_url = $2 AND tags = $3",
-                            &[&Some(&md5s), &base_url, &tags]
-                        ).await?;
-                    }
+                    sqlx::query!(
+                        "UPDATE new_posts SET sent_md5 = $1 WHERE booru_url = $2 AND tags = $3",
+                        &md5s, &base_url, &tags
+                    ).execute(pool).await?;
                 }
             }
         }
