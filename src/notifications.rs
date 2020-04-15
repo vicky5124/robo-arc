@@ -18,9 +18,9 @@ use serenity::{
 };
 
 #[derive(Deserialize)]
-struct Post {
+pub struct Post {
     sample_url: String,
-    md5: String,
+    pub md5: String,
 }
 
 async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
@@ -37,7 +37,7 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
         let tags = i.tags;
         let webhooks = i.webhook.unwrap_or(Vec::new());
         let channels = i.channel_id.unwrap_or(Vec::new());
-        let mut md5s = i.sent_md5.unwrap();
+        let mut md5s = i.sent_md5.unwrap_or(vec![]);
 
         if base_url == "yande.re" {
             let url = Url::parse_with_params("https://yande.re/post/index.json",

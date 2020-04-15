@@ -1,3 +1,4 @@
+#![feature(vec_remove_item)]
 /// This is a discord bot made with `serenity.rs` as a Rust learning project.
 /// If you see a lot of different ways to do the same thing, specially with error handling,
 /// this is indentional, as it helps me remember the concepts that rust provides, so they can be
@@ -506,7 +507,7 @@ async fn unrecognised_command(ctx: &mut Context, msg: &Message, command_name: &s
 
 #[hook]
 async fn dynamic_prefix(ctx: &mut Context, msg: &Message) -> Option<String> { // Custom per guild prefixes.
-    info!("Dynamic prefix call.");
+    //info!("Dynamic prefix call.");
     // obtain the guild id of the command message.
     let guild_id = &msg.guild_id;
 
@@ -535,6 +536,7 @@ async fn dynamic_prefix(ctx: &mut Context, msg: &Message) -> Option<String> { //
         p = ".".to_string();
     };
     // dynamic_prefix() needs an Option<String>
+    //Some(p.to_lowercase())
     Some(p)
 }
 

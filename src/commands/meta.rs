@@ -162,6 +162,7 @@ async fn test(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
     //}
 
     let mut m = msg.channel_id.say(&ctx, "test 1").await?;
+    println!("{}", m.guild_id == None);
 
     let _left = ReactionType::Unicode(String::from("⬅️"));
     let _right = ReactionType::Unicode(String::from("➡️"));

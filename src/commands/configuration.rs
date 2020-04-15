@@ -1,17 +1,26 @@
 use crate::{
+    utils::booru,
     ConnectionPool,
     AnnoyedChannels,
+    notifications::Post,
 };
+
+use std::time::Duration;
 
 use sqlx;
 use futures::TryStreamExt;
 use futures::stream::StreamExt;
 
+use serde_json;
+use reqwest::Url;
+
 use serenity::{
     prelude::Context,
     model::channel::Message,
+    model::user::User,
     framework::standard::{
         Args,
+        Delimiter,
         CommandResult,
         macros::command,
     },
@@ -147,88 +156,218 @@ async fn channel(_ctx: &mut Context, _message: &Message, _args: Args) -> Command
     Ok(())
 }
 
-//#[derive(Default)]
-//struct NewPosts<'a> {
-//    booru_url: &'a str,
-//    tags: &'a str,
-//    remove_hook: bool,
-//    hook: &'a str,
-//    remove_channel: bool,
-//    channel: u64,
-//}
+async fn yande_re_channel(ctx: &Context, msg: &mut Message, author: &User) -> Result<(), Box<dyn std::error::Error>> {
+    msg.edit(ctx, |m| {
+        m.content(format!("<@{}>", author.id));
+        m.embed(|e| {
+            e.title("Say the tag set you would like to get notified about");
+            e.description("This supports the same flags as the `.yandere` command.\n\nExample: `feet stockings -x yuri`")
+        })
+    }).await?;
+
+    if let Some(reply) = author.await_reply(&ctx).timeout(Duration::from_secs(120)).await {
+        msg.edit(ctx, |m| {
+            m.content(format!("<@{}>", author.id));
+            m.embed(|e| {
+                e.title("Say the tag set you would like to get notified about");
+                e.description(format!("You selected the tags: `{}`", reply.content))
+            })
+        }).await?;
+    }
+
+    Ok(())
+}
+
+async fn yande_re_webhook(ctx: &Context, msg: &mut Message, author: &User) -> Result<(), Box<dyn std::error::Error>> {
+    let rdata = ctx.data.read().await;
+    let pool = rdata.get::<ConnectionPool>().unwrap();
+
+    let hooks = msg.channel_id.webhooks(&ctx).await?;
+    let mut existing_hook = false;
+
+    let bot_id = {
+        let cache_read = ctx.cache.read().await;
+        cache_read.user.id
+    };
+
+    let mut hook_index = 0;
+
+    for (index, hook) in hooks.iter().enumerate() {
+        if let Some(u) = &hook.user {
+            if u.id == bot_id {
+                existing_hook = true;
+                hook_index = index;
+            }
+        }
+    }
+
+    msg.edit(ctx, |m| {
+        m.content(format!("<@{}>", author.id));
+        m.embed(|e| {
+            e.title("Say the tag set you would like to get notified about");
+            e.description("This supports the same flags as the `.yandere` command.\n\nExample: `feet stockings -x yuri`")
+        })
+    }).await?;
+    
+    if let Some(reply) = author.await_reply(ctx).timeout(Duration::from_secs(120)).await {
+        let args = Args::new(&reply.content, &[Delimiter::Single(' ')]);
+
+        let channel = ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
+        // Checks if the command was invoked on a DM
+        let dm_channel = msg.guild_id == None;
+    
+        let mut tags = {
+            if channel.is_nsfw().await || dm_channel {
+                let mut raw_tags = booru::obtain_tags_unsafe(args).await;
+                booru::illegal_check_unsafe(&mut raw_tags).await
+            } else {
+                let mut raw_tags = booru::obtain_tags_safe(args).await;
+                booru::illegal_check_safe(&mut raw_tags).await
+            }
+        };
+        tags.sort();
+
+        let mut sorted_tags = tags.iter().map(|i| format!("{} ", i)).collect::<String>();
+        sorted_tags.pop();
+
+        msg.edit(ctx, |m| {
+            m.content(format!("<@{}>", author.id));
+            m.embed(|e| {
+                e.title("Say the tag set you would like to get notified about");
+                e.description(format!("You selected the tags: `{}`", sorted_tags))
+            })
+        }).await?;
+
+        let webhook = if existing_hook {
+            hooks[hook_index].clone()
+        } else {
+            let channel_id = msg.channel_id.0;
+            let map = serde_json::json!({"name": "Robo Arc: yande.re"});
+            
+            ctx.http.create_webhook(channel_id, &map).await?
+        };
+
+        let hook_url = format!("https://discordapp.com/api/webhooks/{}/{}", webhook.id, webhook.token);
+
+        let query = sqlx::query!("SELECT webhook FROM new_posts WHERE booru_url = 'yande.re' AND tags = $1", &sorted_tags)
+            .fetch_optional(pool)
+            .await?;
+
+        if let Some(row) = query {
+            let hooks_raw = row.webhook;
+
+
+            let mut hooks = if let Some(mut hooks) = hooks_raw {
+                if hooks.contains(&hook_url) {
+                    msg.edit(ctx, |m| {
+                        m.content(format!("<@{}>", author.id));
+                        m.embed(|e| {
+                            e.title("It looks like the bot is already posting this tags.");
+                            e.description("Would you like stop getting notified?\n\n1: Yes\n2: No")
+                        })
+                    }).await?;
+
+                    if let Some(reaction) = author.await_reaction(&ctx).timeout(Duration::from_secs(120)).await {
+                        //reaction.as_inner_ref().delete(&ctx).await?;
+                        let emoji = &reaction.as_inner_ref().emoji;
+
+                        match emoji.as_data().as_str() {
+                            "1\u{fe0f}\u{20e3}" => {
+                                hooks.remove_item(&hook_url);
+                                sqlx::query!("UPDATE new_posts SET webhook = $2 WHERE booru_url = 'yande.re' AND tags = $1",
+                                    &sorted_tags, &hooks)
+                                    .execute(pool)
+                                    .await?;
+                                return Ok(());
+                            },
+                            "2\u{fe0f}\u{20e3}" => {
+                                return Ok(());
+                            },
+                            _ => (),
+                        }
+                    }
+                    return Ok(());
+                    
+                } else {
+                    hooks.push(hook_url);
+                    hooks
+                }
+            } else {
+                vec![hook_url]
+            };
+            hooks.dedup();
+
+            sqlx::query!("UPDATE new_posts SET webhook = $2 WHERE booru_url = 'yande.re' AND tags = $1", &sorted_tags, &hooks)
+                .execute(pool)
+                .await?;
+        } else {
+            let hooks = vec![hook_url];
+
+            let md5s = {
+                let url = Url::parse_with_params("https://yande.re/post/index.json",
+                    &[("tags", &sorted_tags), ("limit", &"100".to_string())])?;
+
+                let resp = reqwest::get(url)
+                    .await?
+                    .json::<Vec<Post>>()
+                    .await?;
+                
+                resp.iter().map(|post| post.md5.clone()).collect::<Vec<String>>()
+            };
+
+            sqlx::query!("INSERT INTO new_posts (booru_url, tags, webhook, sent_md5) VALUES ('yande.re', $1, $2, $3)", &sorted_tags, &hooks, &md5s)
+                .execute(pool)
+                .await?;
+        }
+    }
+
+    Ok(())
+}
 
 /// Configure the notifications of the channel.
 /// WIP
 #[command]
-async fn notifications(_ctx: &mut Context, _message: &Message, _args: Args) -> CommandResult {
-//    // TODO: change this to more defined presets lol
-//    let mut msg = message.channel_id.send_message(&ctx, |m| {
-//        m.content(format!("<@{}>", message.author.id));
-//        m.embed(|e| {
-//            e.title("Say the number of option that you want");
-//            e.description("__Choose what notification type you want:__\n1: yande.re")
-//        })
-//    }).await?;
-//    // change this to an enum when i add other services.
-//    let mut data = NewPosts::default();
-//    println!("1");
-//    loop {
-//        println!("2");
-//        match message.author.await_reply(&ctx).timeout(Duration::from_secs(120)).await {
-//            None => break,
-//            Some(answ) => {
-//                println!("3");
-//                if answ.content == "1" {
-//                    println!("4");
-//                    data.booru_url = "yande.re";
-//                    msg.edit(&ctx, |m| {
-//                        m.content(format!("<@{}>", message.author.id));
-//                        m.embed(|e| {
-//                            e.title("Say the numbner of option that you want");
-//                            e.description("__What delivery system do you want to use:__\n1: Webhook\n2: Bot")
-//                        })
-//                    }).await?;
-//                    match message.author.await_reply(&ctx).timeout(Duration::from_secs(120)).await {
-//                        None => break,
-//                        Some(answ) => {
-//                            if answ.content == "1" {
-//                                msg.edit(&ctx, |m| {
-//                                    m.content(format!("<@{}>", message.author.id));
-//                                    m.embed(|e| {
-//                                        e.title("Say the numbner of option that you want");
-//                                        e.description("__What delivery system do you want to use:__\n1: Create hook.\n2: Remove current hook from this channel.")
-//                                    })
-//                                }).await?;
-//                                match message.author.await_reply(&ctx).timeout(Duration::from_secs(120)).await {
-//                                    None => break,
-//                                    Some(answ) => {
-//                                        msg.channel_id.say(&ctx, &answ.content).await?;
-//                                        break;
-//                                    },
-//                                }
-//                            } else if answ.content == "2" {
-//                                msg.edit(&ctx, |m| {
-//                                    m.content(format!("<@{}>", message.author.id));
-//                                    m.embed(|e| {
-//                                        e.title("Say the numbner of option that you want");
-//                                        e.description("__What delivery system do you want to use:__\n1: Not yet implemented.")
-//                                    })
-//                                }).await?;
-//                                break;
-//                                //match message.author.await_reply(&ctx).timeout(Duration::from_secs(120)).await {
-//                                //    None => break,
-//                                //    Some(answ) => {
-//                                //        msg.channel_id.say(&ctx, &answ.content).await?;
-//                                //        break;
-//                                //    },
-//                                //}
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
+async fn notifications(ctx: &mut Context, message: &Message, _args: Args) -> CommandResult {
+    let mut msg = message.channel_id.send_message(&ctx, |m| {
+        m.content(format!("<@{}>", message.author.id));
+        m.embed(|e| {
+            e.title("Select the number of option that you want");
+            e.description("Choose what notification type you want:\n\n1: yande.re posts (WebHook)\n2: yande.re posts (Bot Message)  `WIP`")
+        })
+    }).await?;
+
+    for i in 1..3_u8 {
+        msg.react(&ctx, format!("{}\u{fe0f}\u{20e3}", i)).await?;
+    }
+
+    loop {
+        if let Some(reaction) = message.author.await_reaction(&ctx).timeout(Duration::from_secs(120)).await {
+            reaction.as_inner_ref().delete(&ctx).await?;
+            let emoji = &reaction.as_inner_ref().emoji;
+
+            match emoji.as_data().as_str() {
+                "1\u{fe0f}\u{20e3}" => {yande_re_webhook(&ctx, &mut msg, &message.author).await?; break},
+                "2\u{fe0f}\u{20e3}" => {yande_re_channel(&ctx, &mut msg, &message.author).await?; break},
+                _ => (),
+            }
+
+        } else {
+            msg.edit(&ctx, |m| {
+                m.content(format!("<@{}>: Timeout", message.author.id))
+            }).await?;
+            ctx.http.edit_message(msg.channel_id.0, msg.id.0, &serde_json::json!({"flags" : 4})).await?;
+            msg.delete_reactions(&ctx).await?;
+            return Ok(());
+        }
+    }
+
+    msg.edit(&ctx, |m| {
+        m.content(format!("<@{}>: Success!", message.author.id))
+    }).await?;
+
+    //ctx.http.edit_message(msg.channel_id.0, msg.id.0, &serde_json::json!({"flags" : 4})).await?;
+    msg.delete_reactions(&ctx).await?;
+
     Ok(())
 }
 
