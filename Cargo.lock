@@ -32,7 +32,7 @@ checksum = "d663a8e9a99154b5fb793032533f6328da35e23aac63d5c152279aa8ba356825"
 
 [[package]]
 name = "arc_bot"
-version = "0.1.2-alpha"
+version = "0.1.3-alpha"
 dependencies = [
  "bitflags",
  "futures",
@@ -237,7 +237,7 @@ checksum = "0dbbb57365263e881e805dc77d94697c9118fd94d8da011240555aa7b23445bd"
 [[package]]
 name = "command_attr"
 version = "0.2.0"
-source = "git+https://github.com/Lakelezz/serenity/?branch=await#4298fb8588400745c24bb851dbcee19c3d72a5a1"
+source = "git+https://github.com/Lakelezz/serenity/?branch=await#c9145e62d6d9f96b07668c1f3e7ab7d8a784ace4"
 dependencies = [
  "futures",
  "proc-macro2",
@@ -1408,7 +1408,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.8.1"
-source = "git+https://github.com/Lakelezz/serenity/?branch=await#4298fb8588400745c24bb851dbcee19c3d72a5a1"
+source = "git+https://github.com/Lakelezz/serenity/?branch=await#c9145e62d6d9f96b07668c1f3e7ab7d8a784ace4"
 dependencies = [
  "async-trait",
  "async-tungstenite",
@@ -1501,9 +1501,9 @@ dependencies = [
 
 [[package]]
 name = "sqlx"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63de225f20853d36893d165e636fe73d22042164937e1f6271d501df73b3e5a2"
+checksum = "a2c268cf2f045f3d8b6b54e50653e66c59d6770373b2b59ba29dea459e8294cf"
 dependencies = [
  "sqlx-core",
  "sqlx-macros",
@@ -1511,9 +1511,9 @@ dependencies = [
 
 [[package]]
 name = "sqlx-core"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c9adfd562af3c210adf8e63171baa2161c888d24f89eb7242ada35a48d35871"
+checksum = "673fb6f30bdc14b7812a5ae22d7cc1e8e3d1debd5384eedbdf745827e9721cf3"
 dependencies = [
  "async-native-tls",
  "async-stream",
@@ -1542,9 +1542,9 @@ dependencies = [
 
 [[package]]
 name = "sqlx-macros"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7a391d1f130faf75538b432c34331673bdb16669655cba1ae585391611d88a6"
+checksum = "0de981547a9e8c15336b30079ca040ca252aa91c071e05298d699981d6dec041"
 dependencies = [
  "dotenv",
  "futures",
@@ -1596,18 +1596,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.14"
+version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0570dc61221295909abdb95c739f2e74325e14293b2026b0a7e195091ec54ae"
+checksum = "54b3d3d2ff68104100ab257bb6bb0cb26c901abe4bd4ba15961f3bf867924012"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.14"
+version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "227362df41d566be41a28f64401e07a043157c21c14b9785a0d8e256f940a8fd"
+checksum = "ca972988113b7715266f91250ddb98070d033c62a011fa0fcc57434a649310dd"
 dependencies = [
  "proc-macro2",
  "quote",

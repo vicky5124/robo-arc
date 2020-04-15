@@ -1,3 +1,13 @@
+# 0.1.3-alpha
+
+### Design
+- Replaced tokio-postgres with SQLx
+
+### Commands
+- configure channel notifications
+  New command.
+  Configures the notifications on the channel.
+
 # 0.1.2-alpha
 
 ### Notifications
