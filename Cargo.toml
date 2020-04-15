@@ -56,3 +56,8 @@ features = ["serialize"]
 # https://github.com/flamegraph-rs/flamegraph
 [profile.release]
 debug = true
+
+[build.env]
+passthrough = [
+    "DATABASE_URL",
+]
