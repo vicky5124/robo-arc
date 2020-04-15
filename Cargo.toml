@@ -56,8 +56,3 @@ features = ["serialize"]
 # https://github.com/flamegraph-rs/flamegraph
 [profile.release]
 debug = true
-
-[target.armv7-unknown-linux-gnueabihf.env]
-passthrough = [
-    "DATABASE_URL",
-]
