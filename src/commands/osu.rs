@@ -153,6 +153,28 @@ struct OsuUserData {
     pp_country_rank: Option<String>,
 }
 
+// JSON Structure of the osu! scores API request.
+#[derive(Deserialize, PartialEq, Debug)]
+struct OsuScores {
+    score_id: String,
+    score: String,
+    username: String,
+    maxcombo: String,
+    count50: String,
+    count100: String,
+    count300: String,
+    countmiss: String,
+    countkatu: String,
+    countgeki: String,
+    perfect: String,
+    enabled_mods: String,
+    user_id: String,
+    date: String,
+    rank: String,
+    pp: String,
+    replay_available: String,
+}
+
 // JSON Structure of the osu! user recent plays API request.
 #[derive(Deserialize, PartialEq, Debug, Clone)]
 struct OsuUserRecentData {
@@ -305,6 +327,21 @@ async fn get_osu_user(name: &str, osu_key: &str) -> Result<Vec<OsuUserData>, Box
     Ok(resp)
 }
 
+// Requests to the api the scores of a map 
+async fn get_osu_scores(user_id: i32, user_name: &str, map_id: u64, mode: i32, osu_key: &str) -> Result<Vec<OsuScores>, Box<dyn std::error::Error>> {
+    let url = if user_id != 0 {
+        format!("https://osu.ppy.sh/api/get_scores?k={}&u={}&b={}&m={}&type=id", osu_key, user_id, map_id, mode)
+    } else {
+        format!("https://osu.ppy.sh/api/get_scores?k={}&u={}&b={}&m={}&type=string", osu_key, user_name, map_id, mode)
+    };
+
+    let resp = reqwest::get(&url)
+        .await?
+        .json::<Vec<OsuScores>>()
+        .await?;
+    Ok(resp)
+}
+
 // Requests to the api the recent plays of a user
 async fn get_osu_user_recent(user_id: i32, osu_key: &str) -> Result<Vec<OsuUserRecentData>, Box<dyn std::error::Error>> {
     let url = format!("https://osu.ppy.sh/api/get_user_recent?k={}&u={}&type=id", osu_key, user_id);
@@ -352,7 +389,7 @@ async fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: 
     };
 
     bot_msg.clone().edit(http.clone(), |m| { // say method doesn't work for the message builder.
-        m.content("");
+        m.content(format!("`{}`", beatmap.beatmap_id));
         m.embed( |e| {
             e.color(Colour::new(user.user_id.parse().unwrap()));
             e.title(format!("{} - {} [**{}**]\nby {}",
@@ -549,6 +586,113 @@ Short recent? '{}'```",
     Ok(())
 }
 
+/// Obtains your score on the specified beatmap id
+/// The number that's sent along with the recent command is the beatmap id of it.
+///
+/// Usage: `.score 124217`
+#[command]
+#[aliases("compare")]
+async fn score(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    let bmap_id = match args.parse::<u64>() {
+        Err(_) => {
+            msg.reply(&ctx, "An invalid id was provided").await?;
+            return Ok(());
+        },
+        Ok(x) => x,
+    };
+
+    // Obtains the osu! api key from the "global" data
+    let osu_key = {
+        let data = ctx.data.read().await; // set inmutable global data.
+        let tokens = data.get::<Tokens>().unwrap().clone(); // get the tokens from the global data.
+        tokens["osu"].as_str().unwrap().to_string()
+    };
+    
+    // Obtain the client connection from the "global" data
+    let rdata = ctx.data.read().await;
+    let pool = rdata.get::<ConnectionPool>().expect("no database connection found"); // get the database connection from the global data.
+
+    // get the author_id as a signed 64 bit int, because that's what the database asks for.
+    let author_id = *msg.author.id.as_u64() as i64;
+
+    let user_data = sqlx::query_as!(OsuUserRawDBData, "SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", author_id)
+        .fetch_optional(pool)
+        .boxed()
+        .await?;
+
+    let mut pp = true;
+    let mut mode = 0;
+    let username;
+    let mut osu_id = 0;
+
+    if let Some(row) = user_data {
+        pp = row.pp.unwrap_or(true);
+        mode = row.mode.unwrap_or(0);
+        username = row.osu_username;
+        osu_id = row.osu_id;
+    } else {
+        if let Some(m) = msg.member(&ctx).await {
+            username = m.display_name().await.to_string();
+        } else {
+            username = msg.author.name.to_string();
+        }
+    }
+
+    let score = get_osu_scores(osu_id, &username, bmap_id, mode, &osu_key).await?;
+
+    let s = if let Some(x) = score.get(0) { x } else {
+        msg.channel_id.say(&ctx, format!("The user `{}` does not have any scores on the specified map.", &username)).await?;
+        return Ok(());
+    };
+
+    let beatmap_raw = get_osu_beatmap(&bmap_id.to_string(), &osu_key).await?;
+    let beatmap = &beatmap_raw[0];
+
+    let accuracy = acc_math(s.count300.parse()?, s.count100.parse()?, s.count50.parse()?, s.countmiss.parse()?).await;
+
+    let mods: String = get_mods_short(s.enabled_mods.parse()?).await;
+
+    let rating_url = format!("https://s.ppy.sh/images/{}.png", s.rank.to_uppercase());
+
+    msg.channel_id.send_message(&ctx, |m| {
+        m.embed(|e| {
+            e.color(Colour::new(osu_id as u32));
+
+            e.title(format!("{} - {} [**{}**]\nby {}", beatmap.artist, beatmap.title, beatmap.version, beatmap.creator));
+            e.url(format!("https://osu.ppy.sh/b/{}", beatmap.beatmap_id));
+
+            e.description(format!("**{}** ┇ **x{} / {}**\n**{:.2}%** ┇ {} - {} - {} - {}",
+                s.score.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en),
+                s.maxcombo, beatmap.max_combo, accuracy, s.count300, s.count100, s.count50, s.countmiss));
+            e.timestamp(s.date.clone());
+            e.thumbnail(format!("https://b.ppy.sh/thumb/{}l.jpg", beatmap.beatmapset_id));
+
+            e.author( |a| {
+                a.name(username);
+                if osu_id == 0 {
+                    a.icon_url(format!("https://a.ppy.sh/{}", osu_id + 1));
+                } else {
+                    a.icon_url(format!("https://a.ppy.sh/{}", osu_id));
+                    a.url(format!("https://osu.ppy.sh/u/{}", osu_id));
+                }
+
+                a
+            });
+
+            e.footer(|f| {
+                if pp {
+                    f.text(format!("{}pp | {:.4}* | {}", &s.pp, beatmap.difficultyrating, mods));
+                } else {
+                    f.text(format!("{:.4}* | {}", beatmap.difficultyrating, mods));
+                }
+                f.icon_url(&rating_url)
+            });
+            e
+        })
+    }).await?;
+
+    Ok(())
+}
 /// Command to show the most recent osu! play.
 /// - Due to api limits, this will only work on maps with leaderboard.
 /// - This command is able to show failed plays, and show the % of the progress on the map. 
