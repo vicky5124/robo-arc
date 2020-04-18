@@ -255,12 +255,47 @@ struct OsuUserRawDBData {
     short_recent: Option<bool>,
 }
 
+struct OsuUserRawDBDataMinimal {
+    osu_username: String, // String::new()
+    pp: Option<bool>,
+}
+
 // Centralized data, to be used for the events.
 #[derive(Default, Clone)]
 pub struct EventData {
     user_db_data: Option<OsuUserDBData>,
     user_recent_raw: Option<Vec<OsuUserRecentData>>,
     osu_key: Option<String>,
+}
+
+fn pacman(value: &str) -> String {
+    let x = value.split('.').nth(1).unwrap()[..3].parse::<u32>().unwrap();
+    let tm = x / 50;
+
+    let mut s = "".to_string();
+
+    for _ in 0..tm {
+        s += ". ";
+    }
+    s += "C ";
+
+    for _ in tm..20 {
+        s += "o ";
+    }
+    s
+}
+
+fn seconds_to_days(seconds: u64) -> String {
+    let days = seconds / 60 / 60 / 24;
+    let hours = seconds / 3600 % 24;
+    let minutes = seconds % 3600 / 60;
+    let sec = seconds % 3600 % 60;
+
+    if days == 0 {
+        format!("{}:{}:{}", hours, minutes, sec)
+    } else {
+        format!("{}D {}:{}:{}", days, hours, minutes, sec)
+    }
 }
 
 // Calculates the accuracy % from the number of 300's 100's 50's and misses.
@@ -586,8 +621,162 @@ Short recent? '{}'```",
     Ok(())
 }
 
+/// Shows your osu! profile or of the user specified user.username
+///
+/// You can use `.osuc` to configure your osu! profile.
+/// 
+/// Affected parameters for configuration:
+/// - PP: To know if the bot should display the PP stadistics.
+///
+/// Usage:
+/// `.osu_profile`
+/// `.osu_profile -GN`
+#[command]
+#[aliases("oprofile", "oprof", "osuprofile", "osuprof", "osu_prof", "osu_p", "osup", "osu_p")]
+async fn osu_profile(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    // Obtains the osu! api key from the "global" data
+    let osu_key: &str = {
+        let data = ctx.data.read().await; // set inmutable global data.
+        let tokens = data.get::<Tokens>().unwrap().clone(); // get the tokens from the global data.
+        &tokens["osu"].as_str().unwrap().to_string()
+    };
+    
+    // Obtain the client connection from the "global" data
+    let rdata = ctx.data.read().await;
+    let pool = rdata.get::<ConnectionPool>().expect("no database connection found"); // get the database connection from the global data.
+
+    let mut username = args.message().replace(" ", "_");
+    let author_id = *msg.author.id.as_u64() as i64;
+
+    // get the author_id as a signed 64 bit int, because that's what the database asks for.
+
+
+    let user_data = {
+        if username.is_empty() {
+            sqlx::query_as!(OsuUserRawDBDataMinimal, "SELECT osu_username, pp FROM osu_user WHERE discord_id = $1", author_id)
+                .fetch_optional(pool)
+                .boxed()
+                .await?
+        } else {
+            sqlx::query_as!(OsuUserRawDBDataMinimal, "SELECT osu_username, pp FROM osu_user WHERE osu_username = $1", username)
+                .fetch_optional(pool)
+                .boxed()
+                .await?
+        }
+    };
+
+    let mut pp = true;
+
+    if let Some(row) = user_data {
+        pp = row.pp.unwrap_or(true);
+        if username.is_empty() {
+            username = row.osu_username;
+        }
+    } else {
+        if username.is_empty() {
+            if let Some(m) = msg.member(&ctx).await {
+                username = m.display_name().await.to_string();
+            } else {
+                username = msg.author.name.to_string();
+            }
+        }
+    }
+
+    let resp = get_osu_user(&username, &osu_key).await?;
+
+    let user = if !resp.is_empty() { &resp[0] } else {
+        msg.channel_id.say(&ctx, format!("A user with the name of `{}` was not found.", username)).await?;
+        return Ok(());
+    };
+
+    let country_url = format!("https://raw.githubusercontent.com/stevenrskelton/flag-icon/master/png/75/country-squared/{}.png", &user.country.to_lowercase());
+    
+    if let None = user.total_score {
+        msg.channel_id.send_message(&ctx, |m| {
+            m.embed(|e| {
+                e.timestamp(user.join_date.clone());
+                e.thumbnail(format!("https://a.ppy.sh/{}", &user.user_id));
+                e.author(|a| {
+                    a.name(&user.username);
+                    a.url(format!("https://osu.ppy.sh/u/{}", &user.user_id));
+                    a.icon_url(country_url)
+                })
+            })
+        }).await?;
+
+    } else {
+        msg.channel_id.send_message(&ctx, |m| {
+            m.embed(|e| {
+                e.color(Colour::new(user.user_id.parse::<u32>().expect("The ID was too large for u32 :thinking:")));
+                e.timestamp(user.join_date.clone());
+                e.author(|a| {
+                    a.name(&user.username);
+                    a.url(format!("https://osu.ppy.sh/u/{}", &user.user_id));
+                    a.icon_url(country_url)
+                });
+                e.image(format!("https://a.ppy.sh/{}", &user.user_id));
+
+                e.description({
+                    let mut s = format!("
+                            **{} -- {} -- {}** == 300/100/50
+                            **{:.2}% -- {}** Plays
+                            Total = **{}** ┇ Ranked = **{}**
+                            Played **{}** seconds or: **{:?}**
+                            **L{}** > Next level: `{}`
+                        ",
+
+                        &user.count300.as_ref().unwrap().parse::<u128>().expect("NaN").to_formatted_string(&Locale::en),
+                        &user.count100.as_ref().unwrap().parse::<u128>().expect("NaN").to_formatted_string(&Locale::en),
+                        &user.count50.as_ref().unwrap().parse::<u128>().expect("NaN").to_formatted_string(&Locale::en),
+                        &user.accuracy.as_ref().unwrap().parse::<f32>().expect("NAN"),
+                        &user.playcount.as_ref().unwrap().parse::<u128>().expect("NaN").to_formatted_string(&Locale::en),
+                        &user.total_score.as_ref().unwrap().parse::<u128>().expect("NaN").to_formatted_string(&Locale::en),
+                        &user.ranked_score.as_ref().unwrap().parse::<u128>().expect("NaN").to_formatted_string(&Locale::en),
+                        &user.total_seconds_played.as_ref().unwrap().parse::<u64>().expect("NaN").to_formatted_string(&Locale::en),
+                        seconds_to_days(user.total_seconds_played.as_ref().unwrap().parse::<u64>().expect("NaN")),
+                        user.level.as_ref().unwrap().parse::<f32>().expect("NaN") as u8,
+                        pacman(&user.level.as_ref().unwrap()),
+                    );
+                    if pp {
+                        s += &format!("Global: #**{}** | Country: #**{}**",
+                            &user.pp_rank.as_ref().unwrap().parse::<u128>().expect("NaN").to_formatted_string(&Locale::en),
+                            &user.pp_country_rank.as_ref().unwrap().parse::<u128>().expect("NaN").to_formatted_string(&Locale::en),
+                        );
+                    } s
+                });
+                e.footer(|f| {
+                    if pp {
+                        f.text(format!("PP:{} | SSH:{} | SS:{} | SH:{} | S:{}",
+                               &user.pp_raw.as_ref().unwrap(),
+                               &user.count_rank_ssh.as_ref().unwrap().parse::<u128>().expect("NaN").to_formatted_string(&Locale::en),
+                               &user.count_rank_ss.as_ref().unwrap().parse::<u128>().expect("NaN").to_formatted_string(&Locale::en),
+                               &user.count_rank_sh.as_ref().unwrap().parse::<u128>().expect("NaN").to_formatted_string(&Locale::en),
+                               &user.count_rank_s.as_ref().unwrap().parse::<u128>().expect("NaN").to_formatted_string(&Locale::en),
+                        ))
+                    } else {
+                        f.text(format!("SSH:{} | SS:{} | SH:{} | S:{}",
+                               &user.count_rank_ssh.as_ref().unwrap().parse::<u128>().expect("NaN").to_formatted_string(&Locale::en),
+                               &user.count_rank_ss.as_ref().unwrap().parse::<u128>().expect("NaN").to_formatted_string(&Locale::en),
+                               &user.count_rank_sh.as_ref().unwrap().parse::<u128>().expect("NaN").to_formatted_string(&Locale::en),
+                               &user.count_rank_s.as_ref().unwrap().parse::<u128>().expect("NaN").to_formatted_string(&Locale::en),
+                        ))
+                    }
+                })
+            })
+        }).await?;
+    }
+
+    Ok(())
+}
+
 /// Obtains your score on the specified beatmap id
 /// The number that's sent along with the recent command is the beatmap id of it.
+///
+/// You can use `.osuc` to configure your osu! profile.
+/// 
+/// Affected parameters for configuration:
+/// - Mode: To specify the gamemode the score was on.
+/// - PP: To know if the bot should display the PP stadistics.
 ///
 /// Usage: `.score 124217`
 #[command]
@@ -693,9 +882,10 @@ async fn score(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 
     Ok(())
 }
+
 /// Command to show the most recent osu! play.
 /// - Due to api limits, this will only work on maps with leaderboard.
-/// - This command is able to show failed plays, and show the % of the progress on the map. 
+/// - This command is able to show failed plays, and show the percentage of progress.
 ///
 /// To use this command, first configure your osu! profile with `.osuc`
 /// Affected parameters for configuration:
@@ -705,7 +895,10 @@ async fn score(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 /// (Currently only short exists.)
 ///
 /// You can also invoke the command specifying a username.
-/// Ex: `.recent [ Frost ]`
+/// Usage:
+/// `.recent`
+/// `.recent [ Frost ]`
+/// `.recent nitsuga5124`
 #[command]
 #[aliases("rs", "rc")]
 async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {

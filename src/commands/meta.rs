@@ -219,9 +219,9 @@ Dictionary (dictionary search)
 Calculator (maths)
 Encrypt/Decrypt (encrypts and decrypts a message)
 Reminder (reminds you of a message after X time)
+Translate (switch for google translate to yandex)
 
 #Osu!
-Profile (posts the user profile data)
 Top (posts the top plays of the user)
 MapPP (calculates pp of a map, like ezpp or tillerino)
 
