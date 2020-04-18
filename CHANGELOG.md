@@ -1,3 +1,9 @@
+# 0.1.5-alpha
+
+### Commands
+- play:
+  Now it uses lavalink!
+
 # 0.1.4-alpha
 
 ### Commands

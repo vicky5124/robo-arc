@@ -32,10 +32,12 @@ checksum = "d663a8e9a99154b5fb793032533f6328da35e23aac63d5c152279aa8ba356825"
 
 [[package]]
 name = "arc_bot"
-version = "0.1.4-alpha"
+version = "0.1.5-alpha"
 dependencies = [
+ "async-tungstenite",
  "bitflags",
  "futures",
+ "http",
  "image",
  "num-format",
  "qrcode",
@@ -48,6 +50,7 @@ dependencies = [
  "serenity",
  "sqlx",
  "tokio",
+ "tokio-tls",
  "toml",
  "tracing",
  "tracing-log",

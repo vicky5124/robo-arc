@@ -1,6 +1,6 @@
 [package]
 name = "arc_bot"
-version = "0.1.4-alpha"
+version = "0.1.5-alpha"
 authors = ["nitsuga5124 <nitsuga5124@gmail.com>"]
 edition = "2018"
 
@@ -19,7 +19,8 @@ tracing = "0.1.13" # https://github.com/tokio-rs/tracing
 tracing-subscriber = "0.2.3" # https://github.com/tokio-rs/tracing
 tracing-log = "0.1.1" # https://github.com/tokio-rs/tracing
 futures = "0.3.4" # https://github.com/rust-lang/futures-rs
-#async-tungstenite = "0.4.2" # https://github.com/sdroege/async-tungstenite
+tokio-tls = "0.3.0"
+http = "0.2.1"
 
 [dependencies.tokio]
 version = "=0.2.13"
@@ -52,6 +53,11 @@ features = ["runtime-tokio", "macros", "postgres", "uuid"]
 [dependencies.quick-xml]
 version = "0.18.1"
 features = ["serialize"]
+
+[dependencies.async-tungstenite]
+default-features = false
+features = ["tokio-runtime", "tokio-tls"]
+version = "0.4"
 
 # used for profiling for flamegraph
 # https://github.com/flamegraph-rs/flamegraph
