@@ -43,7 +43,20 @@ use std::{
     sync::Arc,
 };
 
-use tokio::sync::Mutex;
+use tokio::{
+    sync::Mutex,
+    net::TcpStream,
+};
+use tokio_tls::TlsStream;
+use async_tungstenite::{
+    stream::Stream,
+    WebSocketStream,
+    tokio::{
+        connect_async,
+        TokioAdapter,
+    },
+};
+use http::Request;
 
 use tracing::{
     // Log macros.
@@ -142,6 +155,7 @@ struct BooruList; // This is a HashSet of all the boorus found on "boorus.json"
 struct BooruCommands; // This is a HashSet of all the commands/aliases found on "boorus.json"
 struct NotificationStatus; // This is the status of the thread checking for notifications.
 struct VoiceManager; //  This is the struct for the voice manager.
+struct LavalinkSocket; //  This is the struct for the voice manager.
 
 // Implementing a type for each structure
 // This is made to make a Map<Struct, TypeValue>
@@ -182,6 +196,10 @@ impl TypeMapKey for NotificationStatus {
 
 impl TypeMapKey for VoiceManager {
     type Value = Arc<Mutex<ClientVoiceManager>>;
+}
+
+impl TypeMapKey for LavalinkSocket {
+    type Value = Arc<Mutex<WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TokioAdapter<TokioAdapter<TcpStream>>>>>>>>;
 }
 
 
@@ -245,6 +263,7 @@ struct Mod;
 // The music command group.
 #[group("Music")]
 #[description = "All the moderation related commands."]
+#[only_in("guilds")]
 #[commands(play, join, leave)]
 struct Music;
 
@@ -657,11 +676,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Add the shard manager to the data.
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
         // Add the tokens to the data.
-        data.insert::<Tokens>(configuration);
+        data.insert::<Tokens>(configuration.clone());
         // Add the current status of the notifications.
         data.insert::<NotificationStatus>(false);
         // Add the Voice Manager.
         data.insert::<VoiceManager>(Arc::clone(&client.voice_manager));
+
+        {
+            let host = configuration["lavalink"]["host"].as_str().unwrap();
+            let port = configuration["lavalink"]["port"].as_integer().unwrap();
+            let password = configuration["lavalink"]["password"].as_str().unwrap();
+            let shard_count = 1;
+
+            let url = Request::builder()
+                .uri(&format!("ws://{}:{}/", host, port))
+                .header("Authorization", password)
+                .header("Num-Shards", shard_count.to_string())
+                .header("User-Id", bot_id.to_string())
+                .body(())
+                .unwrap();
+
+            let (ws_stream, _) = connect_async(url).await?;
+            data.insert::<LavalinkSocket>(Arc::new(Mutex::new(ws_stream)));
+        }
 
         {
             // Open the boorus.json file

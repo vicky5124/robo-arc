@@ -1,4 +1,8 @@
-use crate::VoiceManager;
+use crate::{
+    VoiceManager,
+    LavalinkSocket,
+    Tokens,
+};
 
 use serenity::{
     framework::{
@@ -11,12 +15,40 @@ use serenity::{
         channel::Message,
         misc::Mentionable
     },
-    voice,
     prelude::Context,
 };
+use futures::prelude::*;
+use async_tungstenite::tungstenite::Message as TungsteniteMessage;
+use reqwest::{
+    Client as ReqwestClient,
+    header::*,
+};
+use serde::Deserialize;
+use serde_json;
+use regex::Regex;
 
+#[derive(Deserialize)]
+struct TrackInformation {
+    author: String,
+    length: u128,
+    title: String,
+    uri: String,
+    identifier: String,
+}
+
+#[derive(Deserialize)]
+struct Track {
+    track: String,
+    info:  TrackInformation,
+}
+
+#[derive(Deserialize)]
+struct VideoData {
+    tracks: Vec<Track>,
+}
 
 #[command]
+#[aliases("connect")]
 async fn join(ctx: &mut Context, msg: &Message) -> CommandResult {
     let guild = match msg.guild(&ctx.cache).await {
         Some(guild) => guild,
@@ -86,12 +118,25 @@ async fn leave(ctx: &mut Context, msg: &Message) -> CommandResult {
 #[command]
 #[min_args(1)]
 async fn play(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    let query = args.message();
+    let mut embeded = false;
+    let mut query = args.message().to_string();
+
+    if query.starts_with('<') && query.ends_with('>') {
+        embeded = true;
+        let re = Regex::new("[<>]").unwrap();
+        query = re.replace_all(&query, "").into_owned();
+    }
 
     if !query.starts_with("http") {
         msg.channel_id.say(&ctx.http, "Must provide a valid URL").await?;
 
         return Ok(());
+    }
+
+    if !embeded {
+        if let Err(_) = ctx.http.edit_message(msg.channel_id.0, msg.id.0, &serde_json::json!({"flags" : 4})).await  {
+            msg.channel_id.say(&ctx, "Please, put the url between <> so it doesn't embed.").await?;
+        }
     }
 
     let guild_id = match ctx.cache.read().await.guild_channel(msg.channel_id) {
@@ -108,22 +153,82 @@ async fn play(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let mut manager = manager_lock.lock().await;
 
     if let Some(handler) = manager.get_mut(guild_id) {
-        let source = match voice::ytdl(&query).await {
-            Ok(source) => source,
-            Err(why) => {
-                println!("Err starting source: {:?}", why);
+        let bot_id = {
+            let cache_read = ctx.cache.read().await;
+            cache_read.user.id.to_string()
+        };
+        let (host, port, password) = {
+            let data_read = ctx.data.read().await;
+            let configuration = data_read.get::<Tokens>().unwrap();
+            
+            let host = configuration["lavalink"]["host"].as_str().unwrap();
+            let port = configuration["lavalink"]["port"].as_integer().unwrap();
+            let password = configuration["lavalink"]["password"].as_str().unwrap();
 
-                msg.channel_id.say(&ctx.http, "Error sourcing ffmpeg").await?;
-
-                return Ok(());
-            },
+            (host.to_string(), port.to_string(), password.to_string())
         };
 
-        handler.play(source);
+        let identifier = query.split("?v=").nth(1).unwrap_or("dQw4w9WgXcQ");
 
-        msg.channel_id.say(&ctx.http, "Playing song").await?;
+        let reqwest = ReqwestClient::new();
+        let url = &format!("ws://{}:{}/loadtracks?identifier={}", &host, &port, identifier);
+
+        let mut headers = HeaderMap::new();
+        headers.insert("Authorization", password.parse()?);
+        headers.insert("Num-Shards", "1".parse()?);
+        headers.insert("User-Id", bot_id.parse()?);
+
+        let raw_resp = reqwest.get(url)
+            .headers(headers.clone())
+            .send()
+            .await?
+            .json::<VideoData>()
+            .await?;
+
+        let event = format!("{{ 'token' : '{}', 'guild_id' : '{}', 'endpoint' : '{}' }}", handler.token.as_ref().unwrap(), handler.guild_id.0, handler.endpoint.as_ref().unwrap());
+
+        let lava_socket =  {
+            let read_data = ctx.data.read().await;
+            read_data.get::<LavalinkSocket>().cloned().unwrap()
+        };
+
+        let payload = format!("{{ 'op' : 'voiceUpdate', 'guildId' : '{}', 'sessionId' : '{}', 'event' : {} }}", handler.guild_id.0, handler.session_id.as_ref().unwrap(), event);
+        {
+            let mut ws = lava_socket.lock().await;
+            ws.send(TungsteniteMessage::text(payload)).await?;
+        }
+        let payload = format!("{{ 'op' : 'play', 'guildId' : '{}', 'track' : '{}' }}", handler.guild_id.0, raw_resp.tracks[0].track);
+        {
+            let mut ws = lava_socket.lock().await;
+            ws.send(TungsteniteMessage::text(payload)).await?;
+        }
+        msg.channel_id.send_message(&ctx, |m| {
+            m.content("Now playing:");
+            m.embed(|e| {
+                e.title(&raw_resp.tracks[0].info.title);
+                e.thumbnail(format!("https://i.ytimg.com/vi/{}/hq720.jpg", raw_resp.tracks[0].info.identifier));
+                e.url(&raw_resp.tracks[0].info.uri);
+                e.footer(|f| f.text(format!("Submited by {}", &msg.author.name)));
+                e.field("Creator", &raw_resp.tracks[0].info.author, true);
+                e.field("Length", format!("{}:{}",
+                    raw_resp.tracks[0].info.length / 1000  % 3600 /  60,
+                    {
+                        let x = raw_resp.tracks[0].info.length / 1000 % 3600 % 60;
+                        if x < 10 {
+                            format!("0{}", x)
+                        } else {
+                            x.to_string()
+                        }
+                    }),
+                true);
+                e
+            })
+        }).await?;
     } else {
-        msg.channel_id.say(&ctx.http, "Not in a voice channel to play in").await?;
+        msg.channel_id.say(&ctx, "Please, connect the bot to a voice channel first with `.join`").await?;
+
+        //join(&mut ctx.clone(), msg, args.clone()).await?;
+        //play(&mut ctx.clone(), msg, args.clone()).await?;
     }
 
     Ok(())
