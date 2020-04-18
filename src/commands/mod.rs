@@ -6,3 +6,4 @@ pub mod sankaku;
 pub mod fun;
 pub mod moderation;
 pub mod configuration;
+pub mod music;

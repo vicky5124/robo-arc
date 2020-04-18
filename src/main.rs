@@ -28,6 +28,7 @@ use commands::image_manipulation::*; // Import everything from the image manipul
 use commands::fun::*; // Import everything from the fun module.
 use commands::moderation::*; // Import everything from the moderation module.
 use commands::configuration::*; // Import everything from the configuration module.
+use commands::music::*; // Import everything from the configuration module.
 
 use utils::database::obtain_pool; // Obtain the get_database function from the utilities.
 use utils::basic_functions::capitalize_first; // Obtain the capitalize_first function from the utilities.
@@ -72,7 +73,10 @@ use serenity::{
     utils::Colour, // To change the embed help color
     client::{
         Client, // To create a client that runs eveyrthing.
-        bridge::gateway::ShardManager, // To manage shards, or in the case of this small bot, just to get the latency of it for ping.
+        bridge::{
+            gateway::ShardManager, // To manage shards, or in the case of this small bot, just to get the latency of it for ping.
+            voice::ClientVoiceManager,
+        },
     },
     http::Http,
     model::{
@@ -137,6 +141,7 @@ struct AnnoyedChannels; // This is a HashSet of all the channels the bot is allo
 struct BooruList; // This is a HashSet of all the boorus found on "boorus.json"
 struct BooruCommands; // This is a HashSet of all the commands/aliases found on "boorus.json"
 struct NotificationStatus; // This is the status of the thread checking for notifications.
+struct VoiceManager; //  This is the struct for the voice manager.
 
 // Implementing a type for each structure
 // This is made to make a Map<Struct, TypeValue>
@@ -173,6 +178,10 @@ impl TypeMapKey for BooruCommands {
 
 impl TypeMapKey for NotificationStatus {
     type Value = bool;
+}
+
+impl TypeMapKey for VoiceManager {
+    type Value = Arc<Mutex<ClientVoiceManager>>;
 }
 
 
@@ -232,6 +241,12 @@ struct Fun;
 #[description = "All the moderation related commands."]
 #[commands(kick, ban, clear)]
 struct Mod;
+
+// The music command group.
+#[group("Music")]
+#[description = "All the moderation related commands."]
+#[commands(play, join, leave)]
+struct Music;
 
 // The configuration command.
 // Technically a group, but it only has a single command.
@@ -625,7 +640,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .group(&ALLBOORUS_GROUP) // Load `Boorus` command group
         .group(&CONFIGURATION_GROUP) // Load `Configuration` command group
         .group(&IMAGEMANIPULATION_GROUP) // Load `image manipulaiton` command group
+        .group(&MUSIC_GROUP) // Load `music` command group
         .help(&MY_HELP); // Load the custom help command.
+
     let mut client = Client::new_with_framework(&bot_token, Handler, framework).await?;
 
     // Block to define global data.
@@ -643,6 +660,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         data.insert::<Tokens>(configuration);
         // Add the current status of the notifications.
         data.insert::<NotificationStatus>(false);
+        // Add the Voice Manager.
+        data.insert::<VoiceManager>(Arc::clone(&client.voice_manager));
 
         {
             // Open the boorus.json file
