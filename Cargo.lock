@@ -32,7 +32,7 @@ checksum = "d663a8e9a99154b5fb793032533f6328da35e23aac63d5c152279aa8ba356825"
 
 [[package]]
 name = "arc_bot"
-version = "0.1.3-alpha"
+version = "0.1.4-alpha"
 dependencies = [
  "bitflags",
  "futures",
@@ -121,6 +121,25 @@ dependencies = [
  "tokio",
  "tokio-tls",
  "tungstenite",
+]
+
+[[package]]
+name = "audiopus"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3743519567e9135cf6f9f1a509851cb0c8e4cb9d66feb286668afb1923bec458"
+dependencies = [
+ "audiopus_sys",
+]
+
+[[package]]
+name = "audiopus_sys"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cabfa29cd59a7bf6fbb12b6a663dc26d30378b7303c67b803abf72a36dfc1223"
+dependencies = [
+ "log",
+ "pkg-config",
 ]
 
 [[package]]
@@ -237,7 +256,7 @@ checksum = "0dbbb57365263e881e805dc77d94697c9118fd94d8da011240555aa7b23445bd"
 [[package]]
 name = "command_attr"
 version = "0.2.0"
-source = "git+https://github.com/Lakelezz/serenity/?branch=await#c9145e62d6d9f96b07668c1f3e7ab7d8a784ace4"
+source = "git+https://github.com/Lakelezz/serenity/?branch=await#2efe3ef503b0e4400af6f2fa5d133b96d88ee2f2"
 dependencies = [
  "futures",
  "proc-macro2",
@@ -378,6 +397,18 @@ name = "fake-simd"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e88a8acf291dafb59c2d96e8f59828f3838bb1a70398823ade51a84de6a6deed"
+
+[[package]]
+name = "filetime"
+version = "0.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f59efc38004c988e4201d11d263b8171f49a2e7ec0bdbb71773433f271504a5e"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "redox_syscall",
+ "winapi 0.3.8",
+]
 
 [[package]]
 name = "flate2"
@@ -570,9 +601,9 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.1.10"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "725cf19794cf90aa94e65050cb4191ff5d8fa87a498383774c47b332e3af952e"
+checksum = "8a0d737e0f947a1864e93d33fdef4af8445a00d1ed8dc0c8ddb73139ea6abf15"
 dependencies = [
  "libc",
 ]
@@ -622,9 +653,9 @@ checksum = "cd179ae861f0c2e53da70d892f5f3029f9594be0c41dc5269cd371691b1dc2f9"
 
 [[package]]
 name = "hyper"
-version = "0.13.4"
+version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed6081100e960d9d74734659ffc9cc91daf1c0fc7aceb8eaa94ee1a3f5046f2e"
+checksum = "96816e1d921eca64d208a85aab4f7798455a8e34229ee5a88c935bdee1b78b14"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -765,9 +796,35 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.68"
+version = "0.2.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dea0c0405123bba743ee3f91f49b1c7cfb684eef0da0a50110f758ccf24cdff0"
+checksum = "99e85c08494b21a9054e7fe1374a732aeadaff3980b6990b94bfd3a70f690005"
+
+[[package]]
+name = "libflate"
+version = "0.1.27"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9135df43b1f5d0e333385cb6e7897ecd1a43d7d11b91ac003f4d2c2d2401fdd"
+dependencies = [
+ "adler32",
+ "crc32fast",
+ "rle-decode-fast",
+ "take_mut",
+]
+
+[[package]]
+name = "libsodium-sys"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c344ff12b90ef8fa1f0fffacd348c1fd041db331841fec9eab23fdb991f5e73"
+dependencies = [
+ "cc",
+ "libc",
+ "libflate",
+ "pkg-config",
+ "tar",
+ "vcpkg",
+]
 
 [[package]]
 name = "log"
@@ -1008,9 +1065,9 @@ dependencies = [
 
 [[package]]
 name = "num_cpus"
-version = "1.12.0"
+version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46203554f085ff89c235cd12f7075f3233af9b11ed7c9e16dfe2560d03313ce6"
+checksum = "05499f3756671c15885fee9034446956fff3f243d6077b91e5767df161f766b3"
 dependencies = [
  "hermit-abi",
  "libc",
@@ -1063,18 +1120,18 @@ checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
 
 [[package]]
 name = "pin-project"
-version = "0.4.8"
+version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7804a463a8d9572f13453c516a5faea534a2403d7ced2f0c7e100eeff072772c"
+checksum = "6f6a7f5eee6292c559c793430c55c00aea9d3b3d1905e855806ca4d7253426a2"
 dependencies = [
  "pin-project-internal",
 ]
 
 [[package]]
 name = "pin-project-internal"
-version = "0.4.8"
+version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "385322a45f2ecf3410c68d2a549a4a2685e8051d0f278e39743ff4e451cb9b3f"
+checksum = "8988430ce790d8682672117bc06dda364c0be32d3abd738234f19f3240bad99a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1240,9 +1297,9 @@ checksum = "2439c63f3f6139d1b57529d16bc3b8bb855230c8efcc5d3a896c8bea7c3b1e84"
 
 [[package]]
 name = "regex"
-version = "1.3.6"
+version = "1.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f6946991529684867e47d86474e3a6d0c0ab9b82d5821e314b1ede31fa3a4b3"
+checksum = "a6020f034922e3194c711b82a627453881bc4682166cabb07134a10c26ba7692"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -1310,6 +1367,12 @@ dependencies = [
  "web-sys",
  "winreg",
 ]
+
+[[package]]
+name = "rle-decode-fast"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cabe4fa914dec5870285fa7f71f602645da47c486e68486d2b4ceb4a343e90ac"
 
 [[package]]
 name = "ryu"
@@ -1408,21 +1471,25 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.8.1"
-source = "git+https://github.com/Lakelezz/serenity/?branch=await#c9145e62d6d9f96b07668c1f3e7ab7d8a784ace4"
+source = "git+https://github.com/Lakelezz/serenity/?branch=await#2efe3ef503b0e4400af6f2fa5d133b96d88ee2f2"
 dependencies = [
  "async-trait",
  "async-tungstenite",
+ "audiopus",
  "base64 0.11.0",
  "bitflags",
+ "byteorder",
  "bytes",
  "chrono",
  "command_attr",
  "flate2",
  "futures",
  "log",
+ "rand",
  "reqwest",
  "serde",
  "serde_json",
+ "sodiumoxide",
  "static_assertions",
  "threadpool",
  "tokio",
@@ -1497,6 +1564,16 @@ dependencies = [
  "libc",
  "redox_syscall",
  "winapi 0.3.8",
+]
+
+[[package]]
+name = "sodiumoxide"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "585232e78a4fc18133eef9946d3080befdf68b906c51b621531c37e91787fa2b"
+dependencies = [
+ "libc",
+ "libsodium-sys",
 ]
 
 [[package]]
@@ -1578,6 +1655,24 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-xid",
+]
+
+[[package]]
+name = "take_mut"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f764005d11ee5f36500a149ace24e00e3da98b0158b3e2d53a7495660d3f4d60"
+
+[[package]]
+name = "tar"
+version = "0.4.26"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b3196bfbffbba3e57481b6ea32249fbaf590396a52505a2615adbb79d9d826d3"
+dependencies = [
+ "filetime",
+ "libc",
+ "redox_syscall",
+ "xattr",
 ]
 
 [[package]]
@@ -1842,9 +1937,9 @@ dependencies = [
 
 [[package]]
 name = "typenum"
-version = "1.11.2"
+version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d2783fe2d6b8c1101136184eb41be8b1ad379e4657050b8aaff0c79ee7575f9"
+checksum = "373c8a200f9e67a0c95e62a4f52fbf80c23b4381c05a17845531982fa99e6b33"
 
 [[package]]
 name = "unicase"
@@ -2074,4 +2169,13 @@ checksum = "d59cefebd0c892fa2dd6de581e937301d8552cb44489cdff035c6187cb63fa5e"
 dependencies = [
  "winapi 0.2.8",
  "winapi-build",
+]
+
+[[package]]
+name = "xattr"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "244c3741f4240ef46274860397c7c74e50eb23624996930e484c16679633a54c"
+dependencies = [
+ "libc",
 ]

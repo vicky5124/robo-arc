@@ -1,6 +1,6 @@
 [package]
 name = "arc_bot"
-version = "0.1.3-alpha"
+version = "0.1.4-alpha"
 authors = ["nitsuga5124 <nitsuga5124@gmail.com>"]
 edition = "2018"
 
@@ -19,6 +19,7 @@ tracing = "0.1.13" # https://github.com/tokio-rs/tracing
 tracing-subscriber = "0.2.3" # https://github.com/tokio-rs/tracing
 tracing-log = "0.1.1" # https://github.com/tokio-rs/tracing
 futures = "0.3.4" # https://github.com/rust-lang/futures-rs
+#async-tungstenite = "0.4.2" # https://github.com/sdroege/async-tungstenite
 
 [dependencies.tokio]
 version = "=0.2.13"
@@ -29,7 +30,7 @@ features = ["full"]
 git = "https://github.com/Lakelezz/serenity/"
 branch = "await"
 default-features = false
-features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "native_tls_backend", "absolute_ratelimits", "collector"]
+features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "native_tls_backend", "absolute_ratelimits", "collector", "voice"]
 
 # https://github.com/seanmonstar/reqwest
 [dependencies.reqwest]

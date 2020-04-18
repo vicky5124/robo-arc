@@ -1,10 +1,26 @@
+# 0.1.4-alpha
+
+### Commands
+- osu_profile:
+  New command.
+  Sends the osu! profile of a user.
+- score:
+  New command.
+  Sends your score on a beatmap.
+- play:
+  New command.
+  Plays the audio from a url.
+- join/leave:
+  New commands.
+  Joins or Leaves voicechat respectively.
+
 # 0.1.3-alpha
 
 ### Design
 - Replaced tokio-postgres with SQLx
 
 ### Commands
-- configure channel notifications
+- configure channel notifications:
   New command.
   Configures the notifications on the channel.
 
