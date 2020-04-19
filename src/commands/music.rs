@@ -127,12 +127,6 @@ async fn play(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         query = re.replace_all(&query, "").into_owned();
     }
 
-    if !query.starts_with("http") {
-        msg.channel_id.say(&ctx.http, "Must provide a valid URL").await?;
-
-        return Ok(());
-    }
-
     if !embeded {
         if let Err(_) = ctx.http.edit_message(msg.channel_id.0, msg.id.0, &serde_json::json!({"flags" : 4})).await  {
             msg.channel_id.say(&ctx, "Please, put the url between <> so it doesn't embed.").await?;
@@ -168,10 +162,8 @@ async fn play(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
             (host.to_string(), port.to_string(), password.to_string())
         };
 
-        let identifier = query.split("?v=").nth(1).unwrap_or("dQw4w9WgXcQ");
-
         let reqwest = ReqwestClient::new();
-        let url = &format!("ws://{}:{}/loadtracks?identifier={}", &host, &port, identifier);
+        let url = &format!("ws://{}:{}/loadtracks?identifier=ytsearch:{}", &host, &port, &query);
 
         let mut headers = HeaderMap::new();
         headers.insert("Authorization", password.parse()?);
@@ -184,6 +176,11 @@ async fn play(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
             .await?
             .json::<VideoData>()
             .await?;
+
+        if raw_resp.tracks.is_empty() {
+            msg.channel_id.say(&ctx, "Could not find any video of the search query.").await?;
+            return Ok(());
+        }
 
         let event = format!("{{ 'token' : '{}', 'guild_id' : '{}', 'endpoint' : '{}' }}", handler.token.as_ref().unwrap(), handler.guild_id.0, handler.endpoint.as_ref().unwrap());
 
