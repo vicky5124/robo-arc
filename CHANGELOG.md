@@ -5,6 +5,10 @@
   Now it uses lavalink!
 - translate:
   Now it uses yandex!
+- eval:
+  New command.
+  Evaluates python code.
+  Using discord.py
 
 # 0.1.4-alpha
 
