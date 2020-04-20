@@ -3,6 +3,8 @@
 ### Commands
 - play:
   Now it uses lavalink!
+- translate:
+  Now it uses yandex!
 
 # 0.1.4-alpha
 
