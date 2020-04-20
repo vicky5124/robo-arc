@@ -632,7 +632,7 @@ Short recent? '{}'```",
 /// `.osu_profile`
 /// `.osu_profile -GN`
 #[command]
-#[aliases("oprofile", "oprof", "osuprofile", "osuprof", "osu_prof", "osu_p", "osup", "osu_p")]
+#[aliases("oprofile", "oprof", "osuprofile", "osuprof", "osu_prof", "osu_p", "osup", "osu_p", "osu")]
 async fn osu_profile(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     // Obtains the osu! api key from the "global" data
     let osu_key: &str = {
