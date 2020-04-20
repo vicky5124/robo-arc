@@ -96,6 +96,21 @@ CREATE TABLE public.new_posts (
 )
 ```
 
+### __**Eval command**__:
+If you'd like to have an eval command, to evaluate python code within discord, you will need to use the `basic_python_bot_for_eval.py` file.
+
+Dependencies:
+```
+# install python 3.6 or newer and python3-pip
+
+python3 -m pip install pipenv -U --user
+pipenv install toml git+https://github.com/Rapptz/discord.py.git#egg=feature-intents
+```
+Running the file:
+```
+pipenv run python3 basic_python_bot_for_eval.py
+```
+
 ### __**Running the bot**__:
 
 It's as simple as just running:

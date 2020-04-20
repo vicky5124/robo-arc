@@ -219,7 +219,6 @@ Dictionary (dictionary search)
 Calculator (maths)
 Encrypt/Decrypt (encrypts and decrypts a message)
 Reminder (reminds you of a message after X time)
-Translate (switch for google translate to yandex)
 
 #Osu!
 Top (posts the top plays of the user)
@@ -254,12 +253,12 @@ Logging (set a channel to log specific events)
 
 # Boorus
 \"Fix tag filter and the 2 boorus that don't work\"
-Source (sends the source of an image, using iqdb and saucenao)
+Sauce (sends the source of an image, using iqdb and saucenao)
 Exclude (excludes tags automatically from your search)
 nHentai (nhentai reader and searcher)
 
 # Music
-\"Make a lavalink wrapper for serenity\"
+\"Make a better lavalink wrapper for serenity\"
 ```").await?;
     Ok(())
 }
