@@ -262,7 +262,7 @@ struct Mod;
 
 // The music command group.
 #[group("Music")]
-#[description = "All the moderation related commands."]
+#[description = "All the voice and music related commands."]
 #[only_in("guilds")]
 #[commands(play, join, leave)]
 struct Music;
