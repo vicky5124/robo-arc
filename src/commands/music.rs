@@ -206,7 +206,7 @@ async fn play(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                 e.thumbnail(format!("https://i.ytimg.com/vi/{}/hq720.jpg", raw_resp.tracks[0].info.identifier));
                 e.url(&raw_resp.tracks[0].info.uri);
                 e.footer(|f| f.text(format!("Submited by {}", &msg.author.name)));
-                e.field("Creator", &raw_resp.tracks[0].info.author, true);
+                e.field("Uploader", &raw_resp.tracks[0].info.author, true);
                 e.field("Length", format!("{}:{}",
                     raw_resp.tracks[0].info.length / 1000  % 3600 /  60,
                     {
