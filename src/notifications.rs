@@ -21,6 +21,7 @@ use serenity::{
 pub struct Post {
     sample_url: String,
     pub md5: String,
+    id: u64,
 }
 
 async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
@@ -52,6 +53,8 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
                     for channel in &channels {
                         if let Err(why) = ChannelId(*channel as u64).send_message(&ctx, |m|{
                             m.embed(|e| {
+                                e.title("Original Post");
+                                e.url(format!("https://yande.re/post/show/{}", post.id));
                                 e.image(post.sample_url.clone())
                             })
                         }).await {
@@ -67,6 +70,8 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
                         let hook = &ctx.http.get_webhook_with_token(id, token).await?;
 
                         let embed = Embed::fake(|e| {
+                            e.title("Original Post");
+                            e.url(format!("https://yande.re/post/show/{}", post.id));
                             e.image(post.sample_url.clone())
                         });
                         
