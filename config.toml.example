@@ -1,5 +1,6 @@
 osu = "" # https://osu.ppy.sh/p/api/
 discord = "" 
+yandex = "" # https://translate.yandex.com/developers/keys
 trace_level = "trace" # error, warn, info, debug, trace
 enable_tracing = false
 

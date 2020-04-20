@@ -96,39 +96,6 @@ CREATE TABLE public.new_posts (
 )
 ```
 
-### __**Translate**__:
-
-The Translate command has been made in a very hacky way.
-The bot is calling a modified version of the package googletrans found on PyPi.
-\
-Install the package with `python3 -m pip install googletrans -U --user`
-\
-NOTE: If you use this package for any other project, it will still work as usual.
-
-To get the modification for it to work, you will need to edit the file:
-\
-*nix: `$HOME/.local/lib/python3.8/site-packages/googletrans/client.py`
-\
-Windows: google it.
-
-And add the next function inside the Translator class:
-```py
-def rust_translate(self, text, dest, src='auto'):
-    if not PY3 and isinstance(text, str):  # pragma: nocover
-        text = text.decode('utf-8')
-
-    token = self.token_acquirer.do(text)
-    params = utils.build_params(query=text, src=src, dest=dest,
-                                token=token)
-    url = urls.TRANSLATE.format(host=self._pick_service_url())
-    r = self.session.get(url, params=params)
-
-    data = utils.format_json(r.text)
-    print(data)
-    exit()
-    return data
-```
-
 ### __**Running the bot**__:
 
 It's as simple as just running:

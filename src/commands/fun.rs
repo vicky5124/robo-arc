@@ -1,3 +1,5 @@
+use crate::Tokens;
+
 use serenity::{
     prelude::Context,
     model::channel::Message,
@@ -17,7 +19,6 @@ use reqwest::{
     Url,
 };
 use serde::Deserialize;
-use tokio::process::Command;
 
 // Struct used to deserialize the output of the urban dictionary api call...
 #[derive(Deserialize, Clone)]
@@ -36,6 +37,14 @@ struct UrbanDict {
 #[derive(Deserialize)]
 struct UrbanList {
     list: Vec<UrbanDict>
+}
+
+// Struct used to deserialize the response from the yandex translate api call.
+#[derive(Deserialize)]
+struct YandexTranslate {
+    code: u16,
+    lang: String,
+    text: Vec<String>,
 }
 
 /// Sends a qr code of the term mentioned.
@@ -106,13 +115,25 @@ async fn urban(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 }
 
 /// Translates a text to the specified language.
-/// Ex: `.translate ja Hello, World!`
+///
+/// Usage:
+///
+/// Translate to japanese:
+/// `.translate ja Hello, World!`
+/// Translate from spanish to japanese:
+/// `.translate es-en Hola!`
 #[command]
 #[aliases(trans)]
 #[min_args(2)]
 async fn translate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+    let yandex_token = {
+        let data_read = ctx.data.read().await;
+        let tokens = data_read.get::<Tokens>().unwrap();
+        tokens["yandex"].as_str().unwrap().to_string()
+    };
+
     let mut dest = args.single::<String>()?;
-    let args_text = args.rest();
+    let text = args.rest();
 
     dest = match dest.as_str() {
         "jp" => "ja".to_string(),
@@ -120,28 +141,48 @@ async fn translate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandR
         _ => dest,
     };
 
-    let output = Command::new("sh")
-            .arg("-c")
-            .arg(format!("./translate.py \"{}\" {}", &args_text, dest).as_str())
-            .output()
-            .await
-            .expect("failed to execute process");
+    let url = Url::parse_with_params("https://translate.yandex.net/api/v1.5/tr.json/translate",
+                                     &[
+                                        ("key", yandex_token),
+                                        ("text", text.to_string()),
+                                        ("lang", dest),
+                                     ])?;
 
-    let text = String::from_utf8_lossy(&output.stdout);
-    let resp = text.split('\'').nth(1).unwrap();
+    let reqwest = ReqwestClient::new();
+    let resp = reqwest.get(url)
+        .send()
+        .await?
+        .json::<YandexTranslate>()
+        .await?;
 
-    let fields = vec![
-        ("Original Text", &args_text, false),
-        ("Translation", &resp, false),
-    ];
+    if resp.code == 200 {
+        let mut fields = vec![
+            ("Original Text", text.to_string() + "\n", false),
+        ];
 
-    msg.channel_id.send_message(&ctx, |m| {
-        m.embed(|e| {
-            e.fields(fields);
-            e
-        });
-        m
-    }).await?;
+        for translated_text in &resp.text {
+            fields.push(("Translation", translated_text.to_string(), false));
+        }
+
+        msg.channel_id.send_message(&ctx, |m| {
+            let mut resp_langs = resp.lang.split('-').into_iter();
+            m.content(format!("From **{}** to **{}**", resp_langs.next().unwrap(), resp_langs.next().unwrap()));
+            m.embed(|e| {
+                e.fields(fields)
+            })
+        }).await?;
+    } else if resp.code == 404 {
+        msg.channel_id.say(&ctx, "The daily translation limit was exceeded.").await?;
+    } else if resp.code == 413 {
+        msg.channel_id.say(&ctx, "The text length limit was exceeded.").await?;
+    } else if resp.code == 422 {
+        msg.channel_id.say(&ctx, "The text could not be translated.").await?;
+    } else if resp.code == 501 {
+        msg.channel_id.say(&ctx, "The specified target language is not supported.").await?;
+    } else {
+        msg.channel_id.say(&ctx, "An unhandled error happened.").await?;
+    }
+
     Ok(())
 }
 
