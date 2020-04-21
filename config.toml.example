@@ -1,6 +1,12 @@
 osu = "" # https://osu.ppy.sh/p/api/
 discord = "" 
 yandex = "" # https://translate.yandex.com/developers/keys
+
+# This needs to be an oauth token
+# curl  -X POST https://id.twitch.tv/oauth2/token\?client_id\={}\&client_secret\={}\&grant_type=client_credentials
+# replace the {} with the needed information
+twitch = "" # https://dev.twitch.tv/console/
+
 trace_level = "trace" # error, warn, info, debug, trace
 enable_tracing = false
 

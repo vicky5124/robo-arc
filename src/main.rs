@@ -18,7 +18,10 @@ use commands::booru::{
 };
 use commands::meta::PREFIX_COMMAND as PREFIXES_COMMAND;
 
-use crate::notifications::notification_loop;
+use crate::notifications::{
+    notification_loop,
+    TwitchStreamData,
+};
 
 use commands::booru::*; // Import everything from the booru module.
 use commands::sankaku::*; // Import everything from the sankaku booru module.
@@ -34,7 +37,10 @@ use utils::database::obtain_pool; // Obtain the get_database function from the u
 use utils::basic_functions::capitalize_first; // Obtain the capitalize_first function from the utilities.
 
 use std::{
-    collections::HashSet, // Low cost indexable lists.
+    collections::{
+        HashSet, // Low cost indexable lists.
+        //HashMap,
+    },
     // For saving / reading files
     fs::File,
     io::prelude::*,
@@ -156,6 +162,7 @@ struct BooruCommands; // This is a HashSet of all the commands/aliases found on 
 struct NotificationStatus; // This is the status of the thread checking for notifications.
 struct VoiceManager; //  This is the struct for the voice manager.
 struct LavalinkSocket; //  This is the struct for the voice manager.
+struct SentTwitchStreams; //  This is the struct for the stream data that has already been sent.
 
 // Implementing a type for each structure
 // This is made to make a Map<Struct, TypeValue>
@@ -200,6 +207,10 @@ impl TypeMapKey for VoiceManager {
 
 impl TypeMapKey for LavalinkSocket {
     type Value = Arc<Mutex<WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TokioAdapter<TokioAdapter<TcpStream>>>>>>>>;
+}
+
+impl TypeMapKey for SentTwitchStreams {
+    type Value = Arc<RwLock<Vec<TwitchStreamData>>>;
 }
 
 
@@ -681,6 +692,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         data.insert::<NotificationStatus>(false);
         // Add the Voice Manager.
         data.insert::<VoiceManager>(Arc::clone(&client.voice_manager));
+        // Add the sent streams.
+        data.insert::<SentTwitchStreams>(Arc::new(RwLock::new(Vec::new())));
 
         {
             let host = configuration["lavalink"]["host"].as_str().unwrap();

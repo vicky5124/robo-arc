@@ -95,6 +95,43 @@ CREATE TABLE public.new_posts (
     sent_md5 text[] COLLATE pg_catalog."default"
 )
 ```
+```sql
+CREATE TABLE public.streamers (
+    streamer text COLLATE pg_catalog."default" NOT NULL,
+    is_live boolean NOT NULL DEFAULT false,
+    use_default boolean NOT NULL DEFAULT false,
+    live_message text COLLATE pg_catalog."default" DEFAULT 'I''m live!'::text,
+    not_live_message text COLLATE pg_catalog."default" DEFAULT 'I''m no longer live.'::text,
+    CONSTRAINT streamers_pkey PRIMARY KEY (streamer)
+);
+
+CREATE TABLE public.streamer_notification_channel (
+    streamer text COLLATE pg_catalog."default" NOT NULL,
+    role_id bigint,
+    use_default boolean NOT NULL DEFAULT false,
+    live_message text COLLATE pg_catalog."default" DEFAULT 'I''m live!'::text,
+    not_live_message text COLLATE pg_catalog."default" DEFAULT 'I''m no longer live.'::text,
+    channel_id bigint,
+    message_id bigint,
+    CONSTRAINT streamer_notification_channel_streamer_fkey FOREIGN KEY (streamer)
+        REFERENCES public.streamers (streamer) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+);
+
+CREATE TABLE public.streamer_notification_webhook (
+    streamer text COLLATE pg_catalog."default" NOT NULL,
+    webhook text COLLATE pg_catalog."default" NOT NULL,
+    role_id bigint,
+    live_message text COLLATE pg_catalog."default" DEFAULT 'I''m live!'::text,
+    not_live_message text COLLATE pg_catalog."default" DEFAULT 'I''m no longer live.'::text,
+    message_id bigint,
+    CONSTRAINT streamer_notification_webhook_streamer_fkey FOREIGN KEY (streamer)
+        REFERENCES public.streamers (streamer) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+);
+```
 
 ### __**Eval command**__:
 If you'd like to have an eval command, to evaluate python code within discord, you will need to use the `basic_python_bot_for_eval.py` file.
