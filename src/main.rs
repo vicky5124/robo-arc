@@ -343,10 +343,24 @@ impl EventHandler for Handler {
         // Changes the presence of the bot to "Listening to ..."
         // https://docs.rs/serenity/0.8.0/serenity/model/gateway/struct.Activity.html#methods
         // for all the available activities.
-        ctx.set_presence(
-            Some(Activity::listening("the awaitening.")),
-            OnlineStatus::Online
-        ).await;
+
+        let info = {
+            let read_data = ctx.data.read().await;
+            let config = read_data.get::<Tokens>().unwrap();
+            config["presence"].clone()
+        };
+
+        if info["play_or_listen"].as_str().unwrap() == "playing" {
+            ctx.set_presence(
+                Some(Activity::playing(info["status"].as_str().unwrap())),
+                OnlineStatus::Online
+            ).await;
+        } else if info["play_or_listen"].as_str().unwrap() == "listening" {
+            ctx.set_presence(
+                Some(Activity::listening(info["status"].as_str().unwrap())),
+                OnlineStatus::Online
+            ).await;
+        }
 
         let status = {
             let read_data = ctx.data.read().await;

@@ -10,6 +10,10 @@ twitch = "" # https://dev.twitch.tv/console/
 trace_level = "trace" # error, warn, info, debug, trace
 enable_tracing = false
 
+[presence]
+play_or_listen = "playing" # playing/listening
+status = "the game of life."
+
 [psql]
 username = "postgres"
 password = ""
