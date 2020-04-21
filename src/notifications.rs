@@ -107,23 +107,29 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
                             eprintln!("Error while sending message >>> {}", why);
                         };
                     }
+                    let allow_hooks = {
+                        let read_data = ctx.data.read().await;
+                        let config = read_data.get::<Tokens>().unwrap();
+                        config["webhook_notifications"].as_bool().unwrap()
+                    };
+                    if allow_hooks {
+                        for webhook in &webhooks {
+                            let mut split = webhook.split('/');
+                            let id = split.nth(5).unwrap().parse::<u64>()?;
+                            let token = split.nth(0).unwrap();
 
-                    for webhook in &webhooks {
-                        let mut split = webhook.split('/');
-                        let id = split.nth(5).unwrap().parse::<u64>()?;
-                        let token = split.nth(0).unwrap();
+                            let hook = &ctx.http.get_webhook_with_token(id, token).await?;
 
-                        let hook = &ctx.http.get_webhook_with_token(id, token).await?;
-
-                        let embed = Embed::fake(|e| {
-                            e.title("Original Post");
-                            e.url(format!("https://yande.re/post/show/{}", post.id));
-                            e.image(post.sample_url.clone())
-                        });
-                        
-                        hook.execute(&ctx.http, false, |m|{
-                            m.embeds(vec![embed])
-                        }).await?;
+                            let embed = Embed::fake(|e| {
+                                e.title("Original Post");
+                                e.url(format!("https://yande.re/post/show/{}", post.id));
+                                e.image(post.sample_url.clone())
+                            });
+                            
+                            hook.execute(&ctx.http, false, |m|{
+                                m.embeds(vec![embed])
+                            }).await?;
+                        }
                     }
 
                     &md5s.push(post.md5);
