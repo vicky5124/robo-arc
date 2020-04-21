@@ -1,3 +1,11 @@
+# 0.1.6-alpha
+
+### Notifications
+- Added twitch notifications
+
+### Design
+- Status are now configurable.
+
 # 0.1.5-alpha
 
 ### Commands
@@ -41,6 +49,9 @@
 ### Notifications
 - yande.re:
   Added basic yande.re new post notifications.
+
+### Commands
+
 - booru_commands:
   Implemented the picture command, that sends a picture from the perffered booru from the user.
 - all xml boorus:
