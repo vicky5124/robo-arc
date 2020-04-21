@@ -228,10 +228,7 @@ MapPP (calculates pp of a map, like ezpp or tillerino)
 Search (searches term on duckduckgo)
 
 #Twitch
-\"Livestream notifications\"
 Streamrole (gives the stream notification role set to the guild)
-ChangeLiveMessage (changes the \"im live\" message)
-ChangeNotLiveMessage (changes the \"im no longer live\" message)
 ConfigureStream (configures stream notifications for the channel)
 
 #Reddit

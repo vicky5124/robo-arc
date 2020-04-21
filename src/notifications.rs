@@ -206,7 +206,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
 
                     if let Ok(mut message) = ctx.http.get_message(notification_place.channel_id.unwrap() as u64, notification_place.message_id.unwrap() as u64).await
                     {
-                        message.edit(&ctx, |m| {
+                        let _ = message.edit(&ctx, |m| {
                             if let Some(role_id) = notification_place.role_id.to_owned() {
                                 m.content(format!("<@&{}>", role_id));
                             }
@@ -229,7 +229,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
                                     true,
                                 )
                             })
-                        }).await?;
+                        }).await;
                     }
 
                     let sent_stream_data = {
@@ -292,10 +292,12 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
                             true,
                         )
                     })
-                }).await?;
-                sqlx::query!("UPDATE streamer_notification_channel SET message_id = $1 WHERE channel_id = $2 AND streamer = $3", message.id.as_u64().to_owned() as i64, message.channel_id.0 as i64, &i.streamer)
-                    .execute(pool)
-                    .await?;
+                }).await;
+                if let Ok(message_ok) = message {
+                    sqlx::query!("UPDATE streamer_notification_channel SET message_id = $1 WHERE channel_id = $2 AND streamer = $3", message_ok.id.as_u64().to_owned() as i64, message_ok.channel_id.0 as i64, &i.streamer)
+                        .execute(pool)
+                        .await?;
+                }
 
                 let sent_stream_data = {
                     let new_vec = sent_streams.read().await;
@@ -322,7 +324,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
             while let Some(notification_place) = data.try_next().await? {
                 if let Ok(mut message) = ctx.http.get_message(notification_place.channel_id.unwrap() as u64, notification_place.message_id.unwrap() as u64).await
                 {
-                    message.edit(&ctx, |m| {
+                    let _ = message.edit(&ctx, |m| {
                         if let Some(role_id) = notification_place.role_id.to_owned() {
                             m.content(format!("<@&{}>", role_id));
                         }
@@ -339,7 +341,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
                             e.url(format!("https://www.twitch.tv/{}", &i.streamer));
                             e.title("No longer live.")
                         })
-                    }).await?;
+                    }).await;
                 }
             }
             sqlx::query!("UPDATE streamers SET is_live = false WHERE streamer = $1", i.streamer)
