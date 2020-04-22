@@ -431,7 +431,7 @@ async fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: 
                             beatmap.artist, beatmap.title, beatmap.version, beatmap.creator));
             e.url(format!("https://osu.ppy.sh/b/{}", beatmap.beatmap_id));
             e.description(format!("**{}** ┇ **x{} / {}**\n**{:.2}%** ┇ {} - {} - {} - {}\n Recent #{} ━ Progress: {:.2}%",
-                                  user_recent.score.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en), user_recent.maxcombo, beatmap.max_combo, accuracy, user_recent.count300, user_recent.count100, user_recent.count50, user_recent.countmiss, attempts, progress));
+                                  user_recent.score.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en), user_recent.maxcombo, beatmap.max_combo, accuracy, user_recent.count300, user_recent.count100, user_recent.count50, user_recent.countmiss, attempts + 1, progress));
             e.timestamp(user_recent.date.clone());
             e.thumbnail(format!("https://b.ppy.sh/thumb/{}l.jpg", beatmap.beatmapset_id));
             e.author( |a| {
@@ -477,9 +477,9 @@ async fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: 
 /// - Keyword arguments are not required, they will default to `std, true, true` respectively.
 /// 
 /// Example usages:
-/// `n!osuc Majorowsky`
-/// `n!osuc nitsuga5124 pp=false short_recent=yes`
-/// `n!osuc [ Frost ] mode=mania pp=yes recent=false`
+/// `osuc Majorowsky`
+/// `osuc nitsuga5124 pp=false short_recent=yes`
+/// `osuc [ Frost ] mode=mania pp=yes recent=false`
 #[command]
 #[aliases("osuc", "config_osu", "configosu", "configureosu", "configo", "setosu", "osuset", "set_osu", "osu_set")]
 async fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
@@ -629,8 +629,8 @@ Short recent? '{}'```",
 /// - PP: To know if the bot should display the PP stadistics.
 ///
 /// Usage:
-/// `.osu_profile`
-/// `.osu_profile -GN`
+/// `osu_profile`
+/// `osu_profile -GN`
 #[command]
 #[aliases("oprofile", "oprof", "osuprofile", "osuprof", "osu_prof", "osu_p", "osup", "osu_p", "osu")]
 async fn osu_profile(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
@@ -778,7 +778,7 @@ async fn osu_profile(ctx: &mut Context, msg: &Message, args: Args) -> CommandRes
 /// - Mode: To specify the gamemode the score was on.
 /// - PP: To know if the bot should display the PP stadistics.
 ///
-/// Usage: `.score 124217`
+/// Usage: `score 124217`
 #[command]
 #[aliases("compare")]
 async fn score(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
@@ -896,9 +896,9 @@ async fn score(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 ///
 /// You can also invoke the command specifying a username.
 /// Usage:
-/// `.recent`
-/// `.recent [ Frost ]`
-/// `.recent nitsuga5124`
+/// `recent`
+/// `recent [ Frost ]`
+/// `recent nitsuga5124`
 #[command]
 #[aliases("rs", "rc")]
 async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {

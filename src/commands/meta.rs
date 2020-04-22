@@ -343,19 +343,20 @@ async fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
 
     let num_guilds = &cache.guilds.len();
     let num_shards = &cache.shard_count;
-    let num_members = &cache.users.len();
+    let num_users = &cache.users.len();
+    let num_channels = &cache.channels.len();
 
 
     msg.channel_id.send_message(&ctx, |m| {
         m.embed(|e| {
             e.title(format!("**{}** - Version: {}", bot_name, version));
-            e.description("General Purpose Discord Bot made in [Rust](https://www.rust-lang.org/) using [serenity.rs](https://github.com/serenity-rs/serenity)\n\nHaving any issues? join the [Support Server](https://discord.gg/kH7z85n)\n\n[Top.GG](https://top.gg/bot/673680961535475712)");
+            e.description("General Purpose Discord Bot made in [Rust](https://www.rust-lang.org/) using [serenity.rs](https://github.com/serenity-rs/serenity)\n\nHaving any issues? join the [Support Server](https://discord.gg/kH7z85n)");
 
             //e.field("Creator", "Tag: nitsuga5124#2207\nID: 182891574139682816", true);
             e.field("Hoster", format!("Tag: {}\nID: {}", hoster_tag, hoster_id), true);
             e.field("Memory usage", format!("Complete:\n`{} KB`\nBase:\n`{} KB`",
                                     &full_mem.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en), &reasonable_mem.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en)), true);
-            e.field("Guild Data", format!("Guilds: {}\nUsers: {}\nShards: {}", num_guilds, num_members, num_shards), true);
+            e.field("Guild Data", format!("Guilds: {}\nUsers: {}\nChannels: {}\nShards: {}", num_guilds, num_users, num_channels, num_shards), true);
 
             if let Some(x) = bot_icon {
                 e.thumbnail(x);

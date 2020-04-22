@@ -199,10 +199,10 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
 /// Usage: `.booru_name tag tag tag`
 /// 
 /// ```
-/// .idol feet -x stockings
-/// .e621 paws
-/// .chan -x
-/// .r32
+/// idol feet -x stockings
+/// e621 paws
+/// chan -x
+/// r32
 /// ```
 /// 
 /// The currently available boorus are:
@@ -236,6 +236,8 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
 /// 
 /// Inspired by -GN's [WaifuBot](https://github.com/isakvik/waifubot/)
 #[command]
+#[usage("test")]
+#[usage("testing")]
 #[aliases("picture", "pic", "booru", "boorus")]
 pub async fn booru_command(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     // open the context data lock in read mode.
@@ -309,7 +311,7 @@ pub async fn booru_command(ctx: &mut Context, msg: &Message, args: Args) -> Comm
 /// Sends a picture of your best girl!
 /// 
 /// You can configure your best girl with this command:
-/// `.config user best_girl <booru tag of your best girl>`
+/// `config user best_girl <booru tag of your best girl>`
 #[command]
 #[aliases(bg, bestgirl, waifu, wife)]
 pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
@@ -412,7 +414,7 @@ pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandR
 /// Sends a picture of your best boy!
 /// 
 /// You can configure your best boy with this command:
-/// `.config user best_boy <booru tag of your best boy>`
+/// `config user best_boy <booru tag of your best boy>`
 #[command]
 #[aliases(bb, bestboy, husbando, husband)]
 pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
@@ -438,12 +440,12 @@ pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
     let row = if let Some(x) = data {
         x
     } else {
-        msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`.conf user best_boy your_best_boy_tag`").await?;
+        msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`conf user best_boy your_best_boy_tag`").await?;
         return Ok(());
     };
 
     if row.best_boy == None {
-        msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`.conf user best_boy your_best_boy_tag`").await?;
+        msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`conf user best_boy your_best_boy_tag`").await?;
         return Ok(());
     }
 

@@ -97,10 +97,7 @@ async fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Me
 }
 
 /// Kicks the specified member
-/// Usage: `.kick @user` or `.kick user name`
-///
-/// NOTE: This does not support usernames with discriminators, in those cases it's recommended to just
-/// mention the member.
+/// Usage: `kick @user` or `.kick user name`
 #[command]
 #[required_permissions(KICK_MEMBERS)]
 #[min_args(1)]
@@ -119,10 +116,7 @@ async fn kick(mut ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
 }
 
 /// Bans the specified member
-/// Usage: `.ban @user` or `.ban user name`
-///
-/// NOTE: This does not support usernames with discriminators, in those cases it's recommended to just
-/// mention the member.
+/// Usage: `ban @user` or `.ban user name`
 #[command]
 #[required_permissions(BAN_MEMBERS)]
 #[min_args(1)]
@@ -143,7 +137,7 @@ async fn ban(mut ctx: &mut Context, msg: &Message, args: Args) -> CommandResult 
 /// Deletes X number of messages from the current channel.
 /// If the messages are older than 2 weeks, due to api limitations, they will not get deleted.
 ///
-/// Usage: `.clear 20`
+/// Usage: `clear 20`
 #[command]
 #[required_permissions(MANAGE_MESSAGES)]
 #[num_args(1)]

@@ -86,8 +86,8 @@ async fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: St
 /// Configures aspects of the bot tied to your account.
 ///
 /// Configurable aspects:
-/// `best_girl`: Toggles the annoying features on or off.
-/// `best_boy`: Toggles the annoying features on or off.
+/// `best_girl`: Sets your best girl to the given tags.
+/// `best_boy`: Sets your best boy to the given tags.
 /// `booru`: Sets the booru to be used for the best_X commands ~~and `picture`~~
 #[command]
 #[sub_commands(best_boy, best_girl, booru)]
@@ -417,7 +417,7 @@ async fn annoy(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
 /// Configures the bot for the guild/server it was invoked on.
 ///
 /// Configurable aspects:
-/// `prefix`: Changes the bot prefix for the guild.
+/// `prefix`: Changes the bot prefix.
 #[command]
 #[required_permissions(MANAGE_GUILD)]
 #[only_in("guilds")]

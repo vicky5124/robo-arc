@@ -297,7 +297,7 @@ struct Configuration;
 // We use \ at the end of the line to easily allow for newlines visually on the code.
 #[individual_command_tip = "Hello!
 If youd like to get more information about a specific command or group, you can just pass it as a command argument.
-All the command examples through out the help will be shown using the default prefix `.`
+All the command examples through out the help will be shown without prefix, use whatever prefix is configured on the server instead.
 
 You can react with 🚫 on *any* message sent by the bot to delete it.\n"]
 // This is the text that gets displayed when a given parameter was not found for information.

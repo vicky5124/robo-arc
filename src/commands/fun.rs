@@ -64,7 +64,7 @@ async fn qr(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 }
 
 /// Defines a term, using the urban dictionary.
-/// Usage: `.urban lmao`
+/// Usage: `urban lmao`
 #[command]
 #[aliases(define)]
 async fn urban(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
@@ -119,9 +119,9 @@ async fn urban(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 /// Usage:
 ///
 /// Translate to japanese:
-/// `.translate ja Hello, World!`
+/// `translate ja Hello, World!`
 /// Translate from spanish to japanese:
-/// `.translate es-en Hola!`
+/// `translate es-en Hola!`
 #[command]
 #[aliases(trans)]
 #[min_args(2)]
@@ -188,7 +188,7 @@ async fn translate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandR
 
 /// Searches a term on duckduckgo.com, for you.
 ///
-/// Usage: `.ddg hello world`
+/// Usage: `ddg hello world`
 #[command]
 #[min_args(1)]
 #[aliases(ddg, duck, duckduckgo, search, better_than_google, betterthangoogle)]
@@ -202,7 +202,7 @@ async fn duck_duck_go(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
 
 /// Encrypts a message. **NOT WORKING**
 /// 15 character limit.
-/// Usage: `.encrypt Hello!`
+/// Usage: `encrypt Hello!`
 /// 
 /// You can decrypt the message with .decrypt
 #[command]
@@ -216,7 +216,7 @@ async fn encrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult 
     Ok(())
 }
 /// Decrypts and encrypted message. **NOT WORKING**
-/// Usage: `.decrypt FBACB56A78BAFCD8239012F`
+/// Usage: `decrypt FBACB56A78BAFCD8239012F`
 #[command]
 async fn decrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let message = args.message();
