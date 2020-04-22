@@ -997,12 +997,12 @@ async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRes
             let emoji = &reaction.as_inner_ref().emoji;
 
             match emoji.as_data().as_str() {
-                "⬅️" => { 
+                "➡️" => { 
                     if page != 0 {
                         page -= 1;
                     }
                 },
-                "➡️" => { 
+                "⬅️" => { 
                     if page != user_recent_raw.len() - 1 {
                         page += 1;
                     }
