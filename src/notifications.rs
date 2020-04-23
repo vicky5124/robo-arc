@@ -328,7 +328,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
                 .boxed();
 
             while let Some(notification_place) = data.try_next().await? {
-                if let Ok(mut message) = ctx.http.get_message(notification_place.channel_id.unwrap() as u64, notification_place.message_id.unwrap() as u64).await
+                if let Ok(mut message) = ctx.http.get_message(notification_place.channel_id.unwrap_or(0) as u64, notification_place.message_id.unwrap_or(0) as u64).await
                 {
                     let _ = message.edit(&ctx, |m| {
                         if let Some(role_id) = notification_place.role_id.to_owned() {
