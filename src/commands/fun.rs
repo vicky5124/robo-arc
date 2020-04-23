@@ -43,8 +43,8 @@ struct UrbanList {
 #[derive(Deserialize)]
 struct YandexTranslate {
     code: u16,
-    lang: String,
-    text: Vec<String>,
+    lang: Option<String>,
+    text: Option<Vec<String>>,
 }
 
 /// Sends a qr code of the term mentioned.
@@ -160,12 +160,19 @@ async fn translate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandR
             ("Original Text", text.to_string() + "\n", false),
         ];
 
-        for translated_text in &resp.text {
+        let mut resp_langs = if let Some(l) = &resp.lang {
+            l.split('-').into_iter()
+        } else {
+            msg.channel_id.say(&ctx, "An invalid destination language was given").await?;
+            return Ok(());
+        };
+
+        for translated_text in &resp.text.unwrap() {
             fields.push(("Translation", translated_text.to_string(), false));
         }
 
+
         msg.channel_id.send_message(&ctx, |m| {
-            let mut resp_langs = resp.lang.split('-').into_iter();
             m.content(format!("From **{}** to **{}**", resp_langs.next().unwrap(), resp_langs.next().unwrap()));
             m.embed(|e| {
                 e.fields(fields)
@@ -179,6 +186,8 @@ async fn translate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandR
         msg.channel_id.say(&ctx, "The text could not be translated.").await?;
     } else if resp.code == 501 {
         msg.channel_id.say(&ctx, "The specified target language is not supported.").await?;
+    } else if resp.code == 502 {
+        msg.channel_id.say(&ctx, "The specified language doesn't exist.").await?;
     } else {
         msg.channel_id.say(&ctx, "An unhandled error happened.").await?;
     }
