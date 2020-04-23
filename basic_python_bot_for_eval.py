@@ -12,6 +12,7 @@ TOKEN = config["discord"]
 
 
 BOT = commands.Bot(command_prefix=commands.when_mentioned_or("."))
+BOT.remove_command('help')
 
 # Intents seem to be broken?
 #print(BOT.intents)
