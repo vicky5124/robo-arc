@@ -44,7 +44,7 @@ async fn gay(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error>>{
     // Save the image as “fractal.png”, the format is deduced from the path
     // imgbuf.save("grayscale.png")?;
     image::DynamicImage::ImageRgba8(imgbuf_clone)
-        .write_to(&mut gay_bytes, image::ImageOutputFormat::Png)
+        .write_to(&mut gay_bytes, image::ImageOutputFormat::Jpeg(255))
         .expect("There was an error writing the image.");
 
     Ok(gay_bytes.to_vec())
@@ -77,7 +77,7 @@ async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Erro
         // Save the image as “fractal.png”, the format is deduced from the path
         // imgbuf.save("grayscale.png")?;
         image::DynamicImage::ImageRgba8(imgbuf)
-            .write_to(&mut *gray_bytes_clone.lock().unwrap(), image::ImageOutputFormat::Png)
+            .write_to(&mut *gray_bytes_clone.lock().unwrap(), image::ImageOutputFormat::Jpeg(255))
             .expect("There was an error writing the image.");
     });
 
@@ -104,6 +104,11 @@ async fn gray(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
                 (err_message, vec![0])
             // else we download the image. Download returns a Result Vec<u8>
             } else {
+                if dimensions.unwrap().0 > 7680 || dimensions.unwrap().1 >  4320 {
+                    msg.reply(&ctx, "The provided image is too large").await?;
+                    return Ok(());
+                }
+
                 let bytes = x.download().await?;
                 filename = &x.filename;
 
@@ -163,6 +168,11 @@ async fn pride(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
                 (err_message, vec![0])
             // else we download the image. Download returns a Result Vec<u8>
             } else {
+                if dimensions.unwrap().0 > 7680 || dimensions.unwrap().1 >  4320 {
+                    msg.reply(&ctx, "The provided image is too large").await?;
+                    return Ok(());
+                }
+
                 let bytes = x.download().await?;
                 filename = &x.filename;
 
