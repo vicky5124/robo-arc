@@ -1,3 +1,20 @@
+# 0.1.7-alpha
+
+### Commands
+- all:
+  Removed the default prefix from the examples.
+- play:
+  Fixed some url's obtaining the wrong video.
+- translate:
+  Fixed invalid language error being unhandled.
+- recent:
+  Reversed arrow directions.
+- gay/pride:
+  Prevented decompression bombs.
+
+### Notifications
+- Webhooks are optional.
+
 # 0.1.6-alpha
 
 ### Notifications
