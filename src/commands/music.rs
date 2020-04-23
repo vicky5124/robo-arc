@@ -17,12 +17,14 @@ use serenity::{
     },
     prelude::Context,
 };
+
 use futures::prelude::*;
 use async_tungstenite::tungstenite::Message as TungsteniteMessage;
 use reqwest::{
     Client as ReqwestClient,
     header::*,
 };
+
 use serde::Deserialize;
 use serde_json;
 use regex::Regex;
@@ -162,8 +164,17 @@ async fn play(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
             (host.to_string(), port.to_string(), password.to_string())
         };
 
+        let search = {
+            if Regex::new(r"(?:https?://)?(?:www\.)?youtu(?:(?:\.be)|(?:be\.com))/(?:watch\?v=)?([^&\s\?]+)").unwrap().is_match(&query) {
+                Regex::new(r"(https?://)|(www\.)|(youtu\.?be)|([/])|(\.com?)|(watch\?v=)|(&.*)").unwrap().replace_all(&query, "").to_string()
+                
+            } else {
+                format!("ytsearch:{}", &query)
+            }
+        };
+
         let reqwest = ReqwestClient::new();
-        let url = &format!("ws://{}:{}/loadtracks?identifier=ytsearch:{}", &host, &port, &query);
+        let url = &format!("ws://{}:{}/loadtracks?identifier={}", &host, &port, &search);
 
         let mut headers = HeaderMap::new();
         headers.insert("Authorization", password.parse()?);
