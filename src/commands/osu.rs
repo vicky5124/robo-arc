@@ -993,7 +993,7 @@ async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRes
     bot_msg.react(&ctx, right).await?;
 
     loop {
-        if let Some(reaction) = &bot_msg.await_reaction(&ctx).timeout(Duration::from_secs(20)).await {
+        if let Some(reaction) = &bot_msg.await_reaction(&ctx).author_id(msg.author.id.0).timeout(Duration::from_secs(20)).await {
             let emoji = &reaction.as_inner_ref().emoji;
 
             match emoji.as_data().as_str() {
