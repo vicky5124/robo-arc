@@ -43,32 +43,65 @@ use reqwest::{
 };
 // quick_xml is an xml sedrde library.
 // used to deserialize the xml data into structs.
-use quick_xml::de::from_str;
+use quick_xml;
 // serde or SerializerDeserializer, is a library to srialize data structures into structs.
 use serde::{
     Deserialize,
     Serialize,
 };
+use serde_json;
+
+#[derive(Serialize, Deserialize, PartialEq, Clone)]
+struct ScoreData {
+    total: i64,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Clone)]
+struct Url {
+    url: String,
+}
 
 // defining the Post type to be used for the xml deserialized on the Posts vector.
-#[derive(Serialize, Deserialize, PartialEq)]
+#[derive(Serialize, Deserialize, PartialEq, Clone)]
 struct Post {
-    score: String, // i32
+    score: Option<String>,
+    actual_score: Option<String>,
     source: Option<String>,
-    rating: String,
+    sources: Option<Vec<String>>,
+    rating: Option<String>,
     sample_url: Option<String>,
     file_url: Option<String>,
+    sample: Option<Url>,
+    file: Option<Url>,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Clone)]
+struct PostE621 {
+    score: Option<ScoreData>,
+    actual_score: Option<String>,
+    source: Option<String>,
+    sources: Option<Vec<String>>,
+    rating: Option<String>,
+    sample_url: Option<String>,
+    file_url: Option<String>,
+    sample: Option<Url>,
+    file: Option<Url>,
 }
 
 // defining the Posts vector to Deserialize the requested xml list.
-#[derive(Deserialize, PartialEq)]
+#[derive(Deserialize, PartialEq, Clone)]
 struct Posts {
     post: Vec<Post>,
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Clone)]
+struct PostsE621 {
+    posts: Vec<PostE621>,
+}
+
 // Function to get the booru data and send it.
 pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // TODO: behoimi needs login, e621 changed the api.
+    // TODO: behoimi needs login.
 
     let channel = &ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
     // Checks if the command was invoked on a DM
@@ -97,18 +130,19 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
     headers.insert(ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8".parse().unwrap());
     headers.insert(USER_AGENT, "Mozilla/5.0 (X11; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0".parse().unwrap());
 
-    let page: usize = 1;
-    let url;
+    let page: usize = 0;
 
-    if booru.typ == 1 {
-        url = format!("https://{}/index.php?page=dapi&s=post&q=index&tags={}&pid={}&limit=50", booru.url, tags, page);
+    let url = if booru.typ == 1 {
+        format!("https://{}/index.php?page=dapi&s=post&q=index&tags={}&pid={}&limit=50", booru.url, tags, page)
     } else if booru.typ == 2 {
-        url = format!("https://{}/post/index.xml?tags={}&page={}&limit=50", booru.url, tags, page);
+        format!("https://{}/post/index.xml?tags={}&page={}&limit=50", booru.url, tags, page)
     } else if booru.typ == 3 {
-        url = format!("http://{}/post/index.xml?tags={}&page={}&limit=50", booru.url, tags, page);
+        format!("http://{}/post/index.xml?tags={}&page={}&limit=50", booru.url, tags, page)
+    } else if booru.typ == 4 {
+        format!("http://{}/posts.json?tags={}&page={}&limit=50", booru.url, tags, page)
     } else {
-        url = "https://safebooru.org/index.php?page=dapi&s=post&q=index".to_string();
-    }
+        "https://safebooru.org/index.php?page=dapi&s=post&q=index".to_string()
+    };
 
     // Send a request with the parsed url, and return the output text.
     let resp = reqwest.get(&url)
@@ -119,11 +153,50 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
         .await?;
 
     // deserialize the request XML into the Posts struct.
-    let xml: Posts = from_str(&resp.as_str())?;
+    let xml = if booru.typ == 4 {
+        let mut posts: PostsE621 = serde_json::from_str(&resp.as_str())?;
+        for (index, post) in posts.clone().posts.iter().enumerate() {
+            posts.posts[index].actual_score = Some(
+                if let Some(score_data) = post.score.clone() {
+                    score_data.total.to_string()
+                } else {
+                    "0".to_string()
+                }
+            );
+            posts.posts[index].score = None;
+            posts.posts[index].source = if let Some(sources) = post.sources.clone() {
+                if !sources.is_empty() {
+                    Some(sources[0].clone())
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            posts.posts[index].sample_url = Some(post.sample.clone().unwrap().url);
+            posts.posts[index].file_url = Some(post.file.clone().unwrap().url);
+        }
+
+        let mut new_raw_posts = serde_json::to_string(&posts)?;
+        new_raw_posts = new_raw_posts.replace("\"posts\"", "\"post\"");
+        new_raw_posts = new_raw_posts.replace("\"score\"", "\"total_score\"");
+        new_raw_posts = new_raw_posts.replace("\"actual_score\"", "\"score\"");
+        let new_posts: Posts = serde_json::from_str(&new_raw_posts)?;
+
+        new_posts
+    } else  {
+        let mut posts: Posts = quick_xml::de::from_str(&resp.as_str())?;
+        for (index, post) in posts.clone().post.iter().enumerate() {
+            posts.post[index].actual_score = post.score.clone();
+        }
+        posts
+    };
 
     // gets a random post from the vector.
-    let r = rand::thread_rng().gen_range(0, xml.post.len()); 
-    let choice = &xml.post[r];
+    let choice = {
+        let r = rand::thread_rng().gen_range(0, xml.post.len()); 
+        xml.post[r].clone()
+    };
 
     // define both url types.
     let full_size = if booru.url != "danbooru.donmai.us" {
@@ -146,16 +219,15 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
     } else {
         full_size.clone()
     };
-    println!("{}", sample_size);
     
     // Sets the score the post has. this score is basically how many favorites the post has.
-    let mut score = &choice.score.as_str()[..];
-    if score == "" {
-        score = "0";
+    let mut score = choice.actual_score.unwrap_or("0".to_string()).to_string();
+    if score == "".to_string() {
+        score = "0".to_string();
     }
     let score_string = score.to_string();
     // Changes the single letter ratings into the more descriptive names.
-    let rating = match &choice.rating[..] {
+    let rating = match &choice.rating.unwrap_or_default()[..] {
         "s" => "Safe".to_string(),
         "q" => "Questionable".to_string(),
         "e" => "Explicit".to_string(),
@@ -216,11 +288,11 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
 /// `DanBooru` - Very popular booru, limited to only 2 tags.
 /// `HypnoBooru` - A booru that hosts all sorts of hypno based content.
 /// `FurryBooru` - Second largest Furry booru.
+/// `e621` - Largest Furry booru.
 /// `RealBooru` - Very large IRL booru.
 /// `IdolComplex` - Largest IRL booru, very asian based.
 /// 
 /// __Broken:__
-/// `e621` - Largest Furry booru.
 /// Broken due to new api.
 ///
 /// `Behoimi` - IRL, Mostly cosplays booru.

@@ -249,7 +249,8 @@ Logging (set a channel to log specific events)
 \"Basically the same as R. Danny, but with personal tags supported\"
 
 # Boorus
-\"Fix tag filter and the 2 boorus that don't work\"
+\"Improve tag filter\"
+\"Fix behoimi\"
 Sauce (sends the source of an image, using iqdb and saucenao)
 Exclude (excludes tags automatically from your search)
 nHentai (nhentai reader and searcher)
