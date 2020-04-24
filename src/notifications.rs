@@ -2,6 +2,7 @@ use crate::{
     ConnectionPool,
     Tokens,
     SentTwitchStreams,
+    VoiceManager,
 };
 use std::{
     time::Duration,
@@ -17,6 +18,11 @@ use reqwest::{
     Client as ReqwestClient,
     Url,
     header::*,
+};
+
+use tracing::{
+    info,
+    error,
 };
 
 use serenity::{
@@ -359,12 +365,45 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
     Ok(())
 }
 
+async fn check_empty_vc(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
+    let manager_lock = ctx.data.read().await
+        .get::<VoiceManager>().cloned().expect("Expected VoiceManager in ShareMap.");
+    let user_id = ctx.cache.read().await.user.id;
+
+    for (guild_id, guild_lock) in &ctx.cache.read().await.guilds {
+        let mut manager = manager_lock.lock().await;
+        let has_handler = manager.get(guild_id).is_some();
+
+        if has_handler {
+            let guild = guild_lock.read().await;
+            if let Some(channel) = guild.voice_states.get(&user_id)
+                .and_then(|v| v.channel_id) {
+                    let guild_channel_lock = {
+                        let cache = ctx.cache.read().await;
+                        cache.guild_channel(channel).unwrap()
+                    };
+                    let guild_channel = guild_channel_lock.read().await;
+
+                    if let Ok(members) = guild_channel.members(&ctx).await {
+                        if members.len() == 1 {
+                            manager.remove(guild_id);
+                        }
+                    }
+            };
+        }
+    }
+
+    Ok(())
+}
+
 pub async fn notification_loop(ctx: Arc<Context>) {
     let ctx = Arc::new(ctx);
     loop {
+        info!("Notification loop started.");
         let ctx1 = Arc::clone(&ctx);
         tokio::spawn(async move {
             if let Err(why) = check_new_posts(Arc::clone(&ctx1)).await {
+                error!("check_new_posts :: {}", why);
                 eprintln!("An error occurred while running check_new_posts() >>> {}", why);
             }
         });
@@ -372,9 +411,19 @@ pub async fn notification_loop(ctx: Arc<Context>) {
         let ctx2 = Arc::clone(&ctx);
         tokio::spawn(async move {
             if let Err(why) = check_twitch_livestreams(Arc::clone(&ctx2)).await {
+                error!("check_twitch_livestreams :: {}", why);
                 eprintln!("An error occurred while running check_twitch_livestreams() >>> {}", why);
             }
         });
+
+        let ctx3 = Arc::clone(&ctx);
+        tokio::spawn(async move {
+            if let Err(why) = check_empty_vc(Arc::clone(&ctx3)).await {
+                error!("check_empty_vc :: {}", why);
+                eprintln!("An error occurred while running check_empty_vc() >>> {}", why);
+            }
+        });
+        info!("Notification loop finished.");
 
         tokio::time::delay_for(Duration::from_secs(120)).await;
     }
