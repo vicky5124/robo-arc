@@ -1,3 +1,22 @@
+# 0.1.8-alpha
+
+### Commands
+- e621:
+  Updated to the new api
+- recent:
+  Reactions are now exclusive to the command author.
+
+### Adaptive commands
+- pi:
+  Added pi verification.
+- nsfw:
+  Added NSFW reaction to message jumps going to nsfw channels.
+- Ping X in nsfw!
+  Added easter egg.
+
+### Voice
+- Automatic disconnection in case of being alone.
+
 # 0.1.7-alpha
 
 ### Commands
