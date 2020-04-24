@@ -23,7 +23,7 @@ tokio-tls = "0.3.0"
 http = "0.2.1"
 
 [dependencies.tokio]
-version = "=0.2.13"
+version = "0.2.13"
 features = ["full"]
 
 # https://github.com/serenity-rs/serenity
