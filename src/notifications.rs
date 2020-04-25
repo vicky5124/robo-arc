@@ -3,6 +3,10 @@ use crate::{
     Tokens,
     SentTwitchStreams,
     VoiceManager,
+    utils::booru::{
+        SAFE_BANLIST,
+        UNSAFE_BANLIST,
+    },
 };
 use std::{
     time::Duration,
@@ -41,6 +45,7 @@ pub struct Post {
     sample_url: String,
     pub md5: String,
     id: u64,
+    tags: String,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
@@ -103,21 +108,42 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
             for post in resp {
                 if !md5s.contains(&post.md5) {
                     for channel in &channels {
-                        if let Err(why) = ChannelId(*channel as u64).send_message(&ctx, |m|{
-                            m.embed(|e| {
-                                e.title("Original Post");
-                                e.url(format!("https://yande.re/post/show/{}", post.id));
-                                e.image(post.sample_url.clone())
-                            })
-                        }).await {
-                            eprintln!("Error while sending message >>> {}", why);
-                        };
+                        let real_channel = ChannelId(*channel as u64).to_channel(&ctx).await?;
+                        let mut is_unsafe = false;
+
+                        if real_channel.is_nsfw().await || real_channel.guild().is_none() {
+                            for tag in post.tags.split(' ').into_iter() {
+                                if UNSAFE_BANLIST.contains(&tag) {
+                                    is_unsafe = true;
+                                }
+                            }
+                        } else {
+                            for tag in post.tags.split(' ').into_iter() {
+                                if SAFE_BANLIST.contains(&tag) {
+                                    is_unsafe = true;
+                                }
+                            }
+                        }
+
+                        if !is_unsafe {
+                            if let Err(why) = ChannelId(*channel as u64).send_message(&ctx, |m|{
+                                m.embed(|e| {
+                                    e.title("Original Post");
+                                    e.url(format!("https://yande.re/post/show/{}", post.id));
+                                    e.image(post.sample_url.clone())
+                                })
+                            }).await {
+                                eprintln!("Error while sending message >>> {}", why);
+                            };
+                        }
                     }
+
                     let allow_hooks = {
                         let read_data = ctx.data.read().await;
                         let config = read_data.get::<Tokens>().unwrap();
                         config["webhook_notifications"].as_bool().unwrap()
                     };
+
                     if allow_hooks {
                         for webhook in &webhooks {
                             let mut split = webhook.split('/');
