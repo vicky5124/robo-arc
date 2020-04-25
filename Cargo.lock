@@ -259,7 +259,7 @@ checksum = "0dbbb57365263e881e805dc77d94697c9118fd94d8da011240555aa7b23445bd"
 [[package]]
 name = "command_attr"
 version = "0.2.0"
-source = "git+https://github.com/Lakelezz/serenity/?branch=await#756c856a0fab773dc69088d45ea27a57439c24a9"
+source = "git+https://github.com/Lakelezz/serenity/?branch=await#28171107433dd44b90d28dbb2fd51cd36ff0f4a3"
 dependencies = [
  "futures",
  "proc-macro2",
@@ -1474,7 +1474,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.8.4"
-source = "git+https://github.com/Lakelezz/serenity/?branch=await#756c856a0fab773dc69088d45ea27a57439c24a9"
+source = "git+https://github.com/Lakelezz/serenity/?branch=await#28171107433dd44b90d28dbb2fd51cd36ff0f4a3"
 dependencies = [
  "async-trait",
  "async-tungstenite",
@@ -1742,9 +1742,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "0.2.18"
+version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34ef16d072d2b6dc8b4a56c70f5c5ced1a37752116f8e7c1e80c659aa7cb6713"
+checksum = "7d9c43f1bb96970e153bcbae39a65e249ccb942bd9d36dbdf086024920417c9c"
 dependencies = [
  "bytes",
  "fnv",

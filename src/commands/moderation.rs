@@ -47,7 +47,7 @@ async fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Me
 
         for m in rguild.members.values() {
             if m.display_name().await == std::borrow::Cow::Borrowed(member_name) ||
-                m.user.read().await.name == member_name
+                m.user.name == member_name
             {
                 members.push(m);
             }
@@ -58,7 +58,7 @@ async fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Me
 
             let mut members_string =  stream::iter(similar_members.iter())
                 .map(|m| async move {
-                    let member = m.0.user.read().await;
+                    let member = &m.0.user;
                     format!("`{}`|", member.name)
                 })
                 .fold(String::new(), |mut acc, c| async move {
@@ -80,7 +80,7 @@ async fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Me
         } else {
             let mut members_string =  stream::iter(members.iter())
                 .map(|m| async move {
-                    let member = m.user.read().await;
+                    let member = &m.user;
                     format!("`{}#{}`|", member.name, member.discriminator)
                 })
                 .fold(String::new(), |mut acc, c| async move {
@@ -107,7 +107,7 @@ async fn kick(mut ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
     match member {
         Ok(m) => {
             m.kick(&ctx).await?;
-            msg.reply(&ctx, format!("Successfully kicked member `{}#{}`", m.user.read().await.name, m.user.read().await.discriminator)).await?;
+            msg.reply(&ctx, format!("Successfully kicked member `{}#{}`", m.user.name, m.user.discriminator)).await?;
         },
         Err(why) => {msg.reply(&ctx, why.to_string()).await?;},
     }
@@ -126,7 +126,7 @@ async fn ban(mut ctx: &mut Context, msg: &Message, args: Args) -> CommandResult 
     match member {
         Ok(m) => {
             m.ban(&ctx, &1).await?;
-            msg.reply(&ctx, format!("Successfully banned member `{}#{}`", m.user.read().await.name, m.user.read().await.discriminator)).await?;
+            msg.reply(&ctx, format!("Successfully banned member `{}#{}`", m.user.name, m.user.discriminator)).await?;
         },
         Err(why) => {msg.reply(&ctx, why.to_string()).await?;},
     }
@@ -150,10 +150,10 @@ async fn clear(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResul
         Ok(n) => {
             let channel = &msg.channel(&ctx).await.unwrap().guild().unwrap();
 
-            let messages = &channel.read().await.messages(&ctx, |r| r.before(&msg.id).limit(n)).await?;
+            let messages = &channel.messages(&ctx, |r| r.before(&msg.id).limit(n)).await?;
             let messages_ids = messages.iter().map(|m| m.id).collect::<Vec<MessageId>>();
 
-            channel.read().await.delete_messages(&ctx, messages_ids).await?;
+            channel.delete_messages(&ctx, messages_ids).await?;
 
             msg.channel_id.say(&ctx, format!("Successfully deleted `{}` message", n)).await?;
         }

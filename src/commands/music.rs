@@ -83,7 +83,7 @@ async fn join(ctx: &mut Context, msg: &Message) -> CommandResult {
     let mut manager = manager_lock.lock().await;
 
     if manager.join(guild_id, connect_to).is_some() {
-        msg.channel_id.say(&ctx.http, &format!("Joined {}", connect_to.mention().await)).await?;
+        msg.channel_id.say(&ctx.http, &format!("Joined {}", connect_to.mention())).await?;
     } else {
         msg.channel_id.say(&ctx.http, "Error joining the channel").await?;
     }
