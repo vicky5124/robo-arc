@@ -1,6 +1,10 @@
 use serenity::framework::standard::Args;
 use rand::Rng;
 
+pub static SAFE_BANLIST: [&str; 11] = ["swastika", "gore", "guro", "smoking", "jailbait", "extreme_content", "extremely_large_filesize", "pussy", "dick", "nude", "partial_nude"];
+
+pub static UNSAFE_BANLIST: [&str; 14] = ["loli", "lolicon", "shota", "shotacon", "swastika", "gore", "guro", "smoking", "underage", "underaged", "jailbait", "extreme_content", "extremely_large_filesize", "contentious_content"];
+
 // This function parses the arguments on the booru commands and returns a list of the tags.
 pub async fn obtain_tags_unsafe(raw_args: Args) -> Vec<String> {
     // transform the arguments into a Vec<&str> for easier management.
@@ -62,13 +66,12 @@ pub async fn obtain_tags_safe(raw_args: Args) -> Vec<String> {
 pub async fn illegal_check_unsafe(tags: &mut Vec<String>) -> Vec<String> {
     // This is a list of tags that are banable from discord.
     // automatically remove them from the arguments if mentioned.
-    let banlist = vec!["loli", "lolicon", "shota", "shotacon", "swastika", "gore", "guro", "smoking", "underage", "underaged", "jailbait", "extreme_content", "extremely_large_filesize", "contentious_content"];
     let mut new_tags = Vec::new();
 
     // iterate over every tag
     for tag in tags{
         // and add them to a new list if they don't match any of the blacklisted tags.
-        if !banlist.contains(&tag.as_str()) {
+        if !UNSAFE_BANLIST.contains(&tag.as_str()) {
             new_tags.push(tag.to_owned());
         }
     }
@@ -78,11 +81,10 @@ pub async fn illegal_check_unsafe(tags: &mut Vec<String>) -> Vec<String> {
 // This function removes any illegal tags for SFW contnet from the tags.
 pub async fn illegal_check_safe(tags: &mut Vec<String>) -> Vec<String> {
     // This is a list of tags that are banable when sent outside nsfw channels.
-    let banlist = vec!["swastika", "gore", "guro", "smoking", "jailbait", "extreme_content", "extremely_large_filesize", "pussy", "dick", "nude", "partial_nude"];
     let mut new_tags = Vec::new();
     // Add the tags that don't match any of the blacklist tags to a new tags vector.
     for tag in tags{
-        if !banlist.contains(&tag.as_str()) {
+        if !SAFE_BANLIST.contains(&tag.as_str()) {
             new_tags.push(tag.to_owned());
         }
     }

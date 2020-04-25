@@ -1,5 +1,9 @@
 use crate::{
     utils::booru,
+    utils::booru::{
+        SAFE_BANLIST,
+        UNSAFE_BANLIST,
+    },
     Tokens,
 };
 
@@ -25,6 +29,11 @@ use reqwest::{
 };
 
 #[derive(Deserialize, PartialEq)]
+struct Tag {
+    name: String,
+}
+
+#[derive(Deserialize, PartialEq)]
 struct SankakuData {
     rating: String,
     sample_url: String,
@@ -34,6 +43,7 @@ struct SankakuData {
     file_size: i32,
     fav_count: i32,
     id: i32,
+    tags: Vec<Tag>,
 }
 
 #[command]
@@ -100,10 +110,32 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
             y += 1;
             // 8MB
             if x.file_size < 8_000_000 {
-                choice = x;
-                break;
-            } else if y > (&resp.len()*2) {
-                msg.channel_id.say(&ctx, "All the content matching the requested tags is too big to be sent.").await?;
+                if channel.is_nsfw().await || dm_channel {
+                    let mut is_unsafe = false;
+                    for tag in &x.tags {
+                        if UNSAFE_BANLIST.contains(&tag.name.as_str()) {
+                            is_unsafe = true;
+                        }
+                    }
+                    if !is_unsafe {
+                        choice = x;
+                        break;
+                    }
+                } else {
+                    let mut is_unsafe = false;
+                    for tag in &x.tags {
+                        if SAFE_BANLIST.contains(&tag.name.as_str()) {
+                            is_unsafe = true;
+                        }
+                    }
+                    if !is_unsafe {
+                        choice = x;
+                        break;
+                    }
+                }
+            }
+            if y > (&resp.len()*2) {
+                msg.channel_id.say(&ctx, "All the content matching the requested tags is too big to be sent or illegal.").await?;
                 return Ok(());
             }
         }
@@ -147,7 +179,6 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
     if choice.source.as_ref().unwrap() != &"".to_string() {
         fields.push(("Source", &source_md, true));
     }
-
 
     msg.channel_id.send_message(&ctx, |m| {
         m.add_file(attachment);
@@ -229,10 +260,32 @@ pub async fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
             y += 1;
             // 8MB
             if x.file_size < 8_000_000 {
-                choice = x;
-                break;
-            } else if y > (&resp.len()*2) {
-                msg.channel_id.say(&ctx, "All the content matching the requested tags is too big to be sent.").await?;
+                if channel.is_nsfw().await || dm_channel {
+                    let mut is_unsafe = false;
+                    for tag in &x.tags {
+                        if UNSAFE_BANLIST.contains(&tag.name.as_str()) {
+                            is_unsafe = true;
+                        }
+                    }
+                    if !is_unsafe {
+                        choice = x;
+                        break;
+                    }
+                } else {
+                    let mut is_unsafe = false;
+                    for tag in &x.tags {
+                        if SAFE_BANLIST.contains(&tag.name.as_str()) {
+                            is_unsafe = true;
+                        }
+                    }
+                    if !is_unsafe {
+                        choice = x;
+                        break;
+                    }
+                }
+            }
+            if y > (&resp.len()*2) {
+                msg.channel_id.say(&ctx, "All the content matching the requested tags is too big to be sent or illegal.").await?;
                 return Ok(());
             }
         }
