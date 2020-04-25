@@ -129,6 +129,7 @@ use serenity::{
         HelpOptions,
         help_commands,
         StandardFramework,
+        Reason,
         macros::{
             group,
             help,
@@ -550,6 +551,11 @@ async fn on_dispatch_error(ctx: &mut Context, msg: &Message, error: DispatchErro
         },
         DispatchError::IgnoredBot {} => {
             return;
+        },
+        DispatchError::CheckFailed(_, reason) => {
+            if let Reason::User(r) = reason {
+                let _ = msg.channel_id.say(&ctx, r).await;
+            }
         },
         // eprint prints to stderr rather than stdout.
         _ => {

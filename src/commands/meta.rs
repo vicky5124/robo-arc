@@ -228,7 +228,6 @@ MapPP (calculates pp of a map, like ezpp or tillerino)
 Search (searches term on duckduckgo)
 
 #Twitch
-Streamrole (gives the stream notification role set to the guild)
 ConfigureStream (configures stream notifications for the channel)
 
 #Reddit
@@ -237,7 +236,7 @@ User (posts a random post from the user specified)
 Sub/User Bomb (posts 5 posts from the subreddit or user specified)
 
 #Image Manipulation
-Pride (prides the provided image, either bi or gay)
+Pride (prides the provided image, either bi, gay, lesbian, etc...)
 
 #Mod
 Clear (add specific requieriments like \"only webhooks\")

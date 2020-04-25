@@ -18,17 +18,32 @@ use serenity::{
     prelude::Context,
     model::channel::Message,
     model::user::User,
+    model::id::RoleId,
     framework::standard::{
         Args,
         Delimiter,
         CommandResult,
-        macros::command,
+        CheckResult,
+        macros::{
+            command,
+            check,
+        },
     },
     utils::{
         content_safe,
         ContentSafeOptions,
     },
 };
+
+#[check]
+#[name = "bot_has_manage_roles"]
+async fn bot_has_manage_roles_check(ctx: &mut Context, msg: &Message) -> CheckResult {
+    if !ctx.http.get_member(msg.guild_id.unwrap().0, ctx.cache.read().await.user.id.0).await.expect("What even").permissions(&ctx).await.expect("What even 2").manage_roles() {
+        CheckResult::new_user("I'm unable to run this command due to missing the `Manage Roles` permission.")
+    } else {
+        CheckResult::Success
+    }
+}
 
 async fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: String) -> Result<(), Box<dyn std::error::Error>> {
     let rdata = ctx.data.read().await;
@@ -89,9 +104,70 @@ async fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: St
 /// `best_girl`: Sets your best girl to the given tags.
 /// `best_boy`: Sets your best boy to the given tags.
 /// `booru`: Sets the booru to be used for the best_X commands ~~and `picture`~~
+/// `streamrole`: Gives you the configured streamrole of a streamer the guild gets notifications on.
 #[command]
-#[sub_commands(best_boy, best_girl, booru)]
+#[sub_commands(best_boy, best_girl, booru, streamrole)]
 async fn user(_ctx: &mut Context, _msg: &Message, _args: Args) -> CommandResult {
+    Ok(())
+}
+
+/// Gives you the stream notification role bound to a streamer being notified on the server.
+///
+/// Usage: `config user streamrole bobross`
+#[command]
+#[only_in("guilds")]
+#[min_args(1)]
+#[checks("bot_has_manage_roles")]
+async fn streamrole(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+    let rdata = ctx.data.read().await;
+    let pool = rdata.get::<ConnectionPool>().unwrap();
+
+    let streamer = args.single_quoted::<String>()?;
+    let mut channels = Vec::new();
+
+    for channel in msg.guild_id.unwrap().channels(&ctx).await?.keys() {
+        channels.push(channel.0 as i64);
+    }
+
+    let role_ids = sqlx::query!("SELECT role_id FROM streamer_notification_channel WHERE streamer = $1 AND channel_id = ANY($2)", &streamer, &channels)
+        .fetch_optional(pool)
+        .boxed()
+        .await?;
+
+    let role_id = if let Some(roles) = role_ids {
+        if let Some(r) = roles.role_id {
+            r
+        } else {
+            1
+        }
+    } else {
+        0
+    };
+
+    if role_id == 1 {
+        msg.channel_id.say(&ctx, "The mentioned streamer does not have a role configured on this server.").await?;
+    } else if role_id == 0 {
+        msg.channel_id.say(&ctx, "The mentioned streamer is not being notified on this server").await?;
+    } else {
+        if !msg.member(&ctx).await.unwrap().roles.contains(&RoleId(role_id as u64)) {
+            if let Err(_) = msg.member(&ctx).await.unwrap().add_role(&ctx, role_id as u64).await {
+                msg.channel_id.say(&ctx, "The configured role does not exist, contact the server administrators about the issue.").await?;
+            } else {
+                msg.channel_id.say(&ctx, format!("Successfully obtained the role `{}`",
+                    RoleId(role_id as u64).to_role_cached(&ctx).await.unwrap().name))
+                    .await?;
+            }
+        } else {
+            if let Err(why) = msg.member(&ctx).await.unwrap().remove_role(&ctx, role_id as u64).await {
+                msg.channel_id.say(&ctx, format!("I was unable to remove your role: {}", why)).await?;
+            } else {
+                msg.channel_id.say(&ctx, format!("Successfully removed the role `{}`",
+                    RoleId(role_id as u64).to_role_cached(&ctx).await.unwrap().name))
+                    .await?;
+            }
+        }
+    }
+
     Ok(())
 }
 
