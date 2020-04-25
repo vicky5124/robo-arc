@@ -1,3 +1,18 @@
+# 0.1.9-alpha
+
+### Commands
+- configure user:
+  streamrole: New command, gives you the bound notification role to a streamer.
+- sankaku / idol:
+  Imrpoved tag filtering.
+
+### Notifications
+- yandere:
+  Improved tag filtering.
+
+### Dependencies
+- Updated all dependencies.
+
 # 0.1.8-alpha
 
 ### Commands
