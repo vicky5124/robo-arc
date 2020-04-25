@@ -46,7 +46,7 @@ async fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Me
         let member_name = member_name.split('#').next().unwrap();
 
         for m in rguild.members.values() {
-            if m.display_name().await == std::borrow::Cow::Borrowed(member_name) ||
+            if m.display_name() == std::borrow::Cow::Borrowed(member_name) ||
                 m.user.name == member_name
             {
                 members.push(m);

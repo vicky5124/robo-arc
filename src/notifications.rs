@@ -111,7 +111,7 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
                         let real_channel = ChannelId(*channel as u64).to_channel(&ctx).await?;
                         let mut is_unsafe = false;
 
-                        if real_channel.is_nsfw().await || real_channel.guild().is_none() {
+                        if real_channel.is_nsfw() || real_channel.guild().is_none() {
                             for tag in post.tags.split(' ').into_iter() {
                                 if UNSAFE_BANLIST.contains(&tag) {
                                     is_unsafe = true;

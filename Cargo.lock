@@ -32,7 +32,7 @@ checksum = "b585a98a234c46fc563103e9278c9391fde1f4e6850334da895d27edb9580f62"
 
 [[package]]
 name = "arc_bot"
-version = "0.1.8-alpha"
+version = "0.1.9-alpha"
 dependencies = [
  "async-tungstenite",
  "bitflags",
@@ -259,7 +259,7 @@ checksum = "0dbbb57365263e881e805dc77d94697c9118fd94d8da011240555aa7b23445bd"
 [[package]]
 name = "command_attr"
 version = "0.2.0"
-source = "git+https://github.com/Lakelezz/serenity/?branch=await#28171107433dd44b90d28dbb2fd51cd36ff0f4a3"
+source = "git+https://github.com/Lakelezz/serenity/?branch=await#874571486056e171d08006fc4abf154a70628fc1"
 dependencies = [
  "futures",
  "proc-macro2",
@@ -1474,7 +1474,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.8.4"
-source = "git+https://github.com/Lakelezz/serenity/?branch=await#28171107433dd44b90d28dbb2fd51cd36ff0f4a3"
+source = "git+https://github.com/Lakelezz/serenity/?branch=await#874571486056e171d08006fc4abf154a70628fc1"
 dependencies = [
  "async-trait",
  "async-tungstenite",

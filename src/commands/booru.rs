@@ -110,7 +110,7 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
     // Obtains a list of tags from the arguments.
     let raw_tags = {
         // if the channel is nsfw or a dm, parse for nsfw tags.
-        if channel.is_nsfw().await || dm_channel {
+        if channel.is_nsfw() || dm_channel {
             let mut raw_tags = booru::obtain_tags_unsafe(args).await;
             booru::illegal_check_unsafe(&mut raw_tags).await
         // else, parse for safe tags.

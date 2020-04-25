@@ -63,7 +63,7 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
     let dm_channel = msg.guild_id == None;
 
     let raw_tags = {
-        if channel.is_nsfw().await || dm_channel {
+        if channel.is_nsfw() || dm_channel {
             let mut raw_tags = booru::obtain_tags_unsafe(args).await;
             booru::illegal_check_unsafe(&mut raw_tags).await
         } else {
@@ -110,7 +110,7 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
             y += 1;
             // 8MB
             if x.file_size < 8_000_000 {
-                if channel.is_nsfw().await || dm_channel {
+                if channel.is_nsfw() || dm_channel {
                     let mut is_unsafe = false;
                     for tag in &x.tags {
                         if UNSAFE_BANLIST.contains(&tag.name.as_str()) {
@@ -204,7 +204,7 @@ pub async fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
     let dm_channel = msg.guild_id == None;
 
     let raw_tags = {
-        if channel.is_nsfw().await || dm_channel {
+        if channel.is_nsfw() || dm_channel {
             let mut raw_tags = booru::obtain_tags_unsafe(args).await;
             booru::illegal_check_unsafe(&mut raw_tags).await
         } else {
@@ -260,7 +260,7 @@ pub async fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
             y += 1;
             // 8MB
             if x.file_size < 8_000_000 {
-                if channel.is_nsfw().await || dm_channel {
+                if channel.is_nsfw() || dm_channel {
                     let mut is_unsafe = false;
                     for tag in &x.tags {
                         if UNSAFE_BANLIST.contains(&tag.name.as_str()) {

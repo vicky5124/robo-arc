@@ -422,7 +422,7 @@ impl EventHandler for Handler {
             if splits.clone().count() == 7 {
                 let channel_id  = splits.nth(5).unwrap_or("0").parse::<u64>().expect("NaN");
                 if let Ok(chan) = ChannelId(channel_id).to_channel(&ctx).await {
-                    if chan.is_nsfw().await {
+                    if chan.is_nsfw() {
                         let _ = msg.react(&ctx, "🇳").await;
                         let _ = msg.react(&ctx, "🇸").await;
                         let _ = msg.react(&ctx, "🇫").await;

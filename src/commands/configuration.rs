@@ -293,7 +293,7 @@ async fn yande_re_webhook(ctx: &Context, msg: &mut Message, author: &User) -> Re
         let dm_channel = msg.guild_id == None;
     
         let mut tags = {
-            if channel.is_nsfw().await || dm_channel {
+            if channel.is_nsfw() || dm_channel {
                 let mut raw_tags = booru::obtain_tags_unsafe(args).await;
                 booru::illegal_check_unsafe(&mut raw_tags).await
             } else {
