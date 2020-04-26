@@ -32,7 +32,7 @@ checksum = "b585a98a234c46fc563103e9278c9391fde1f4e6850334da895d27edb9580f62"
 
 [[package]]
 name = "arc_bot"
-version = "0.1.9-alpha"
+version = "0.1.10-alpha"
 dependencies = [
  "async-tungstenite",
  "bitflags",
@@ -46,6 +46,7 @@ dependencies = [
  "regex",
  "reqwest",
  "serde",
+ "serde-aux",
  "serde_json",
  "serenity",
  "sqlx",
@@ -1435,6 +1436,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "36df6ac6412072f67cf767ebbde4133a5b2e88e76dc6187fa7104cd16f783399"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde-aux"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae50f53d4b01e854319c1f5b854cd59471f054ea7e554988850d3f36ca1dc852"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_derive",
+ "serde_json",
 ]
 
 [[package]]

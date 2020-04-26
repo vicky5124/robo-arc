@@ -1,3 +1,16 @@
+# 0.1.10-alpha
+
+### Commands:
+- all_boorus:
+  Improved tag filter.
+- e621:
+  No longer broken on missing url fields.
+- configure channel notifications:
+  webhook yandere: fixed issue #832 on serenity.
+- nHentai:
+  New command.
+  Allows you to read nhentai mangas from within discord.
+
 # 0.1.9-alpha
 
 ### Commands
