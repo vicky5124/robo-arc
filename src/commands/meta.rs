@@ -248,7 +248,6 @@ Logging (set a channel to log specific events)
 \"Basically the same as R. Danny, but with personal tags supported\"
 
 # Boorus
-\"Improve tag filter\"
 \"Fix behoimi\"
 Sauce (sends the source of an image, using iqdb and saucenao)
 Exclude (excludes tags automatically from your search)
