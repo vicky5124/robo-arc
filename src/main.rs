@@ -243,7 +243,7 @@ struct Osu;
 // The Booru command group.
 // This group will contain every single command from every booru that gets implemented.
 // As you can see on the last line, the description also supports url markdown.
-#[group("NSFW")]
+#[group("Image Boards")]
 #[description = "All the booru related commands.\n\
 Available parameters:
 `-x` Explicit
