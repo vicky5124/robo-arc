@@ -3,7 +3,7 @@ use rand::Rng;
 
 pub static SAFE_BANLIST: [&str; 11] = ["swastika", "gore", "guro", "smoking", "jailbait", "extreme_content", "extremely_large_filesize", "pussy", "dick", "nude", "partial_nude"];
 
-pub static UNSAFE_BANLIST: [&str; 14] = ["loli", "lolicon", "shota", "shotacon", "swastika", "gore", "guro", "smoking", "underage", "underaged", "jailbait", "extreme_content", "extremely_large_filesize", "contentious_content"];
+pub static UNSAFE_BANLIST: [&str; 16] = ["loli", "lolicon", "shota", "shotacon", "swastika", "gore", "guro", "smoking", "underage", "underaged", "jailbait", "extreme_content", "extremely_large_filesize", "contentious_content", "cub", "young"];
 
 // This function parses the arguments on the booru commands and returns a list of the tags.
 pub async fn obtain_tags_unsafe(raw_args: Args) -> Vec<String> {

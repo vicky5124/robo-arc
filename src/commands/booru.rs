@@ -10,6 +10,10 @@ use crate::{
     utils::{
         booru,
         basic_functions::capitalize_first,
+        booru::{
+            SAFE_BANLIST,
+            UNSAFE_BANLIST,
+        }
     },
     // import all the types that are used for the global data.
     Booru,
@@ -58,7 +62,12 @@ struct ScoreData {
 
 #[derive(Serialize, Deserialize, PartialEq, Clone)]
 struct Url {
-    url: String,
+    url: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Clone)]
+struct Tags {
+    general: Option<Vec<Option<String>>>,
 }
 
 // defining the Post type to be used for the xml deserialized on the Posts vector.
@@ -73,6 +82,7 @@ struct Post {
     file_url: Option<String>,
     sample: Option<Url>,
     file: Option<Url>,
+    tags: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Clone)]
@@ -86,6 +96,8 @@ struct PostE621 {
     file_url: Option<String>,
     sample: Option<Url>,
     file: Option<Url>,
+    tags: Option<Tags>,
+    string_tags: Option<String>,
 }
 
 // defining the Posts vector to Deserialize the requested xml list.
@@ -173,13 +185,22 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
             } else {
                 None
             };
-            posts.posts[index].sample_url = Some(post.sample.clone().unwrap().url);
-            posts.posts[index].file_url = Some(post.file.clone().unwrap().url);
+            posts.posts[index].sample_url = Some(post.sample.clone().unwrap().url.unwrap_or_default());
+            posts.posts[index].file_url = Some(post.file.clone().unwrap().url.unwrap_or_default());
+            posts.posts[index].string_tags = Some({
+                if let Some(t) = post.tags.clone() {
+                    t.general.unwrap_or(vec![Some("gore".to_string())]).iter().map(|tag| format!("{} ", tag.as_ref().unwrap_or(&"gore".to_string()))).collect::<String>()
+                } else {
+                    "gore".to_string()
+                }
+            });
         }
 
         let mut new_raw_posts = serde_json::to_string(&posts)?;
         new_raw_posts = new_raw_posts.replace("\"posts\"", "\"post\"");
-        new_raw_posts = new_raw_posts.replace("\"score\"", "\"total_score\"");
+        new_raw_posts = new_raw_posts.replace("\"score\"", "\"__\"");
+        new_raw_posts = new_raw_posts.replace("\"tags\"", "\"___\"");
+        new_raw_posts = new_raw_posts.replace("\"string_tags\"", "\"tags\"");
         new_raw_posts = new_raw_posts.replace("\"actual_score\"", "\"score\"");
         let new_posts: Posts = serde_json::from_str(&new_raw_posts)?;
 
@@ -193,9 +214,37 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
     };
 
     // gets a random post from the vector.
-    let choice = {
-        let r = rand::thread_rng().gen_range(0, xml.post.len()); 
-        xml.post[r].clone()
+    let choice;
+    {
+        let mut y = 1;
+        loop {
+            let r = rand::thread_rng().gen_range(0, xml.post.len()); 
+            let x = xml.post[r].clone();
+            let mut is_unsafe = false;
+            y += 1;
+
+            if channel.is_nsfw() || dm_channel {
+                for tag in x.clone().tags.unwrap_or("gore".to_string()).split(' ').into_iter() {
+                    if UNSAFE_BANLIST.contains(&tag) {
+                        is_unsafe = true;
+                    }
+                }
+            } else {
+                for tag in x.clone().tags.unwrap_or("gore".to_string()).split(' ').into_iter() {
+                    if SAFE_BANLIST.contains(&tag) {
+                        is_unsafe = true;
+                    }
+                }
+            }
+            if !is_unsafe {
+                choice = x;
+                break;
+            }
+            if y > (&resp.len()*2) {
+                msg.channel_id.say(&ctx, "All the content matching the requested tags is too big to be sent or illegal.").await?;
+                return Ok(());
+            }
+        }
     };
 
     // define both url types.
