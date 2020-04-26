@@ -243,7 +243,7 @@ struct Osu;
 // The Booru command group.
 // This group will contain every single command from every booru that gets implemented.
 // As you can see on the last line, the description also supports url markdown.
-#[group("All Boorus")]
+#[group("NSFW")]
 #[description = "All the booru related commands.\n\
 Available parameters:
 `-x` Explicit
@@ -252,7 +252,7 @@ Available parameters:
 `-n` Non Safe (Random between E or Q)
 
 Inspired by -GN's WaifuBot ([source](https://github.com/isakvik/waifubot/))"]
-#[commands(booru_command, BB, BG)] // We imported BB_COMMAND and BG_COMMAND, but this macro automatically adds _COMMAND, so we don't put that.
+#[commands(booru_command, BB, BG, n_hentai)] // We imported BB_COMMAND and BG_COMMAND, but this macro automatically adds _COMMAND, so we don't put that.
 struct AllBoorus;
 
 // The Image Manipulation command group.

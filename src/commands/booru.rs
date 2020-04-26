@@ -22,6 +22,11 @@ use crate::{
     ConnectionPool,
 };
 
+use std::{
+    collections::HashMap,
+    time::Duration,
+};
+
 use sqlx;
 use futures::TryStreamExt;
 use futures::stream::StreamExt;
@@ -44,6 +49,7 @@ use rand::Rng;
 use reqwest::{
     Client as ReqwestClient,
     header::*,
+    Url as ReqUrl,
 };
 // quick_xml is an xml sedrde library.
 // used to deserialize the xml data into structs.
@@ -53,25 +59,67 @@ use serde::{
     Deserialize,
     Serialize,
 };
+use serde_aux::prelude::*;
 use serde_json;
 
-#[derive(Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+struct NHentaiTags {
+    name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+struct NHentaiTitle {
+    english: String,
+    japanese: Option<String>,
+    pretty: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+struct NHentaiImage {
+    t: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+struct NHentaiImages {
+    pages: Vec<NHentaiImage>,
+    cover: NHentaiImage,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+struct NHentaiSearchResult {
+    #[serde(deserialize_with = "deserialize_string_from_number")]
+    id: String,
+    #[serde(deserialize_with = "deserialize_string_from_number")]
+    media_id: String,
+    title: NHentaiTitle,
+    images: NHentaiImages,
+    tags: Vec<NHentaiTags>,
+    num_pages: u64,
+    num_favorites: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+struct NHentaiSearch {
+    result: Vec<NHentaiSearchResult>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 struct ScoreData {
     total: i64,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 struct Url {
     url: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 struct Tags {
     general: Option<Vec<Option<String>>>,
 }
 
 // defining the Post type to be used for the xml deserialized on the Posts vector.
-#[derive(Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 struct Post {
     score: Option<String>,
     actual_score: Option<String>,
@@ -85,7 +133,7 @@ struct Post {
     tags: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 struct PostE621 {
     score: Option<ScoreData>,
     actual_score: Option<String>,
@@ -101,12 +149,12 @@ struct PostE621 {
 }
 
 // defining the Posts vector to Deserialize the requested xml list.
-#[derive(Deserialize, PartialEq, Clone)]
+#[derive(Debug, Deserialize, PartialEq, Clone)]
 struct Posts {
     post: Vec<Post>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 struct PostsE621 {
     posts: Vec<PostE621>,
 }
@@ -432,7 +480,8 @@ pub async fn booru_command(ctx: &mut Context, msg: &Message, args: Args) -> Comm
 /// Sends a picture of your best girl!
 /// 
 /// You can configure your best girl with this command:
-/// `config user best_girl <booru tag of your best girl>`
+/// `config user best_girl {booru tags of your best girl}`
+/// Usage: `bestgirl <additional tags>`
 #[command]
 #[aliases(bg, bestgirl, waifu, wife)]
 pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
@@ -535,7 +584,8 @@ pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandR
 /// Sends a picture of your best boy!
 /// 
 /// You can configure your best boy with this command:
-/// `config user best_boy <booru tag of your best boy>`
+/// `config user best_boy {booru tags of your best boy}`
+/// Usage: `bestboy <additional tags>`
 #[command]
 #[aliases(bb, bestboy, husbando, husband)]
 pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
@@ -630,6 +680,279 @@ pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
     } else {
         msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan").await?;
         chan(&mut ctx.clone(), &msg, args_tags).await?;
+    }
+
+    Ok(())
+}
+
+/// An nHentai reader within discord!
+/// Use the left and right arrow reactions to go to the previous or next page respectively.
+/// On search, use ✅ to select the current item.
+///
+/// Usage:
+/// Use an id directly:
+/// `nhentai 259670`
+/// Get a random manga:
+/// `nhentai random`
+/// Search mangas:
+/// `nhentai feet trap`
+#[command]
+#[aliases(nh, nhentai)]
+pub async fn n_hentai(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    if let Some(channel) = msg.channel(&ctx).await {
+        if !channel.is_nsfw() && !channel.guild().is_none() {
+            msg.channel_id.say(&ctx, "This command can only be ran on nsfw channels or in dm's").await?;
+        }
+    }
+
+    let reqwest = ReqwestClient::new();
+    let mut bot_msg = msg.channel_id.say(&ctx, "Obtaining manga... Please wait.").await?;
+
+    let urls = {
+        let search = args.message();
+        if let Ok(num) = search.parse::<u64>() {
+            let api_url = format!("https://nhentai.net/api/gallery/{}", num);
+            let post_url = format!("https://nhentai.net/g/{}", num);
+            let mut map = HashMap::new();
+            map.insert("api_url", api_url);
+            map.insert("post_url", post_url);
+            map
+        } else {
+            if &search == &"random" {
+                let post_url = reqwest.get("https://nhentai.net/random/")
+                    .send()
+                    .await?
+                    .url()
+                    .to_string();
+
+                let num = post_url.split('/').into_iter().nth(4).unwrap();
+                let api_url = format!("https://nhentai.net/api/gallery/{}", num);
+
+                let mut map = HashMap::new();
+                map.insert("api_url", api_url.to_string());
+                map.insert("post_url", post_url);
+                map
+            } else {
+                let url = ReqUrl::parse_with_params("https://nhentai.net/api/galleries/search",
+                    &[("query", search)])?;
+
+                let resp = reqwest.get(url)
+                    .send()
+                    .await?
+                    .json::<NHentaiSearch>()
+                    .await?;
+
+                if resp.result.is_empty() {
+                    bot_msg.edit(&ctx, |m| m.content("There are no search results.")).await?;
+                    return Ok(());
+                }
+
+                let mut index = 0;
+                let id;
+
+                bot_msg.react(&ctx, "⬅️").await?;
+                bot_msg.react(&ctx, "➡️").await?;
+                bot_msg.react(&ctx, "✅").await?;
+
+                bot_msg.edit(&ctx, |m| {
+                    m.content(&resp.result[index].id);
+                    m.embed(|e| {
+                        e.title(&resp.result[index].title.english);
+                        e.url(format!("https://nhentai.net/g/{}/", &resp.result[index].id));
+                        e.description(format!("{}", {
+                            let mut tags = resp.result[index].tags.iter().map(|t| format!("{}, ", t.name)).collect::<String>();
+                            tags.pop(); tags.pop();
+                            tags
+                        }));
+
+                        let format = {
+                            let t = &resp.result[index].images.cover.t;
+                            if t == &"j".to_string() {
+                                "jpg"
+                            } else if t == &"p".to_string() {
+                                "png"
+                            } else {
+                                "jpg"
+                            }
+                        };
+
+                        e.image(format!("https://t.nhentai.net/galleries/{}/cover.{}", &resp.result[index].media_id, format));
+                        e.footer(|f| {
+                            f.text(format!("{} Pages | {} Favs", &resp.result[index].num_pages, &resp.result[index].num_favorites))
+                        })
+                    })
+                }).await?;
+
+                loop {
+                    if let Some(reaction) = &bot_msg.await_reaction(&ctx).author_id(msg.author.id.0).timeout(Duration::from_secs(30)).await {
+                        let emoji = &reaction.as_inner_ref().emoji;
+
+                        match emoji.as_data().as_str() {
+                            "⬅️" => { 
+                                if index != 0 {
+                                    index -= 1;
+                                }
+                            },
+                            "➡️" => { 
+                                if index != resp.result.len() - 1 {
+                                    index += 1;
+                                }
+                            },
+                            "✅" => {
+                                id = resp.result[index].id.clone();
+                                break;
+                            },
+                            _ => (),
+                        }
+                        bot_msg.edit(&ctx, |m| {
+                            m.content(&resp.result[index].id);
+                            m.embed(|e| {
+                                e.title(&resp.result[index].title.english);
+                                e.url(format!("https://nhentai.net/g/{}/", &resp.result[index].id));
+                                e.description(format!("{}", {
+                                    let mut tags = resp.result[index].tags.iter().map(|t| format!("{}, ", t.name)).collect::<String>();
+                                    tags.pop(); tags.pop();
+                                    tags
+                                }));
+
+                                let format = {
+                                    let t = &resp.result[index].images.cover.t;
+                                    if t == &"j".to_string() {
+                                        "jpg"
+                                    } else if t == &"p".to_string() {
+                                        "png"
+                                    } else {
+                                        "jpg"
+                                    }
+                                };
+
+                                e.image(format!("https://t.nhentai.net/galleries/{}/cover.{}", &resp.result[index].media_id, format));
+                                e.footer(|f| {
+                                    f.text(format!("{} Pages | {} Favs", &resp.result[index].num_pages, &resp.result[index].num_favorites))
+                                })
+                            })
+                        }).await?;
+                        reaction.as_inner_ref().delete(&ctx).await?;
+                    } else {
+                        bot_msg.edit(&ctx, |m| {
+                            m.content("Timeout")
+                        }).await?;
+                        ctx.http.edit_message(bot_msg.channel_id.0, bot_msg.id.0, &serde_json::json!({"flags" : 4})).await?;
+                        bot_msg.delete_reactions(&ctx).await?;
+                        return Ok(());
+                    };
+                }
+
+                let api_url = format!("https://nhentai.net/api/gallery/{}", id);
+                let post_url = format!("https://nhentai.net/g/{}", id);
+                let mut map = HashMap::new();
+                map.insert("api_url", api_url);
+                map.insert("post_url", post_url);
+                map
+            }
+        }
+    };
+
+    let resp = reqwest.get(&urls["api_url"])
+        .send()
+        .await?
+        .json::<NHentaiSearchResult>()
+        .await?;
+
+    bot_msg.react(&ctx, "⬅️").await?;
+    bot_msg.react(&ctx, "➡️").await?;
+
+    let mut index = 0;
+
+    bot_msg.edit(&ctx, |m| {
+        m.content(&resp.id);
+        m.embed(|e| {
+            e.title(&resp.title.pretty);
+            e.url(format!("https://nhentai.net/g/{}/", &resp.id));
+            e.description(format!("{}", {
+                let mut tags = resp.tags.iter().map(|t| format!("{}, ", t.name)).collect::<String>();
+                tags.pop(); tags.pop();
+                tags
+            }));
+
+            let format = {
+                let t = &resp.images.cover.t;
+                if t == &"j".to_string() {
+                    "jpg"
+                } else if t == &"p".to_string() {
+                    "png"
+                } else {
+                    "jpg"
+                }
+            };
+
+            e.image(format!("https://i.nhentai.net/galleries/{}/{}.{}", &resp.media_id, index+1, format));
+            e.footer(|f| {
+                f.text(format!("{}/{} | {} Favs", index + 1,&resp.num_pages, &resp.num_favorites))
+            })
+        })
+    }).await?;
+
+    loop {
+        if let Some(reaction) = &bot_msg.await_reaction(&ctx).author_id(msg.author.id.0).timeout(Duration::from_secs(120)).await {
+            let emoji = &reaction.as_inner_ref().emoji;
+
+            match emoji.as_data().as_str() {
+                "⬅️" => { 
+                    if index != 0 {
+                        index -= 1;
+                    }
+                },
+                "➡️" => { 
+                    if index != resp.images.pages.len() - 1 {
+                        index += 1;
+                    }
+                },
+                _ => (),
+            }
+
+            reaction.as_inner_ref().delete(&ctx).await?;
+
+            bot_msg.edit(&ctx, |m| {
+                m.content(&resp.id);
+                m.embed(|e| {
+                    e.title(&resp.title.pretty);
+                    e.url(format!("https://nhentai.net/g/{}/", &resp.id));
+                    e.description("");
+
+                    let format = {
+                        let t = &resp.images.pages[index].t;
+                        if t == &"j".to_string() {
+                            "jpg"
+                        } else if t == &"p".to_string() {
+                            "png"
+                        } else {
+                            "jpg"
+                        }
+                    };
+
+                    e.image(format!("https://i.nhentai.net/galleries/{}/{}.{}", &resp.media_id, index+1, format));
+                    e.footer(|f| {
+                        f.text(format!("{}/{} | {} Favs", index + 1,&resp.num_pages, &resp.num_favorites))
+                    })
+                })
+            }).await?;
+
+        } else {
+            bot_msg.edit(&ctx, |m| {
+                m.embed(|e| {
+                    e.title(&resp.title.pretty);
+                    e.url(format!("https://nhentai.net/g/{}/", &resp.id));
+                    e.description(format!("{}", {
+                        let mut tags = resp.tags.iter().map(|t| format!("{}, ", t.name)).collect::<String>();
+                        tags.pop(); tags.pop();
+                        tags
+                    }))
+                })
+            }).await?;
+            bot_msg.delete_reactions(&ctx).await?;
+            break
+        };
     }
 
     Ok(())

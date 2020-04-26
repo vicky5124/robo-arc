@@ -251,7 +251,6 @@ Logging (set a channel to log specific events)
 \"Fix behoimi\"
 Sauce (sends the source of an image, using iqdb and saucenao)
 Exclude (excludes tags automatically from your search)
-nHentai (nhentai reader and searcher)
 
 # Music
 \"Make a better lavalink wrapper for serenity\"
