@@ -290,7 +290,11 @@ async fn yande_re_webhook(ctx: &Context, msg: &mut Message, author: &User) -> Re
 
         let channel = ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
         // Checks if the command was invoked on a DM
-        let dm_channel = msg.guild_id == None;
+        let dm_channel = if let Some(channel) = msg.channel_id.to_channel_cached(&ctx).await {
+            channel.guild().is_none()
+        } else {
+            true
+        };
     
         let mut tags = {
             if channel.is_nsfw() || dm_channel {
