@@ -131,7 +131,9 @@ async fn play(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 
     if !embeded {
         if let Err(_) = ctx.http.edit_message(msg.channel_id.0, msg.id.0, &serde_json::json!({"flags" : 4})).await  {
-            msg.channel_id.say(&ctx, "Please, put the url between <> so it doesn't embed.").await?;
+            if query.starts_with("http") {
+                msg.channel_id.say(&ctx, "Please, put the url between <> so it doesn't embed.").await?;
+            }
         }
     }
 
