@@ -275,10 +275,10 @@ fn decrypt_bytes(encrypted_data: &[u8]) -> Result<Vec<u8>, symmetriccipher::Symm
 }
 
 
-/// Encrypts a message. **NOT WORKING**
-/// Usage: `encrypt Jaxtar is Cute!`
-/// 
+/// Encrypts a message.
 /// You can decrypt the message with `decrypt {hex_hash}`
+/// 
+/// Usage: `encrypt Jaxtar is Cute!`
 #[command]
 #[min_args(1)]
 async fn encrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
@@ -290,7 +290,9 @@ async fn encrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult 
     msg.channel_id.say(&ctx, format!("`{}`", encrypted_data_text)).await?;
     Ok(())
 }
+
 /// Decrypts and encrypted message.
+///
 /// Usage: `decrypt 36991e919634f4dc933787de47e9cb37`
 #[command]
 async fn decrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
