@@ -545,7 +545,15 @@ async fn on_dispatch_error(ctx: &mut Context, msg: &Message, error: DispatchErro
         // Notify the user if the reason of the command failing to execute was because of
         // inssufficient arguments.
         DispatchError::NotEnoughArguments { min, given } => {
-            let s = format!("I need {} arguments to run this command, but i was only given {}.", min, given);
+            let s = {
+                if given == 0  && min == 1{
+                    format!("I need an argument to run this command")
+                } else if given == 0 {
+                    format!("I need atleast {} arguments to run this command", min)
+                } else {
+                    format!("I need {} arguments to run this command, but i was only given {}.", min, given)
+                }
+            };
             // Send the message, but supress any errors that may occur.
             let _ = msg.channel_id.say(&ctx, s).await;
         },
