@@ -21,8 +21,7 @@ use futures::{
     StreamExt,
 };
 
-async fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Member, String> {
-    let member_name = args.message();
+async fn parse_member(ctx: &mut Context, msg: &Message, member_name: String) -> Result<Member, String> {
     let mut members = Vec::new();
 
     if let Ok(id) = member_name.parse::<u64>() {
@@ -33,7 +32,7 @@ async fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Me
         }
     } else if member_name.starts_with("<@") && member_name.ends_with('>') {
         let re = Regex::new("[<@!>]").unwrap();
-        let member_id = re.replace_all(member_name, "").into_owned();
+        let member_id = re.replace_all(&member_name, "").into_owned();
         let member = &msg.guild_id.unwrap().member(&ctx, UserId(member_id.parse::<u64>().unwrap())).await;
 
         match member {
@@ -96,18 +95,31 @@ async fn parse_member(ctx: &mut Context, msg: &Message, args: Args) -> Result<Me
     }
 }
 
-/// Kicks the specified member
-/// Usage: `kick @user` or `.kick user name`
+/// Kicks the specified member with an optional reason.
+///
+/// Usage:
+/// `kick @user`
+/// `kick "user name"`
+/// `kick "user name#3124"`
+/// `kick 135423120268984330 he is a very bad person.`
 #[command]
 #[required_permissions(KICK_MEMBERS)]
 #[min_args(1)]
 #[only_in("guilds")]
-async fn kick(mut ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    let member = parse_member(&mut ctx, &msg, args).await;
+async fn kick(mut ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+    let member_arg = args.single_quoted::<String>()?;
+    let member = parse_member(&mut ctx, &msg, member_arg).await;
+
+    let reason = args.remains();
+
     match member {
         Ok(m) => {
-            m.kick(&ctx).await?;
-            msg.reply(&ctx, format!("Successfully kicked member `{}#{}`", m.user.name, m.user.discriminator)).await?;
+            if let Some(r) = reason {
+                m.kick_with_reason(&ctx, r).await?;
+            } else {
+                m.kick(&ctx).await?;
+            }
+            msg.reply(&ctx, format!("Successfully kicked member `{}#{}` with id `{}`", m.user.name, m.user.discriminator, m.user.id.0)).await?;
         },
         Err(why) => {msg.reply(&ctx, why.to_string()).await?;},
     }
@@ -115,18 +127,31 @@ async fn kick(mut ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
     Ok(())
 }
 
-/// Bans the specified member
-/// Usage: `ban @user` or `.ban user name`
+/// Bans the specified member with an optional reason.
+///
+/// Usage:
+/// `ban @user`
+/// `ban "user name"`
+/// `ban "user name#3124"`
+/// `ban 135423120268984330 he is a very bad person.`
 #[command]
 #[required_permissions(BAN_MEMBERS)]
 #[min_args(1)]
 #[only_in("guilds")]
-async fn ban(mut ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    let member = parse_member(&mut ctx, &msg, args).await;
+async fn ban(mut ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+    let member_arg = args.single_quoted::<String>()?;
+    let member = parse_member(&mut ctx, &msg, member_arg).await;
+
+    let reason = args.remains();
+
     match member {
         Ok(m) => {
-            m.ban(&ctx, &1).await?;
-            msg.reply(&ctx, format!("Successfully banned member `{}#{}`", m.user.name, m.user.discriminator)).await?;
+            if let Some(r) = reason {
+                m.ban(&ctx, &r).await?;
+            } else {
+                m.ban(&ctx, &1).await?;
+            }
+            msg.reply(&ctx, format!("Successfully banned member `{}#{}` with id `{}`", m.user.name, m.user.discriminator, m.user.id.0)).await?;
         },
         Err(why) => {msg.reply(&ctx, why.to_string()).await?;},
     }
