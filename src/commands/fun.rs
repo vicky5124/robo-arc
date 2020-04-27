@@ -19,6 +19,21 @@ use reqwest::{
     Url,
 };
 use serde::Deserialize;
+use crypto::{
+    symmetriccipher,
+    buffer,
+    aes,
+    blockmodes
+};
+use crypto::buffer::{
+    ReadBuffer,
+    WriteBuffer,
+    BufferResult
+};
+use hex;
+
+static KEY: [u8; 32] =  [244, 129, 85, 125, 252, 92, 208, 68, 29, 125, 160, 4, 146, 245, 193, 135, 12, 68, 162, 84, 202, 123, 90, 165, 194, 126, 12, 117, 87, 195, 9, 202];
+static IV: [u8; 16] =  [41, 61, 154, 40, 255, 51, 217, 146, 228, 10, 58, 62, 217, 128, 96, 7];
 
 // Struct used to deserialize the output of the urban dictionary api call...
 #[derive(Deserialize, Clone)]
@@ -209,29 +224,85 @@ async fn duck_duck_go(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
     Ok(())
 }
 
+fn encrypt_bytes(data: &[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError> {
+    let mut encryptor = aes::cbc_encryptor(
+            aes::KeySize::KeySize256,
+            &KEY,
+            &IV,
+            blockmodes::PkcsPadding);
+
+    let mut final_result = Vec::<u8>::new();
+    let mut read_buffer = buffer::RefReadBuffer::new(data);
+    let mut buffer = [0; 4096];
+    let mut write_buffer = buffer::RefWriteBuffer::new(&mut buffer);
+
+    loop {
+        let result = encryptor.encrypt(&mut read_buffer, &mut write_buffer, true)?;
+        final_result.extend(write_buffer.take_read_buffer().take_remaining().iter().map(|&i| i));
+
+        match result {
+            BufferResult::BufferUnderflow => break,
+            BufferResult::BufferOverflow => {}
+        }
+    }
+
+    Ok(final_result)
+}
+
+fn decrypt_bytes(encrypted_data: &[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError> {
+    let mut decryptor = aes::cbc_decryptor(
+            aes::KeySize::KeySize256,
+            &KEY,
+            &IV,
+            blockmodes::PkcsPadding);
+
+    let mut final_result = Vec::<u8>::new();
+    let mut read_buffer = buffer::RefReadBuffer::new(encrypted_data);
+    let mut buffer = [0; 4096];
+    let mut write_buffer = buffer::RefWriteBuffer::new(&mut buffer);
+
+    loop {
+        let result = decryptor.decrypt(&mut read_buffer, &mut write_buffer, true)?;
+        final_result.extend(write_buffer.take_read_buffer().take_remaining().iter().map(|&i| i));
+
+        match result {
+            BufferResult::BufferUnderflow => break,
+            BufferResult::BufferOverflow => {}
+        }
+    }
+
+    Ok(final_result)
+}
+
+
 /// Encrypts a message. **NOT WORKING**
-/// 15 character limit.
-/// Usage: `encrypt Hello!`
+/// Usage: `encrypt Jaxtar is Cute!`
 /// 
-/// You can decrypt the message with .decrypt
+/// You can decrypt the message with `decrypt {hex_hash}`
 #[command]
 #[min_args(1)]
 async fn encrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let message = args.message();
-    let bytes = message.as_bytes();
-    let encrypted_bytes = bytes.iter().map(|b| format!("{}", b)).collect::<String>();
-    let encrypted_message = encrypted_bytes.parse::<u128>()? << 1;
-    msg.channel_id.say(&ctx, format!("`{:X}`", encrypted_message)).await?;
+
+    let encrypted_data = encrypt_bytes(message.as_bytes()).ok().unwrap();
+    let encrypted_data_text = hex::encode(encrypted_data.to_vec());
+
+    msg.channel_id.say(&ctx, format!("`{}`", encrypted_data_text)).await?;
     Ok(())
 }
-/// Decrypts and encrypted message. **NOT WORKING**
-/// Usage: `decrypt FBACB56A78BAFCD8239012F`
+/// Decrypts and encrypted message.
+/// Usage: `decrypt 36991e919634f4dc933787de47e9cb37`
 #[command]
 async fn decrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let message = args.message();
-    let bytes = message.as_bytes();
-    let encrypted_bytes = bytes.iter().map(|b| format!("{}", b)).collect::<String>();
-    let encrypted_message = encrypted_bytes.parse::<u128>()? >> 1;
-    msg.channel_id.say(&ctx, format!("`{:X}`", encrypted_message)).await?;
+
+    let encrypted_data = hex::decode(&message)?;
+    let decrypted_data_bytes = decrypt_bytes(&encrypted_data[..]).ok().unwrap();
+    let decrypted_data_text = String::from_utf8(decrypted_data_bytes)?;
+
+    msg.channel_id.send_message(&ctx, |m| m.embed(|e| {
+        e.title(format!("From `{}`", message));
+        e.description(decrypted_data_text)
+    })).await?;
     Ok(())
 }

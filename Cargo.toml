@@ -1,13 +1,12 @@
 [package]
 name = "arc_bot"
-version = "0.1.10-alpha"
+version = "0.1.11-alpha"
 authors = ["nitsuga5124 <nitsuga5124@gmail.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies] # a lot of github smh
-rand = "0.7.3" # https://github.com/rust-random/rand
 toml = "0.5.6" # https://github.com/alexcrichton/toml-rs
 regex = "1.3.6" # https://github.com/rust-lang/regex
 bitflags = "1.2.1" # https://github.com/bitflags/bitflags
@@ -20,8 +19,15 @@ tracing = "0.1.13" # https://github.com/tokio-rs/tracing
 tracing-subscriber = "0.2.3" # https://github.com/tokio-rs/tracing
 tracing-log = "0.1.1" # https://github.com/tokio-rs/tracing
 futures = "0.3.4" # https://github.com/rust-lang/futures-rs
-tokio-tls = "0.3.0"
-http = "0.2.1"
+tokio-tls = "0.3.0" # https://github.com/tokio-rs/tokio
+http = "0.2.1" # https://github.com/hyperium/http
+rust-crypto = "0.2.36" # https://github.com/dagenix/rust-crypto
+hex = "0.4.2" # https://github.com/KokaKiwi/rust-hex
+ 
+# https://github.com/rust-random/rand
+[dependencies.rand]
+version = "0.7.3"
+#features = ["getrandom"]
 
 [dependencies.tokio]
 version = "0.2.13"
