@@ -697,10 +697,12 @@ pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
 /// `nhentai feet trap`
 #[command]
 #[aliases(nh, nhentai)]
+#[min_args(1)]
 pub async fn n_hentai(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     if let Some(channel) = msg.channel(&ctx).await {
         if !channel.is_nsfw() && !channel.guild().is_none() {
             msg.channel_id.say(&ctx, "This command can only be ran on nsfw channels or in dm's").await?;
+            return Ok(());
         }
     }
 
