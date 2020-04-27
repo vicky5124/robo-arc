@@ -565,16 +565,19 @@ async fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> Com
     } else {
         // gets the current configuration of the user
         let current_conf = format!("
-Your current configuration:
-```User ID: '{}'
-Username: '{}'
-Mode ID: '{}'
-Show PP? '{}'
-Short recent? '{}'```",
+**User ID**: {}
+**Username**: {}
+**Mode ID**: {}
+**Show PP**? {}
+**Short recent**? {}",
             user_data.osu_id, user_data.name, user_data.mode.unwrap(), user_data.pp.unwrap(), user_data.short_recent.unwrap()
         );
-        // and sends it.
-        msg.channel_id.say(&ctx, current_conf).await?;
+
+        msg.channel_id.send_message(&ctx, |m| m.embed(|e| {
+            e.title("Your current configuration:");
+            e.description(current_conf)
+        })).await?;
+
         return Ok(());
     }
 
@@ -607,16 +610,18 @@ Short recent? '{}'```",
     }
 
     let current_conf = format!("
-Successfully changed your configuration to this:
-```User ID: '{}'
-Username: '{}'
-Mode ID: '{}'
-Show PP? '{}'
-Short recent? '{}'```",
+**User ID**: {}
+**Username**: {}
+**Mode ID**: {}
+**Show PP**? {}
+**Short recent**? {}",
         user_data.osu_id, user_data.name, user_data.mode.unwrap(), user_data.pp.unwrap(), user_data.short_recent.unwrap()
     );
 
-    msg.channel_id.say(&ctx, current_conf).await?;
+    msg.channel_id.send_message(&ctx, |m| m.embed(|e| {
+        e.title("Successfully changed your configuration!");
+        e.description(current_conf)
+    })).await?;
 
     Ok(())
 }
@@ -952,22 +957,25 @@ async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRes
         user_data.short_recent = Some(true);
     }
 
+    let user_data_name = user_data.name.replace("`", "").replace("@", "@\u{200b}");
+
     if user_data.osu_id == 0 {
         let user_id = get_osu_id(&user_data.name, &osu_key).await?;
         if user_id == 0 {
-            msg.channel_id.say(&ctx, format!("Could not find any osu! user with the name of '{}'", user_data.name)).await?;
+            msg.channel_id.say(&ctx, format!("Could not find any osu! user with the name of '{}'", user_data_name)).await?;
             return Ok(());
         } else {
             user_data.osu_id = user_id;
         }
     }
-    let bot_msg = msg.channel_id.say(&ctx, format!("Obtaining **{}** recent data", user_data.name)).await?;
+
+    let bot_msg = msg.channel_id.say(&ctx, format!("Obtaining **{}** recent data", user_data_name)).await?;
 
     let user_recent_raw = get_osu_user_recent(user_data.osu_id, &osu_key).await?;
 
     if user_recent_raw.is_empty() {
         bot_msg.clone().edit(&ctx, |m| {
-            m.content(format!("The user **{}** has not played in the last 24 hours.", user_data.name));
+            m.content(format!("The user **{}** has not played in the last 24 hours.", user_data_name));
             m
         }).await?;
         return Ok(());
