@@ -1,3 +1,16 @@
+# 0.1.11-alpha
+
+### Commands:
+- nhentai:
+  No longer runs in sfw channels.
+- ban / kick:
+  Now they can use reasons.
+- recent / configure_osu:
+  Removed possible mention exploits.
+- encrypt / decrypt
+  Changed to an aes algorythm.
+  No longer broken.
+
 # 0.1.10-alpha
 
 ### Commands:
