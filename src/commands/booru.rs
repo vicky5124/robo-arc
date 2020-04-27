@@ -390,8 +390,6 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
 /// `IdolComplex` - Largest IRL booru, very asian based.
 /// 
 /// __Broken:__
-/// Broken due to new api.
-///
 /// `Behoimi` - IRL, Mostly cosplays booru.
 /// Broken due to access restrictions.
 ///
@@ -688,6 +686,7 @@ pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
 /// An nHentai reader within discord!
 /// Use the left and right arrow reactions to go to the previous or next page respectively.
 /// On search, use ✅ to select the current item.
+/// For a structure on how the search works, read [this](https://nhentai.net/info/)
 ///
 /// Usage:
 /// Use an id directly:
