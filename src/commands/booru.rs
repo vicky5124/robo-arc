@@ -427,7 +427,11 @@ pub async fn booru_command(ctx: &mut Context, msg: &Message, args: Args) -> Comm
 
     // get the booru and tags from the database.
     let mut booru = if let Some(result) = data {
-        Some(result.booru.unwrap())
+        if let Some(x) = result.booru {
+            Some(x)
+        } else {
+            None
+        }
     } else {
         None
     };

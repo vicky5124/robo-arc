@@ -10,6 +10,7 @@ use serenity::{
         macros::command,
     },
 };
+use tracing::error;
 use qrcode::{
     QrCode,
     render::unicode,
@@ -299,7 +300,15 @@ async fn decrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult 
     let message = args.message();
 
     let encrypted_data = hex::decode(&message)?;
-    let decrypted_data_bytes = decrypt_bytes(&encrypted_data[..]).ok().unwrap();
+    let decrypted_data_bytes = match decrypt_bytes(&encrypted_data[..]) {
+        Ok(ok) => ok,
+        Err(why) => {
+            error!(why);
+            msg.channel_id.say(&ctx, format!("An invalid hash was provided. `{:?}`", why)).await?;
+            return Ok(());
+        },
+    };
+
     let decrypted_data_text = String::from_utf8(decrypted_data_bytes)?;
 
     msg.channel_id.send_message(&ctx, |m| m.embed(|e| {

@@ -476,12 +476,11 @@ impl EventHandler for Handler {
         }
 
         // gets the message the reaction happened on
-        let msg = ctx
-            .http
-            .as_ref()
+        let msg = if let Ok(x) = ctx.http.as_ref()
             .get_message(add_reaction.channel_id.0, add_reaction.message_id.0)
-            .await
-            .expect("Error while obtaining message");
+            .await { x } else {
+                return;
+        };
 
         // Obtain the "global" data in read mode
         let data_read = ctx.data.read().await;
