@@ -65,4 +65,8 @@ async def _eval(ctx, *, code):
 async def on_error(_):
     return
 
+@BOT.event
+async def on_command_error(_, _):
+    return
+
 BOT.run(TOKEN)
