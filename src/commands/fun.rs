@@ -1,13 +1,24 @@
-use crate::Tokens;
+use crate::{
+    Tokens,
+    commands::moderation::parse_member,
+};
+
+use std::time::Duration;
 
 use serenity::{
     prelude::Context,
+    model::misc::Mentionable,
     model::channel::Message,
+    model::user::User,
     framework::standard::{
         Args,
         CommandResult,
+        CheckResult,
         CommandError,
-        macros::command,
+        macros::{
+            command,
+            check,
+        },
     },
 };
 use tracing::error;
@@ -35,6 +46,16 @@ use hex;
 
 static KEY: [u8; 32] =  [244, 129, 85, 125, 252, 92, 208, 68, 29, 125, 160, 4, 146, 245, 193, 135, 12, 68, 162, 84, 202, 123, 90, 165, 194, 126, 12, 117, 87, 195, 9, 202];
 static IV: [u8; 16] =  [41, 61, 154, 40, 255, 51, 217, 146, 228, 10, 58, 62, 217, 128, 96, 7];
+
+#[check]
+#[name = "bot_has_manage_messages"]
+async fn bot_has_manage_messages_check(ctx: &mut Context, msg: &Message) -> CheckResult {
+    if !ctx.http.get_member(msg.guild_id.unwrap().0, ctx.cache.read().await.user.id.0).await.expect("What even").permissions(&ctx).await.expect("What even 2").manage_messages() {
+        CheckResult::new_user("I'm unable to run this command due to missing the `Manage Messages` permission.")
+    } else {
+        CheckResult::Success
+    }
+}
 
 // Struct used to deserialize the output of the urban dictionary api call...
 #[derive(Deserialize, Clone)]
@@ -303,7 +324,7 @@ async fn decrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult 
     let decrypted_data_bytes = match decrypt_bytes(&encrypted_data[..]) {
         Ok(ok) => ok,
         Err(why) => {
-            error!(why);
+            error!("{:?}", why);
             msg.channel_id.say(&ctx, format!("An invalid hash was provided. `{:?}`", why)).await?;
             return Ok(());
         },
@@ -315,5 +336,291 @@ async fn decrypt(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult 
         e.title(format!("From `{}`", message));
         e.description(decrypted_data_text)
     })).await?;
+    Ok(())
+}
+
+async fn place_piece<'a>(board: &mut Vec<Vec<&'a str>>, user: &User, piece: &'a str, ctx: &mut Context) -> Result<(), ()> {
+    'outer: loop {
+        let mut x: Option<usize> = None;
+        let mut y: Option<usize> = None;
+        loop {
+            if x.is_none() || y.is_none() {
+                if let Some(reaction) = user.await_reaction(ctx).timeout(Duration::from_secs(120)).await {
+                    let _ = reaction.as_inner_ref().delete(&ctx).await;
+                    let emoji = &reaction.as_inner_ref().emoji;
+
+                    match emoji.as_data().as_str() {
+                        "1\u{fe0f}\u{20e3}" => y = Some(0),
+                        "2\u{fe0f}\u{20e3}" => y = Some(1),
+                        "3\u{fe0f}\u{20e3}" => y = Some(2),
+                        "\u{01f1e6}" => x = Some(0),
+                        "\u{01f1e7}" => x = Some(1),
+                        "\u{01f1e8}" => x = Some(2),
+                        _ => ()
+                    }
+                } else {
+                    return Err(());
+                }
+            } else {
+                if !x.is_none() && !y.is_none() {
+                    if board[y.unwrap()][x.unwrap()] == " " {
+                        board[y.unwrap()][x.unwrap()] = piece;
+                        break 'outer;
+                    } else {
+                        x = None;
+                        y = None;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn check_win<'a>(board: &Vec<Vec<&'a str>>) -> Option<&'a str> {
+    // diagonal \
+    if board[0][0] == "O" && board[1][1] == "O" && board[2][2] == "O" {
+        return Some("O");
+    } else if board[0][0] == "X" && board[1][1] == "X" && board[2][2] == "X" {
+        return Some("X");
+
+    // diagonal /
+    } else if board[2][0] == "O" && board[1][1] == "O" && board[0][2] == "O" {
+        return Some("O");
+    } else if board[2][0] == "X" && board[1][1] == "X" && board[0][2] == "X" {
+        return Some("X");
+
+    // straight lines ---
+    } else if board[0] == vec!["O", "O", "O"] {
+        return Some("O");
+    } else if board[1] == vec!["O", "O", "O"] {
+        return Some("O");
+    } else if board[2] == vec!["O", "O", "O"] {
+        return Some("O");
+    } else if board[0] == vec!["X", "X", "X"] {
+        return Some("X");
+    } else if board[1] == vec!["X", "X", "X"] {
+        return Some("X");
+    } else if board[2] == vec!["X", "X", "X"] {
+        return Some("X");
+
+    // straigt lines |
+    } else if board[0][0] == "O" && board[1][0] == "O" && board[2][0] == "O" {
+        return Some("O");
+    } else if board[0][1] == "O" && board[1][1] == "O" && board[2][1] == "O" {
+        return Some("O");
+    } else if board[0][2] == "O" && board[1][2] == "O" && board[2][2] == "O" {
+        return Some("O");
+    } else if board[0][0] == "X" && board[1][0] == "X" && board[2][0] == "X" {
+        return Some("X");
+    } else if board[0][1] == "X" && board[1][1] == "X" && board[2][1] == "X" {
+        return Some("X");
+    } else if board[0][2] == "X" && board[1][2] == "X" && board[2][2] == "X" {
+        return Some("X");
+    }
+
+
+    None 
+}
+
+fn format_board(board: &Vec<Vec<&str>>) -> String {
+    let mut lines = "```X | A   B   C\n--------------\n".to_string();
+
+    for (i, x) in board.iter().enumerate() {
+        let line = format!("{} | {} | {} | {}", i+1, x[0], x[1], x[2]);
+        lines += format!("{}\n", line).as_str();
+    }
+    lines += "\nY```";
+    lines
+}
+
+/// 2 player game where you must compete with the other player to be the first to obtain 3 of your pieces in line.
+/// 
+/// X is --- / Horizontal
+/// Y is ||| / Vertical
+///
+/// When it's your turn, react with a number and a letter, corresponding to the position of the board.
+/// If the place is taken, you will need to repick the position.
+///
+/// Is there an AI to play by myself? No, you have to play with another player.
+///
+/// Usage:
+/// `ttt @timmy`
+#[command]
+#[aliases(ttt, tictactoe)]
+#[checks("bot_has_manage_messages")]
+#[min_args(1)]
+async fn tic_tac_toe(mut ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+    let user1 = &msg.author;
+    let user2 = parse_member(&mut ctx, &msg, args.single::<String>()?).await?;
+
+    let mut confirmation = msg.channel_id.say(&ctx, format!("{}: Do you accept this TicTacToe match?", user2.mention())).await?;
+    confirmation.react(&ctx, "✅").await?;
+    confirmation.react(&ctx, "❌").await?;
+
+    loop {
+        if let Some(reaction) = user2.user.await_reaction(ctx).timeout(Duration::from_secs(120)).await {
+            let emoji = &reaction.as_inner_ref().emoji;
+
+            match emoji.as_data().as_str() {
+                "✅" => {
+                    confirmation.delete(&ctx).await?;
+                    break;
+                },
+                "❌" => {
+                    confirmation.edit(&ctx, |m| m.content(format!("{}: {} didn't accept the match.", user1.mention(), user2.mention()))).await?;
+                    return Ok(());
+                },
+                _ => ()
+            }
+        } else {
+            confirmation.edit(&ctx, |m| m.content(format!("{}: {} took to long to respond.", user1.mention(), user2.mention()))).await?;
+            return Ok(());
+        }
+    }
+
+    let users = {
+        if msg.timestamp.timestamp() % 2 == 0 {
+            (user1, &user2.user)
+        } else {
+            (&user2.user, user1)
+        }
+    };
+
+    let mut iteration = 0u8;
+    let mut board = vec![
+        vec![" ", " ", " "],
+        vec![" ", " ", " "],
+        vec![" ", " ", " "],
+    ];
+
+    let b = format_board(&board);
+    let mut m = msg.channel_id.send_message(&ctx, |m| {
+        m.content(format!("{} (X): Select the position for your piece.", users.0.id.mention()));
+        m.embed(|e| {
+            e.description(&b)
+        })
+    }).await?;
+
+    m.react(&ctx, "1\u{fe0f}\u{20e3}").await?;
+    m.react(&ctx, "2\u{fe0f}\u{20e3}").await?;
+    m.react(&ctx, "3\u{fe0f}\u{20e3}").await?;
+    m.react(&ctx, "\u{01f1e6}").await?;
+    m.react(&ctx, "\u{01f1e7}").await?;
+    m.react(&ctx, "\u{01f1e8}").await?;
+
+    loop {
+        if let Err(_) = place_piece(&mut board, &users.0, "X", ctx).await {
+            m.edit(&ctx, |m| {
+                m.content("Timeout.");
+                m.embed(|e| {
+                    e.description(&b)
+                })
+            }).await?;
+        };
+
+        let b = format_board(&board);
+        m.edit(&ctx, |m| {
+            m.content(format!("{} (O): Select the position for your piece.", users.1.id.mention()));
+            m.embed(|e| {
+                e.description(&b)
+            })
+        }).await?;
+
+        let won = check_win(&board);
+
+        if iteration == 4 {
+            if let Some(win) = won {
+                if win == "X" {
+                    m.edit(&ctx, |m| {
+                        m.content(format!("{} (X) won!", users.0.id.mention()));
+                        m.embed(|e| {
+                            e.description(&b)
+                        })
+                    }).await?;
+                } else {
+                    m.edit(&ctx, |m| {
+                        m.content(format!("{} (O) won!", users.1.id.mention()));
+                        m.embed(|e| {
+                            e.description(&b)
+                        })
+                    }).await?;
+                }
+            } else {
+                m.edit(&ctx, |m| {
+                    m.content(format!("{} and {} tied.", users.0.id.mention(), users.1.id.mention()));
+                    m.embed(|e| {
+                        e.description(&b)
+                    })
+                }).await?;
+            }
+            m.delete_reactions(&ctx).await?;
+            break;
+        } else {
+            if let Some(win) = won {
+                if win == "X" {
+                    m.edit(&ctx, |m| {
+                        m.content(format!("{} (X) won!", users.0.id.mention()));
+                        m.embed(|e| {
+                            e.description(&b)
+                        })
+                    }).await?;
+                } else {
+                    m.edit(&ctx, |m| {
+                        m.content(format!("{} (O) won!", users.1.id.mention()));
+                        m.embed(|e| {
+                            e.description(&b)
+                        })
+                    }).await?;
+                }
+                m.delete_reactions(&ctx).await?;
+                break;
+            }
+        }
+
+        if let Err(_) = place_piece(&mut board, &users.1, "O", ctx).await {
+            m.edit(&ctx, |m| {
+                m.content("Timeout.");
+                m.embed(|e| {
+                    e.description(b)
+                })
+            }).await?;
+            m.delete_reactions(&ctx).await?;
+            break;
+        };
+
+        let b = format_board(&board);
+        m.edit(&ctx, |m| {
+            m.content(format!("{} (X): Select the position for your piece.", users.0.id.mention()));
+            m.embed(|e| {
+                e.description(&b)
+            })
+        }).await?;
+
+        let won = check_win(&board);
+        if let Some(win) = won {
+            if win == "X" {
+                m.edit(&ctx, |m| {
+                    m.content(format!("{} (X) won!", users.0.id.mention()));
+                    m.embed(|e| {
+                        e.description(&b)
+                    })
+                }).await?;
+            } else {
+                m.edit(&ctx, |m| {
+                    m.content(format!("{} (O) won!", users.1.id.mention()));
+                    m.embed(|e| {
+                        e.description(&b)
+                    })
+                }).await?;
+            }
+            m.delete_reactions(&ctx).await?;
+            break;
+        }
+        
+        iteration += 1;
+    }
+
     Ok(())
 }

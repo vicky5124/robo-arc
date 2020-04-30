@@ -21,7 +21,7 @@ use futures::{
     StreamExt,
 };
 
-async fn parse_member(ctx: &mut Context, msg: &Message, member_name: String) -> Result<Member, String> {
+pub async fn parse_member(ctx: &mut Context, msg: &Message, member_name: String) -> Result<Member, String> {
     let mut members = Vec::new();
 
     if let Ok(id) = member_name.parse::<u64>() {
