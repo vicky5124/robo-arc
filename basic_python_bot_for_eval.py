@@ -66,7 +66,7 @@ async def on_error(_):
     return
 
 @BOT.event
-async def on_command_error(_, _):
+async def on_command_error(_1, _2):
     return
 
 BOT.run(TOKEN)
