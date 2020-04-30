@@ -1,3 +1,15 @@
+# 0.1.12-alpha
+
+### Commands:
+- TicTacToe:
+  New command.
+  To play tic tac toe with other users.
+
+### Bugs:
+- python bot no longer spams command not found errors.
+- antispam not triggering on the correct messages if the bot can't manage messages.
+- fixed 3 panics
+
 # 0.1.11-alpha
 
 ### Commands:
