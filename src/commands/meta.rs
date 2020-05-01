@@ -217,7 +217,6 @@ TODO:
 #Random/Fun
 Dictionary (dictionary search)
 Calculator (maths)
-Encrypt/Decrypt (encrypts and decrypts a message)
 Reminder (reminds you of a message after X time)
 
 #Osu!
