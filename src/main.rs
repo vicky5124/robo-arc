@@ -93,7 +93,10 @@ use serenity::{
     client::{
         Client, // To create a client that runs eveyrthing.
         bridge::{
-            gateway::ShardManager, // To manage shards, or in the case of this small bot, just to get the latency of it for ping.
+            gateway::{
+                ShardManager, // To manage shards, or in the case of this small bot, just to get the latency of it for ping.
+                GatewayIntents,
+            },
             voice::ClientVoiceManager,
         },
     },
@@ -751,7 +754,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .group(&MUSIC_GROUP) // Load `music` command group
         .help(&MY_HELP); // Load the custom help command.
 
-    let mut client = Client::new_with_framework(&bot_token, Handler, framework).await?;
+    let mut client = Client::new_with_extras(&bot_token, |extras| {extras
+        .event_handler(Handler)
+        .framework(framework)
+        .intents({
+            let mut intents = GatewayIntents::all();
+            intents.remove(GatewayIntents::GUILD_PRESENCES);
+            intents.remove(GatewayIntents::DIRECT_MESSAGE_TYPING);
+            intents.remove(GatewayIntents::GUILD_MESSAGE_TYPING);
+            intents
+        })
+    }).await?;
 
     // Block to define global data.
     // and so the data lock is not kept open in write mode.
