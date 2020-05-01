@@ -38,7 +38,15 @@ use serenity::{
 #[check]
 #[name = "bot_has_manage_roles"]
 async fn bot_has_manage_roles_check(ctx: &mut Context, msg: &Message) -> CheckResult {
-    if !ctx.http.get_member(msg.guild_id.unwrap().0, ctx.cache.read().await.user.id.0).await.expect("What even").permissions(&ctx).await.expect("What even 2").manage_roles() {
+    let bot_id = (ctx.cache.read().await).user.id.0.clone();
+    if !ctx.http.get_member(msg.guild_id.unwrap().0, bot_id)
+        .await
+        .expect("What even")
+        .permissions(&ctx)
+        .await
+        .expect("What even 2")
+        .manage_roles()
+    {
         CheckResult::new_user("I'm unable to run this command due to missing the `Manage Roles` permission.")
     } else {
         CheckResult::Success
