@@ -34,7 +34,6 @@ checksum = "b585a98a234c46fc563103e9278c9391fde1f4e6850334da895d27edb9580f62"
 name = "arc_bot"
 version = "0.1.12-alpha"
 dependencies = [
- "async-tungstenite",
  "bitflags",
  "futures",
  "hex",
@@ -51,9 +50,9 @@ dependencies = [
  "serde-aux",
  "serde_json",
  "serenity",
+ "serenity-lavalink",
  "sqlx",
  "tokio",
- "tokio-tls",
  "toml",
  "tracing",
  "tracing-log",
@@ -1591,6 +1590,24 @@ dependencies = [
  "tokio-tls",
  "url",
  "uwl",
+]
+
+[[package]]
+name = "serenity-lavalink"
+version = "0.0.1"
+source = "git+https://gitlab.com/nitsuga5124/serenity-lavalink/#f5c55138cb7686ad90a6e272ca1c31b83f0d95a6"
+dependencies = [
+ "async-tungstenite",
+ "futures",
+ "http",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serenity",
+ "tokio",
+ "tokio-tls",
+ "tracing-log",
 ]
 
 [[package]]

@@ -1,7 +1,6 @@
 use crate::{
     VoiceManager,
-    LavalinkSocket,
-    Tokens,
+    Lavalink,
 };
 
 use serenity::{
@@ -18,36 +17,8 @@ use serenity::{
     prelude::Context,
 };
 
-use futures::prelude::*;
-use async_tungstenite::tungstenite::Message as TungsteniteMessage;
-use reqwest::{
-    Client as ReqwestClient,
-    header::*,
-};
-
-use serde::Deserialize;
 use serde_json;
 use regex::Regex;
-
-#[derive(Deserialize)]
-struct TrackInformation {
-    author: String,
-    length: u128,
-    title: String,
-    uri: String,
-    identifier: String,
-}
-
-#[derive(Deserialize)]
-struct Track {
-    track: String,
-    info:  TrackInformation,
-}
-
-#[derive(Deserialize)]
-struct VideoData {
-    tracks: Vec<Track>,
-}
 
 #[command]
 #[aliases("connect")]
@@ -151,79 +122,33 @@ async fn play(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let mut manager = manager_lock.lock().await;
 
     if let Some(handler) = manager.get_mut(guild_id) {
-        let bot_id = {
-            let cache_read = ctx.cache.read().await;
-            cache_read.user.id.to_string()
-        };
-        let (host, port, password) = {
-            let data_read = ctx.data.read().await;
-            let configuration = data_read.get::<Tokens>().unwrap();
-            
-            let host = configuration["lavalink"]["host"].as_str().unwrap();
-            let port = configuration["lavalink"]["port"].as_integer().unwrap();
-            let password = configuration["lavalink"]["password"].as_str().unwrap();
+        let data = ctx.data.read().await;
+        let lava_client = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
 
-            (host.to_string(), port.to_string(), password.to_string())
-        };
+        let query_information = lava_client.auto_search_tracks(&query).await?;
 
-        let search = {
-            if Regex::new(r"(?:https?://)?(?:www\.)?youtu(?:(?:\.be)|(?:be\.com))/(?:watch\?v=)?([^&\s\?]+)").unwrap().is_match(&query) {
-                Regex::new(r"(https?://)|(www\.)|(youtu\.?be)|([/])|(\.com?)|(watch\?v=)|(&.*)").unwrap().replace_all(&query, "").to_string()
-                
-            } else {
-                format!("ytsearch:{}", &query)
-            }
-        };
-
-        let reqwest = ReqwestClient::new();
-        let url = &format!("ws://{}:{}/loadtracks?identifier={}", &host, &port, &search);
-
-        let mut headers = HeaderMap::new();
-        headers.insert("Authorization", password.parse()?);
-        headers.insert("Num-Shards", "1".parse()?);
-        headers.insert("User-Id", bot_id.parse()?);
-
-        let raw_resp = reqwest.get(url)
-            .headers(headers.clone())
-            .send()
-            .await?
-            .json::<VideoData>()
-            .await?;
-
-        if raw_resp.tracks.is_empty() {
+        if query_information.tracks.is_empty() {
             msg.channel_id.say(&ctx, "Could not find any video of the search query.").await?;
             return Ok(());
         }
 
-        let event = format!("{{ 'token' : '{}', 'guild_id' : '{}', 'endpoint' : '{}' }}", handler.token.as_ref().unwrap(), handler.guild_id.0, handler.endpoint.as_ref().unwrap());
-
-        let lava_socket =  {
-            let read_data = ctx.data.read().await;
-            read_data.get::<LavalinkSocket>().cloned().unwrap()
+        if let Err(why) = lava_client.play(&handler, &query_information.tracks[0]).await {
+            msg.channel_id.say(&ctx, format!("There was an error playing the audio: {}", why)).await?;
+            return Ok(());
         };
 
-        let payload = format!("{{ 'op' : 'voiceUpdate', 'guildId' : '{}', 'sessionId' : '{}', 'event' : {} }}", handler.guild_id.0, handler.session_id.as_ref().unwrap(), event);
-        {
-            let mut ws = lava_socket.lock().await;
-            ws.send(TungsteniteMessage::text(payload)).await?;
-        }
-        let payload = format!("{{ 'op' : 'play', 'guildId' : '{}', 'track' : '{}' }}", handler.guild_id.0, raw_resp.tracks[0].track);
-        {
-            let mut ws = lava_socket.lock().await;
-            ws.send(TungsteniteMessage::text(payload)).await?;
-        }
         msg.channel_id.send_message(&ctx, |m| {
             m.content("Now playing:");
             m.embed(|e| {
-                e.title(&raw_resp.tracks[0].info.title);
-                e.thumbnail(format!("https://i.ytimg.com/vi/{}/hq720.jpg", raw_resp.tracks[0].info.identifier));
-                e.url(&raw_resp.tracks[0].info.uri);
+                e.title(&query_information.tracks[0].info.title);
+                e.thumbnail(format!("https://i.ytimg.com/vi/{}/hq720.jpg", query_information.tracks[0].info.identifier));
+                e.url(&query_information.tracks[0].info.uri);
                 e.footer(|f| f.text(format!("Submited by {}", &msg.author.name)));
-                e.field("Uploader", &raw_resp.tracks[0].info.author, true);
+                e.field("Uploader", &query_information.tracks[0].info.author, true);
                 e.field("Length", format!("{}:{}",
-                    raw_resp.tracks[0].info.length / 1000  % 3600 /  60,
+                    query_information.tracks[0].info.length / 1000  % 3600 /  60,
                     {
-                        let x = raw_resp.tracks[0].info.length / 1000 % 3600 % 60;
+                        let x = query_information.tracks[0].info.length / 1000 % 3600 % 60;
                         if x < 10 {
                             format!("0{}", x)
                         } else {

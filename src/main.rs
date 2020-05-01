@@ -47,22 +47,10 @@ use std::{
 
     // For having refferences between threads
     sync::Arc,
+    convert::TryInto
 };
 
-use tokio::{
-    sync::Mutex,
-    net::TcpStream,
-};
-use tokio_tls::TlsStream;
-use async_tungstenite::{
-    stream::Stream,
-    WebSocketStream,
-    tokio::{
-        connect_async,
-        TokioAdapter,
-    },
-};
-use http::Request;
+use tokio::sync::Mutex;
 
 use tracing::{
     // Log macros.
@@ -73,6 +61,7 @@ use tracing::{
     Level,
     instrument
 };
+
 use tracing_subscriber::FmtSubscriber;
 use tracing_log::LogTracer;
 //use tracing_futures::Instrument;
@@ -85,6 +74,8 @@ use futures::stream::StreamExt;
 use toml::Value; // To parse the data of .toml files
 use serde_json; // To parse the data of .json files (where's serde_toml smh)
 use serde::Deserialize; // To deserialize data into structures
+
+use serenity_lavalink::LavalinkClient;
 
 // Serenity! what make's the bot function. Discord API wrapper.
 use serenity::{
@@ -168,7 +159,7 @@ struct BooruList; // This is a HashSet of all the boorus found on "boorus.json"
 struct BooruCommands; // This is a HashSet of all the commands/aliases found on "boorus.json"
 struct NotificationStatus; // This is the status of the thread checking for notifications.
 struct VoiceManager; //  This is the struct for the voice manager.
-struct LavalinkSocket; //  This is the struct for the voice manager.
+struct Lavalink; //  This is the struct for the lavalink client.
 struct SentTwitchStreams; //  This is the struct for the stream data that has already been sent.
 
 // Implementing a type for each structure
@@ -212,8 +203,8 @@ impl TypeMapKey for VoiceManager {
     type Value = Arc<Mutex<ClientVoiceManager>>;
 }
 
-impl TypeMapKey for LavalinkSocket {
-    type Value = Arc<Mutex<WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TokioAdapter<TokioAdapter<TcpStream>>>>>>>>;
+impl TypeMapKey for Lavalink {
+    type Value = LavalinkClient;
 }
 
 impl TypeMapKey for SentTwitchStreams {
@@ -787,21 +778,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         data.insert::<SentTwitchStreams>(Arc::new(RwLock::new(Vec::new())));
 
         {
+            // TODO: get the real shard amount.
+            let _shard_count = 1;
+
             let host = configuration["lavalink"]["host"].as_str().unwrap();
             let port = configuration["lavalink"]["port"].as_integer().unwrap();
             let password = configuration["lavalink"]["password"].as_str().unwrap();
-            let shard_count = 1;
 
-            let url = Request::builder()
-                .uri(&format!("ws://{}:{}/", host, port))
-                .header("Authorization", password)
-                .header("Num-Shards", shard_count.to_string())
-                .header("User-Id", bot_id.to_string())
-                .body(())
-                .unwrap();
+            let mut lava_client = LavalinkClient::new();
+            lava_client.bot_id = bot_id;
+            lava_client.password = password.to_string();
+            lava_client.host = host.to_string();
+            lava_client.port = port.try_into().unwrap();
+            lava_client.initialize().await?;
 
-            let (ws_stream, _) = connect_async(url).await?;
-            data.insert::<LavalinkSocket>(Arc::new(Mutex::new(ws_stream)));
+            data.insert::<Lavalink>(lava_client);
         }
 
         {

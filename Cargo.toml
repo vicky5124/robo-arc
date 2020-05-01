@@ -19,7 +19,6 @@ tracing = "0.1.13" # https://github.com/tokio-rs/tracing
 tracing-subscriber = "0.2.3" # https://github.com/tokio-rs/tracing
 tracing-log = "0.1.1" # https://github.com/tokio-rs/tracing
 futures = "0.3.4" # https://github.com/rust-lang/futures-rs
-tokio-tls = "0.3.0" # https://github.com/tokio-rs/tokio
 http = "0.2.1" # https://github.com/hyperium/http
 rust-crypto = "0.2.36" # https://github.com/dagenix/rust-crypto
 hex = "0.4.2" # https://github.com/KokaKiwi/rust-hex
@@ -61,10 +60,9 @@ features = ["runtime-tokio", "macros", "postgres", "uuid"]
 version = "0.18.1"
 features = ["serialize"]
 
-[dependencies.async-tungstenite]
-default-features = false
-features = ["tokio-runtime", "tokio-tls"]
-version = "0.4"
+[dependencies.serenity-lavalink]
+git = "https://gitlab.com/nitsuga5124/serenity-lavalink/"
+branch = "master"
 
 # used for profiling for flamegraph
 # https://github.com/flamegraph-rs/flamegraph
