@@ -1,3 +1,21 @@
+# 0.1.13-alpha
+
+### Events:
+- Added custom intents.
+
+### Commands:
+- play:
+  Now it uses serenity-lavalink!
+- help, tic_tac_toe, configure channel notifications:
+  Fixed deadlock.
+
+### Dependencies:
+- serenity:
+  Updated, no longer has `&mut ctx`
+- the rest:
+  Also updated.
+
+
 # 0.1.12-alpha
 
 ### Commands:
