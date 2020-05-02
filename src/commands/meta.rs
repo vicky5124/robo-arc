@@ -43,14 +43,14 @@ use tokio::process::Command;
 // All command functions must take a Context and Message type parameters.
 // Optionally they may also take an Args type parameter for command arguments.
 // They must also return CommandResult.
-async fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
     // The shard manager is an interface for mutating, stopping, restarting, and
     // retrieving information about shards.
     let data = ctx.data.read().await;
     let shard_manager = match data.get::<ShardManagerContainer>() {
         Some(v) => v,
         None => {
-            msg.reply(&ctx, "There was a problem getting the shard manager").await?;
+            msg.reply(ctx, "There was a problem getting the shard manager").await?;
 
             return Ok(());
         },
@@ -65,7 +65,7 @@ async fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
     let runner = match runners.get(&ShardId(ctx.shard_id)) {
         Some(runner) => runner,
         None => {
-            msg.reply(&ctx,  "No shard found").await?;
+            msg.reply(ctx,  "No shard found").await?;
 
             return Ok(());
         },
@@ -76,14 +76,14 @@ async fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
         Some(ms) => latency = format!("{:.2}ms", ms.as_micros() as f32 / 1000.0),
         _ => latency = String::new(),
     }
-    msg.reply(&ctx, format!("Ping? {}", latency)).await?;
+    msg.reply(ctx, format!("Ping? {}", latency)).await?;
 
     Ok(())
 }
 
 /// This command just sends an invite of the bot with the required permissions.
 #[command]
-async fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
     // Sets up the permissions
     let mut permissions = Permissions::empty();
     permissions.set(Permissions::KICK_MEMBERS, true);
@@ -107,7 +107,7 @@ async fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
 
     // Creates the invite link for the bot with the permissions specified earlier.
     // Error handling in rust is so nice.
-    let url = match ctx.cache.read().await.user.invite_url(&ctx, permissions).await {
+    let url = match ctx.cache.read().await.user.invite_url(ctx, permissions).await {
         Ok(v) => v,
         Err(why) => {
             println!("Error creating invite url: {:?}", why);
@@ -116,7 +116,7 @@ async fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
         }
     };
     
-    msg.channel_id.send_message(&ctx, |m| {
+    msg.channel_id.send_message(ctx, |m| {
         m.embed( |e| {
             e.title("Invite Link");
             e.url(url);
@@ -154,28 +154,28 @@ async fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
 #[owners_only] // to only allow the owner of the bot to use this command
 //#[min_args(3)] // Sets the minimum ammount of arguments the command requires to be ran. This is used to trigger the `NotEnoughArguments` error.
 // Testing command, please ignore.
-async fn test(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
-    //let guild_lock = msg.guild(&ctx.cache).await.unwrap();
+async fn test(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    //let guild_lock = msg.guild(ctx.cache).await.unwrap();
     //let guild = guild_lock.read().await;
     //for role in guild.roles.values() {
-    //    msg.channel_id.say(&ctx.http, format!("{}", role.name)).await?;
+    //    msg.channel_id.say(ctx.http, format!("{}", role.name)).await?;
     //}
 
-    let mut m = msg.channel_id.say(&ctx, "test 1").await?;
+    let mut m = msg.channel_id.say(ctx, "test 1").await?;
     println!("{}", m.guild_id == None);
 
     let _left = ReactionType::Unicode(String::from("⬅️"));
     let _right = ReactionType::Unicode(String::from("➡️"));
 
-    //m.react(&ctx, left).await?;
-    //m.react(&ctx, right).await?;
+    //m.react(ctx, left).await?;
+    //m.react(ctx, right).await?;
     
-    if let Some(answer) = msg.author.await_reply(&ctx).timeout(Duration::from_secs(120)).await {
+    if let Some(answer) = msg.author.await_reply(ctx).timeout(Duration::from_secs(120)).await {
         if !answer.content.starts_with('<') {
-            m.edit(&ctx, |m| m.content("test 2")).await?;
-            if let Some(answer) = msg.author.await_reply(&ctx).timeout(Duration::from_secs(120)).await {
+            m.edit(ctx, |m| m.content("test 2")).await?;
+            if let Some(answer) = msg.author.await_reply(ctx).timeout(Duration::from_secs(120)).await {
                 if !answer.content.starts_with('<') {
-                    m.edit(&ctx, |m| m.content("test 3")).await?;
+                    m.edit(ctx, |m| m.content("test 3")).await?;
                 }
             } else {
                 return Ok(());
@@ -193,25 +193,25 @@ async fn test(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
     //let z = args.single::<i32>()?;
     //
     //let multiplied = y * z;
-    //msg.channel_id.say(&ctx, format!("{} nice: {}", x, multiplied)).await?;
+    //msg.channel_id.say(ctx, format!("{} nice: {}", x, multiplied)).await?;
     //let f = vec![123; 1000];
-    //msg.channel_id.say(&ctx, format!("{:?}", &f)).await?;
+    //msg.channel_id.say(ctx, format!("{:?}", &f)).await?;
 
     Ok(())
 }
 
 /// Sends the source code url to the bot.
 #[command]
-async fn source(ctx: &mut Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(&ctx, "<https://gitlab.com/nitsuga5124/robo-arc/>").await?;
+async fn source(ctx: &Context, msg: &Message) -> CommandResult {
+    msg.channel_id.say(ctx, "<https://gitlab.com/nitsuga5124/robo-arc/>").await?;
     Ok(())
 }
 
 /// Sends the current TO-DO list of the bot
 #[command]
 #[aliases(todo_list)]
-async fn todo(ctx: &mut Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(&ctx, "```prolog
+async fn todo(ctx: &Context, msg: &Message) -> CommandResult {
+    msg.channel_id.say(ctx, "```prolog
 TODO:
 
 #Random/Fun
@@ -260,7 +260,7 @@ Exclude (excludes tags automatically from your search)
 /// Sends the current prefixes set to the server.
 #[command]
 #[aliases(prefixes)]
-async fn prefix(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn prefix(ctx: &Context, msg: &Message) -> CommandResult {
     let data_read = ctx.data.read().await;
     let guild_id = &msg.guild_id;
 
@@ -286,7 +286,7 @@ async fn prefix(ctx: &mut Context, msg: &Message) -> CommandResult {
         prefix = ".".to_string();
     }
 
-    msg.channel_id.say(&ctx, format!("Current prefix:\n`{}`", &prefix)).await?;
+    msg.channel_id.say(ctx, format!("Current prefix:\n`{}`", &prefix)).await?;
 
     Ok(())
 }
@@ -294,7 +294,7 @@ async fn prefix(ctx: &mut Context, msg: &Message) -> CommandResult {
 /// Sends information about the bot.
 #[command]
 #[aliases(info)]
-async fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn about(ctx: &Context, msg: &Message) -> CommandResult {
     let pid = id().to_string();
 
     let full_stdout = Command::new("sh")
@@ -318,9 +318,9 @@ async fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
     reasonable_mem.pop();
     reasonable_mem.pop();
 
-    let cache = &ctx.cache.read().await;
-    let current_user = &ctx.http.get_current_user().await?;
-    let app_info = &ctx.http.get_current_application_info().await?;
+    let cache = ctx.cache.read().await;
+    let current_user = ctx.http.get_current_user().await?;
+    let app_info = ctx.http.get_current_application_info().await?;
 
     let hoster_tag = &app_info.owner.tag();
     let hoster_id = &app_info.owner.id;
@@ -344,7 +344,7 @@ async fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
     let num_channels = &cache.channels.len();
 
 
-    msg.channel_id.send_message(&ctx, |m| {
+    msg.channel_id.send_message(ctx, |m| {
         m.embed(|e| {
             e.title(format!("**{}** - Version: {}", bot_name, version));
             e.description("General Purpose Discord Bot made in [Rust](https://www.rust-lang.org/) using [serenity.rs](https://github.com/serenity-rs/serenity)\n\nHaving any issues? join the [Support Server](https://discord.gg/kH7z85n)");
@@ -368,16 +368,16 @@ async fn about(ctx: &mut Context, msg: &Message) -> CommandResult {
 
 /// Sends the bot changelog.
 #[command]
-async fn changelog(ctx: &mut Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(&ctx, "<https://gitlab.com/nitsuga5124/robo-arc/-/blob/master/CHANGELOG.md>").await?;
+async fn changelog(ctx: &Context, msg: &Message) -> CommandResult {
+    msg.channel_id.say(ctx, "<https://gitlab.com/nitsuga5124/robo-arc/-/blob/master/CHANGELOG.md>").await?;
     Ok(())
 }
 
 #[command]
 #[owners_only]
-async fn reload_db(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn reload_db(ctx: &Context, msg: &Message) -> CommandResult {
     let mut data = ctx.data.write().await;
     data.insert::<ConnectionPool>(obtain_pool().await?);
-    msg.channel_id.say(&ctx, "Ok.").await?;
+    msg.channel_id.say(ctx, "Ok.").await?;
     Ok(())
 }

@@ -21,11 +21,11 @@ use futures::{
     StreamExt,
 };
 
-pub async fn parse_member(ctx: &mut Context, msg: &Message, member_name: String) -> Result<Member, String> {
+pub async fn parse_member(ctx: &Context, msg: &Message, member_name: String) -> Result<Member, String> {
     let mut members = Vec::new();
 
     if let Ok(id) = member_name.parse::<u64>() {
-        let member = &msg.guild_id.unwrap().member(&ctx, id).await;
+        let member = &msg.guild_id.unwrap().member(ctx, id).await;
         match member {
             Ok(m) => Ok(m.to_owned()),
             Err(why) => Err(why.to_string()),
@@ -33,14 +33,14 @@ pub async fn parse_member(ctx: &mut Context, msg: &Message, member_name: String)
     } else if member_name.starts_with("<@") && member_name.ends_with('>') {
         let re = Regex::new("[<@!>]").unwrap();
         let member_id = re.replace_all(&member_name, "").into_owned();
-        let member = &msg.guild_id.unwrap().member(&ctx, UserId(member_id.parse::<u64>().unwrap())).await;
+        let member = &msg.guild_id.unwrap().member(ctx, UserId(member_id.parse::<u64>().unwrap())).await;
 
         match member {
             Ok(m) => Ok(m.to_owned()),
             Err(why) => Err(why.to_string()),
         }
     } else {
-        let guild = &msg.guild(&ctx).await.unwrap();
+        let guild = &msg.guild(ctx).await.unwrap();
         let rguild = &guild.read().await;
         let member_name = member_name.split('#').next().unwrap();
 
@@ -106,7 +106,7 @@ pub async fn parse_member(ctx: &mut Context, msg: &Message, member_name: String)
 #[required_permissions(KICK_MEMBERS)]
 #[min_args(1)]
 #[only_in("guilds")]
-async fn kick(mut ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn kick(mut ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let member_arg = args.single_quoted::<String>()?;
     let member = parse_member(&mut ctx, &msg, member_arg).await;
 
@@ -115,13 +115,13 @@ async fn kick(mut ctx: &mut Context, msg: &Message, mut args: Args) -> CommandRe
     match member {
         Ok(m) => {
             if let Some(r) = reason {
-                m.kick_with_reason(&ctx, r).await?;
+                m.kick_with_reason(ctx, r).await?;
             } else {
-                m.kick(&ctx).await?;
+                m.kick(ctx).await?;
             }
-            msg.reply(&ctx, format!("Successfully kicked member `{}#{}` with id `{}`", m.user.name, m.user.discriminator, m.user.id.0)).await?;
+            msg.reply(ctx, format!("Successfully kicked member `{}#{}` with id `{}`", m.user.name, m.user.discriminator, m.user.id.0)).await?;
         },
-        Err(why) => {msg.reply(&ctx, why.to_string()).await?;},
+        Err(why) => {msg.reply(ctx, why.to_string()).await?;},
     }
 
     Ok(())
@@ -138,7 +138,7 @@ async fn kick(mut ctx: &mut Context, msg: &Message, mut args: Args) -> CommandRe
 #[required_permissions(BAN_MEMBERS)]
 #[min_args(1)]
 #[only_in("guilds")]
-async fn ban(mut ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn ban(mut ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let member_arg = args.single_quoted::<String>()?;
     let member = parse_member(&mut ctx, &msg, member_arg).await;
 
@@ -147,13 +147,13 @@ async fn ban(mut ctx: &mut Context, msg: &Message, mut args: Args) -> CommandRes
     match member {
         Ok(m) => {
             if let Some(r) = reason {
-                m.ban(&ctx, &r).await?;
+                m.ban(ctx, &r).await?;
             } else {
-                m.ban(&ctx, &1).await?;
+                m.ban(ctx, &1).await?;
             }
-            msg.reply(&ctx, format!("Successfully banned member `{}#{}` with id `{}`", m.user.name, m.user.discriminator, m.user.id.0)).await?;
+            msg.reply(ctx, format!("Successfully banned member `{}#{}` with id `{}`", m.user.name, m.user.discriminator, m.user.id.0)).await?;
         },
-        Err(why) => {msg.reply(&ctx, why.to_string()).await?;},
+        Err(why) => {msg.reply(ctx, why.to_string()).await?;},
     }
 
     Ok(())
@@ -168,19 +168,19 @@ async fn ban(mut ctx: &mut Context, msg: &Message, mut args: Args) -> CommandRes
 #[num_args(1)]
 #[only_in("guilds")]
 #[aliases(purge)]
-async fn clear(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn clear(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let num = args.single::<u64>();
     match num {
-        Err(_) => {msg.channel_id.say(&ctx, "The value provided was not a valid number").await?;},
+        Err(_) => {msg.channel_id.say(ctx, "The value provided was not a valid number").await?;},
         Ok(n) => {
-            let channel = &msg.channel(&ctx).await.unwrap().guild().unwrap();
+            let channel = &msg.channel(ctx).await.unwrap().guild().unwrap();
 
-            let messages = &channel.messages(&ctx, |r| r.before(&msg.id).limit(n)).await?;
+            let messages = &channel.messages(ctx, |r| r.before(&msg.id).limit(n)).await?;
             let messages_ids = messages.iter().map(|m| m.id).collect::<Vec<MessageId>>();
 
-            channel.delete_messages(&ctx, messages_ids).await?;
+            channel.delete_messages(ctx, messages_ids).await?;
 
-            msg.channel_id.say(&ctx, format!("Successfully deleted `{}` message", n)).await?;
+            msg.channel_id.say(ctx, format!("Successfully deleted `{}` message", n)).await?;
         }
     }
     Ok(())

@@ -315,7 +315,7 @@ You can react with 🚫 on *any* message sent by the bot to delete it.\n"]
 // This will change the text that appears on groups that have a custom prefix
 #[group_prefix = "Prefix commands"]
 async fn my_help(
-    ctx: &mut Context,
+    ctx: &Context,
     msg: &Message,
     args: Args,
     help_options: &'static HelpOptions,
@@ -417,10 +417,10 @@ impl EventHandler for Handler {
                 let channel_id  = splits.nth(5).unwrap_or("0").parse::<u64>().expect("NaN");
                 if let Ok(chan) = ChannelId(channel_id).to_channel(&ctx).await {
                     if chan.is_nsfw() {
-                        let _ = msg.react(&ctx, "🇳").await;
-                        let _ = msg.react(&ctx, "🇸").await;
-                        let _ = msg.react(&ctx, "🇫").await;
-                        let _ = msg.react(&ctx, "🇼").await;
+                        let _ = msg.react(&ctx, '🇳').await;
+                        let _ = msg.react(&ctx, '🇸').await;
+                        let _ = msg.react(&ctx, '🇫').await;
+                        let _ = msg.react(&ctx, '🇼').await;
                     }
                 }
             }
@@ -446,9 +446,9 @@ impl EventHandler for Handler {
             }
 
             if correct {
-                let _ = msg.react(&ctx, "✅").await;
+                let _ = msg.react(&ctx, '✅').await;
             } else {
-                let _ = msg.react(&ctx, "❌").await;
+                let _ = msg.react(&ctx, '❌').await;
             }
         }
 
@@ -533,7 +533,7 @@ impl EventHandler for Handler {
 
 // This is for errors that happen before command execution.
 #[hook]
-async fn on_dispatch_error(ctx: &mut Context, msg: &Message, error: DispatchError) {
+async fn on_dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
     match error {
         // Notify the user if the reason of the command failing to execute was because of
         // inssufficient arguments.
@@ -548,14 +548,14 @@ async fn on_dispatch_error(ctx: &mut Context, msg: &Message, error: DispatchErro
                 }
             };
             // Send the message, but supress any errors that may occur.
-            let _ = msg.channel_id.say(&ctx, s).await;
+            let _ = msg.channel_id.say(ctx, s).await;
         },
         DispatchError::IgnoredBot {} => {
             return;
         },
         DispatchError::CheckFailed(_, reason) => {
             if let Reason::User(r) = reason {
-                let _ = msg.channel_id.say(&ctx, r).await;
+                let _ = msg.channel_id.say(ctx, r).await;
             }
         },
         // eprint prints to stderr rather than stdout.
@@ -569,7 +569,7 @@ async fn on_dispatch_error(ctx: &mut Context, msg: &Message, error: DispatchErro
 
 // This function executes before a command is called.
 #[hook]
-async fn before(_ctx: &mut Context, msg: &Message, cmd_name: &str) -> bool {
+async fn before(_ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
     info!("Running command: {}", &cmd_name);
     trace!("Message: {}", &msg.content);
     true
@@ -578,7 +578,7 @@ async fn before(_ctx: &mut Context, msg: &Message, cmd_name: &str) -> bool {
 // This function executes every time a command finishes executing.
 // It's used here to handle errors that happen in the middle of the command.
 #[hook]
-async fn after(ctx: &mut Context, msg: &Message, cmd_name: &str, error: CommandResult) {
+async fn after(ctx: &Context, msg: &Message, cmd_name: &str, error: CommandResult) {
     // error is the command result.
     // inform the user about an error when it happens.
     if let Err(why) = &error {
@@ -587,13 +587,13 @@ async fn after(ctx: &mut Context, msg: &Message, cmd_name: &str, error: CommandR
 
         eprintln!("Error while running {}:\n{:?}", &cmd_name, &error);
         let err = why.0.to_string();
-        let _ = msg.channel_id.say(&ctx, &err).await;
+        let _ = msg.channel_id.say(ctx, &err).await;
     }
 }
 
 // Small error event that triggers when a command doesn't exist.
 #[hook]
-async fn unrecognised_command(ctx: &mut Context, msg: &Message, command_name: &str) {
+async fn unrecognised_command(ctx: &Context, msg: &Message, command_name: &str) {
     let data_read = ctx.data.read().await;
 
     let commands = data_read.get::<BooruCommands>();
@@ -612,18 +612,18 @@ async fn unrecognised_command(ctx: &mut Context, msg: &Message, command_name: &s
         let parameters = msg.content.split(command_name).nth(1).unwrap();
         let params = Args::new(&parameters, &[Delimiter::Single(' ')]);
 
-        let booru = get_booru(&mut ctx.clone(), &msg.clone(), &booru, params).await;
+        let booru = get_booru(ctx, &msg, &booru, params).await;
         if let Err(why) = booru {
             // Handle any error that may occur.
             let why = why.to_string();
             let reason = format!("There was an error executing the command: {}", capitalize_first(&why).await);
-            let _ = msg.channel_id.say(&ctx, reason).await;
+            let _ = msg.channel_id.say(ctx, reason).await;
         }
     }
 }
 
 #[hook]
-async fn dynamic_prefix(ctx: &mut Context, msg: &Message) -> Option<String> { // Custom per guild prefixes.
+async fn dynamic_prefix(ctx: &Context, msg: &Message) -> Option<String> { // Custom per guild prefixes.
     //info!("Dynamic prefix call.");
     // obtain the guild id of the command message.
     let guild_id = &msg.guild_id;
@@ -745,17 +745,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .group(&MUSIC_GROUP) // Load `music` command group
         .help(&MY_HELP); // Load the custom help command.
 
-    let mut client = Client::new_with_extras(&bot_token, |extras| {extras
+    let mut client = Client::new(&bot_token)
         .event_handler(Handler)
         .framework(framework)
-        .intents({
+        .add_intent({
             let mut intents = GatewayIntents::all();
             intents.remove(GatewayIntents::GUILD_PRESENCES);
             intents.remove(GatewayIntents::DIRECT_MESSAGE_TYPING);
             intents.remove(GatewayIntents::GUILD_MESSAGE_TYPING);
             intents
         })
-    }).await?;
+        .await?;
 
     // Block to define global data.
     // and so the data lock is not kept open in write mode.

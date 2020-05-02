@@ -16,7 +16,10 @@ use reqwest::Url;
 
 use serenity::{
     prelude::Context,
-    model::channel::Message,
+    model::channel::{
+        Message,
+        ReactionType,
+    },
     model::user::User,
     model::id::RoleId,
     framework::standard::{
@@ -37,12 +40,12 @@ use serenity::{
 
 #[check]
 #[name = "bot_has_manage_roles"]
-async fn bot_has_manage_roles_check(ctx: &mut Context, msg: &Message) -> CheckResult {
+async fn bot_has_manage_roles_check(ctx: &Context, msg: &Message) -> CheckResult {
     let bot_id = (ctx.cache.read().await).user.id.0.clone();
     if !ctx.http.get_member(msg.guild_id.unwrap().0, bot_id)
         .await
         .expect("What even")
-        .permissions(&ctx)
+        .permissions(ctx)
         .await
         .expect("What even 2")
         .manage_roles()
@@ -53,7 +56,7 @@ async fn bot_has_manage_roles_check(ctx: &mut Context, msg: &Message) -> CheckRe
     }
 }
 
-async fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: String) -> Result<(), Box<dyn std::error::Error>> {
+async fn set_best_tags(sex: &str, ctx: &Context, msg: &Message, mut tags: String) -> Result<(), Box<dyn std::error::Error>> {
     let rdata = ctx.data.read().await;
     let pool = rdata.get::<ConnectionPool>().unwrap();
 
@@ -72,7 +75,7 @@ async fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: St
                 .execute(pool)
                 .await?;
 
-            msg.reply(&ctx, format!("Successfully set your husbando to `{}`", &tags)).await?;
+            msg.reply(ctx, format!("Successfully set your husbando to `{}`", &tags)).await?;
         } else if sex == "girl" {
             // insert +1girl
             tags += " 1girl";
@@ -81,7 +84,7 @@ async fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: St
                 .execute(pool)
                 .await?;
 
-            msg.reply(&ctx, format!("Successfully set your waifu to `{}`", &tags)).await?;
+            msg.reply(ctx, format!("Successfully set your waifu to `{}`", &tags)).await?;
         }
     } else if sex == "boy" {
         // update +1boy
@@ -91,7 +94,7 @@ async fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: St
             .execute(pool)
             .await?;
 
-        msg.reply(&ctx, format!("You successfully broke up with your old husbando, now your husbando is `{}`", &tags)).await?;
+        msg.reply(ctx, format!("You successfully broke up with your old husbando, now your husbando is `{}`", &tags)).await?;
     } else if sex == "girl" {
         // update +1girl
         tags += " 1girl";
@@ -100,7 +103,7 @@ async fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: St
             .execute(pool)
             .await?;
 
-        msg.reply(&ctx, format!("You successfully broke up with your old waifu, now your waifu is `{}`", &tags)).await?;
+        msg.reply(ctx, format!("You successfully broke up with your old waifu, now your waifu is `{}`", &tags)).await?;
     }
 
     Ok(())
@@ -115,7 +118,7 @@ async fn set_best_tags(sex: &str, ctx: &mut Context, msg: &Message, mut tags: St
 /// `streamrole`: Gives you the configured streamrole of a streamer the guild gets notifications on.
 #[command]
 #[sub_commands(best_boy, best_girl, booru, streamrole)]
-async fn user(_ctx: &mut Context, _msg: &Message, _args: Args) -> CommandResult {
+async fn user(_ctx: &Context, _msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
 
@@ -126,14 +129,14 @@ async fn user(_ctx: &mut Context, _msg: &Message, _args: Args) -> CommandResult 
 #[only_in("guilds")]
 #[min_args(1)]
 #[checks("bot_has_manage_roles")]
-async fn streamrole(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn streamrole(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let rdata = ctx.data.read().await;
     let pool = rdata.get::<ConnectionPool>().unwrap();
 
     let streamer = args.single_quoted::<String>()?;
     let mut channels = Vec::new();
 
-    for channel in msg.guild_id.unwrap().channels(&ctx).await?.keys() {
+    for channel in msg.guild_id.unwrap().channels(ctx).await?.keys() {
         channels.push(channel.0 as i64);
     }
 
@@ -153,24 +156,24 @@ async fn streamrole(ctx: &mut Context, msg: &Message, mut args: Args) -> Command
     };
 
     if role_id == 1 {
-        msg.channel_id.say(&ctx, "The mentioned streamer does not have a role configured on this server.").await?;
+        msg.channel_id.say(ctx, "The mentioned streamer does not have a role configured on this server.").await?;
     } else if role_id == 0 {
-        msg.channel_id.say(&ctx, "The mentioned streamer is not being notified on this server").await?;
+        msg.channel_id.say(ctx, "The mentioned streamer is not being notified on this server").await?;
     } else {
-        if !msg.member(&ctx).await.unwrap().roles.contains(&RoleId(role_id as u64)) {
-            if let Err(_) = msg.member(&ctx).await.unwrap().add_role(&ctx, role_id as u64).await {
-                msg.channel_id.say(&ctx, "The configured role does not exist, contact the server administrators about the issue.").await?;
+        if !msg.member(ctx).await.unwrap().roles.contains(&RoleId(role_id as u64)) {
+            if let Err(_) = msg.member(ctx).await.unwrap().add_role(ctx, role_id as u64).await {
+                msg.channel_id.say(ctx, "The configured role does not exist, contact the server administrators about the issue.").await?;
             } else {
-                msg.channel_id.say(&ctx, format!("Successfully obtained the role `{}`",
-                    RoleId(role_id as u64).to_role_cached(&ctx).await.unwrap().name))
+                msg.channel_id.say(ctx, format!("Successfully obtained the role `{}`",
+                    RoleId(role_id as u64).to_role_cached(ctx).await.unwrap().name))
                     .await?;
             }
         } else {
-            if let Err(why) = msg.member(&ctx).await.unwrap().remove_role(&ctx, role_id as u64).await {
-                msg.channel_id.say(&ctx, format!("I was unable to remove your role: {}", why)).await?;
+            if let Err(why) = msg.member(ctx).await.unwrap().remove_role(ctx, role_id as u64).await {
+                msg.channel_id.say(ctx, format!("I was unable to remove your role: {}", why)).await?;
             } else {
-                msg.channel_id.say(&ctx, format!("Successfully removed the role `{}`",
-                    RoleId(role_id as u64).to_role_cached(&ctx).await.unwrap().name))
+                msg.channel_id.say(ctx, format!("Successfully removed the role `{}`",
+                    RoleId(role_id as u64).to_role_cached(ctx).await.unwrap().name))
                     .await?;
             }
         }
@@ -181,18 +184,18 @@ async fn streamrole(ctx: &mut Context, msg: &Message, mut args: Args) -> Command
 
 #[command]
 #[aliases(husbando, husband)]
-async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn best_boy(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     Ok(set_best_tags("boy", ctx, msg, args.message().to_string()).await?)
 }
 
 #[command]
 #[aliases(waifu, wife)]
-async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn best_girl(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     Ok(set_best_tags("girl", ctx, msg, args.message().to_string()).await?)
 }
 
 #[command]
-async fn booru(ctx: &mut Context, msg: &Message, raw_args: Args) -> CommandResult {
+async fn booru(ctx: &Context, msg: &Message, raw_args: Args) -> CommandResult {
     let booru = raw_args.message().to_lowercase();
 
     let rdata = ctx.data.read().await;
@@ -207,14 +210,14 @@ async fn booru(ctx: &mut Context, msg: &Message, raw_args: Args) -> CommandResul
 
     if let None = data { 
         if booru.as_str() == "" {
-            msg.reply(&ctx, "Please, specify the booru to set as your default.").await?;
+            msg.reply(ctx, "Please, specify the booru to set as your default.").await?;
             return Ok(());
         }
         sqlx::query!("INSERT INTO best_bg (booru, user_id) VALUES ($1, $2)", &booru, user_id)
             .execute(pool)
             .await?;
 
-        msg.reply(&ctx, format!("Successfully set your main booru to `{}`", &booru)).await?;
+        msg.reply(ctx, format!("Successfully set your main booru to `{}`", &booru)).await?;
     } else {
         if booru.as_str() == "" {return Ok(());}
 
@@ -222,7 +225,7 @@ async fn booru(ctx: &mut Context, msg: &Message, raw_args: Args) -> CommandResul
             .execute(pool)
             .await?;
 
-        msg.reply(&ctx, format!("Successfully edited your main booru to `{}`", &booru)).await?;
+        msg.reply(ctx, format!("Successfully edited your main booru to `{}`", &booru)).await?;
     }
     Ok(())
 }
@@ -236,7 +239,7 @@ async fn booru(ctx: &mut Context, msg: &Message, raw_args: Args) -> CommandResul
 #[required_permissions(MANAGE_CHANNELS)]
 #[only_in("guilds")]
 #[sub_commands(annoy, notifications)]
-async fn channel(_ctx: &mut Context, _message: &Message, _args: Args) -> CommandResult {
+async fn channel(_ctx: &Context, _message: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
 
@@ -249,7 +252,7 @@ async fn yande_re_channel(ctx: &Context, msg: &mut Message, author: &User) -> Re
         })
     }).await?;
 
-    if let Some(reply) = author.await_reply(&ctx).timeout(Duration::from_secs(120)).await {
+    if let Some(reply) = author.await_reply(ctx).timeout(Duration::from_secs(120)).await {
         msg.edit(ctx, |m| {
             m.content(format!("<@{}>", author.id));
             m.embed(|e| {
@@ -266,7 +269,7 @@ async fn yande_re_webhook(ctx: &Context, msg: &mut Message, author: &User) -> Re
     let rdata = ctx.data.read().await;
     let pool = rdata.get::<ConnectionPool>().unwrap();
 
-    let hooks = msg.channel_id.webhooks(&ctx).await?;
+    let hooks = msg.channel_id.webhooks(ctx).await?;
     let mut existing_hook = false;
 
     let bot_id = {
@@ -298,7 +301,7 @@ async fn yande_re_webhook(ctx: &Context, msg: &mut Message, author: &User) -> Re
 
         let channel = ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
         // Checks if the command was invoked on a DM
-        let dm_channel = if let Some(channel) = msg.channel_id.to_channel_cached(&ctx).await {
+        let dm_channel = if let Some(channel) = msg.channel_id.to_channel_cached(ctx).await {
             channel.guild().is_none()
         } else {
             true
@@ -355,8 +358,8 @@ async fn yande_re_webhook(ctx: &Context, msg: &mut Message, author: &User) -> Re
                         })
                     }).await?;
 
-                    if let Some(reaction) = author.await_reaction(&ctx).timeout(Duration::from_secs(120)).await {
-                        //reaction.as_inner_ref().delete(&ctx).await?;
+                    if let Some(reaction) = author.await_reaction(ctx).timeout(Duration::from_secs(120)).await {
+                        //reaction.as_inner_ref().delete(ctx).await?;
                         let emoji = &reaction.as_inner_ref().emoji;
 
                         match emoji.as_data().as_str() {
@@ -415,8 +418,8 @@ async fn yande_re_webhook(ctx: &Context, msg: &mut Message, author: &User) -> Re
 /// Configure the notifications of the channel.
 /// WIP
 #[command]
-async fn notifications(ctx: &mut Context, message: &Message, _args: Args) -> CommandResult {
-    let mut msg = message.channel_id.send_message(&ctx, |m| {
+async fn notifications(ctx: &Context, message: &Message, _args: Args) -> CommandResult {
+    let mut msg = message.channel_id.send_message(ctx, |m| {
         m.content(format!("<@{}>", message.author.id));
         m.embed(|e| {
             e.title("Select the number of option that you want");
@@ -425,43 +428,44 @@ async fn notifications(ctx: &mut Context, message: &Message, _args: Args) -> Com
     }).await?;
 
     for i in 1..3_u8 {
-        msg.react(&ctx, format!("{}\u{fe0f}\u{20e3}", i)).await?;
+        let num = ReactionType::Unicode(String::from(format!("{}\u{fe0f}\u{20e3}", i)));
+        msg.react(ctx, num).await?;
     }
 
     loop {
-        if let Some(reaction) = message.author.await_reaction(&ctx).timeout(Duration::from_secs(120)).await {
-            reaction.as_inner_ref().delete(&ctx).await?;
+        if let Some(reaction) = message.author.await_reaction(ctx).timeout(Duration::from_secs(120)).await {
+            reaction.as_inner_ref().delete(ctx).await?;
             let emoji = &reaction.as_inner_ref().emoji;
 
             match emoji.as_data().as_str() {
-                "1\u{fe0f}\u{20e3}" => {yande_re_webhook(&ctx, &mut msg, &message.author).await?; break},
-                "2\u{fe0f}\u{20e3}" => {yande_re_channel(&ctx, &mut msg, &message.author).await?; break},
+                "1\u{fe0f}\u{20e3}" => {yande_re_webhook(ctx, &mut msg, &message.author).await?; break},
+                "2\u{fe0f}\u{20e3}" => {yande_re_channel(ctx, &mut msg, &message.author).await?; break},
                 _ => (),
             }
 
         } else {
-            msg.edit(&ctx, |m| {
+            msg.edit(ctx, |m| {
                 m.content(format!("<@{}>: Timeout", message.author.id))
             }).await?;
             ctx.http.edit_message(msg.channel_id.0, msg.id.0, &serde_json::json!({"flags" : 4})).await?;
-            msg.delete_reactions(&ctx).await?;
+            msg.delete_reactions(ctx).await?;
             return Ok(());
         }
     }
 
-    msg.edit(&ctx, |m| {
+    msg.edit(ctx, |m| {
         m.content(format!("<@{}>: Success!", message.author.id))
     }).await?;
 
     //ctx.http.edit_message(msg.channel_id.0, msg.id.0, &serde_json::json!({"flags" : 4})).await?;
-    msg.delete_reactions(&ctx).await?;
+    msg.delete_reactions(ctx).await?;
 
     Ok(())
 }
 
 /// Toggles the annoying features on or off.
 #[command]
-async fn annoy(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
+async fn annoy(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let rdata = ctx.data.read().await;
     let pool = rdata.get::<ConnectionPool>().unwrap();
 
@@ -476,14 +480,14 @@ async fn annoy(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
             .execute(pool)
             .await?;
 
-        msg.channel_id.say(&ctx, format!("Successfully removed `{}` from the list of channels that allows the bot to do annoying features.", msg.channel_id.name(&ctx).await.unwrap())).await?;
+        msg.channel_id.say(ctx, format!("Successfully removed `{}` from the list of channels that allows the bot to do annoying features.", msg.channel_id.name(ctx).await.unwrap())).await?;
 
     } else {
         sqlx::query!("INSERT INTO annoyed_channels (channel_id) VALUES ($1)", channel_id)
             .execute(pool)
             .await?;
 
-        msg.channel_id.say(&ctx, format!("Successfully added `{}` to the list of channels that allows the bot to do annoying features.", msg.channel_id.name(&ctx).await.unwrap())).await?;
+        msg.channel_id.say(ctx, format!("Successfully added `{}` to the list of channels that allows the bot to do annoying features.", msg.channel_id.name(ctx).await.unwrap())).await?;
     }
 
     {
@@ -511,15 +515,15 @@ async fn annoy(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
 #[only_in("guilds")]
 #[aliases(server)]
 #[sub_commands(prefix)]
-async fn guild(_ctx: &mut Context, _msg: &Message, _args: Args) -> CommandResult {
+async fn guild(_ctx: &Context, _msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
 
 #[command]
 #[min_args(1)]
-async fn prefix(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn prefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     if args.is_empty() {
-        msg.reply(&ctx, "Invalid prefix was given").await?;
+        msg.reply(ctx, "Invalid prefix was given").await?;
         return Ok(());
     }
     let prefix = args.message();
@@ -547,7 +551,7 @@ async fn prefix(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 
     let content_safe_options = ContentSafeOptions::default();
     let bad_success_message = format!("Successfully changed your prefix to `{}`", prefix);
-    let success_message = content_safe(&ctx, bad_success_message, &content_safe_options).await;
-    msg.reply(&ctx, success_message).await?;
+    let success_message = content_safe(ctx, bad_success_message, &content_safe_options).await;
+    msg.reply(ctx, success_message).await?;
     Ok(())
 }

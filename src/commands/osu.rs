@@ -482,7 +482,7 @@ async fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: 
 /// `osuc [ Frost ] mode=mania pp=yes recent=false`
 #[command]
 #[aliases("osuc", "config_osu", "configosu", "configureosu", "configo", "setosu", "osuset", "set_osu", "osu_set")]
-async fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
+async fn configure_osu(ctx: &Context, msg: &Message, arguments: Args) -> CommandResult {
     let osu_key = {
         let data = ctx.data.read().await; // set inmutable global data.
         let tokens = data.get::<Tokens>().unwrap().clone(); // get the tokens from the global data.
@@ -560,7 +560,7 @@ async fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> Com
     } else if empty_data {
         // sends the help of the command
         let a = Args::new("configure_osu", &[Delimiter::Single(' ')]);
-        (MY_HELP.fun)(&mut ctx.clone(), &msg, a, &MY_HELP.options, &[&OSU_GROUP], HashSet::new()).await?;
+        (MY_HELP.fun)(ctx, msg, a, &MY_HELP.options, &[&OSU_GROUP], HashSet::new()).await?;
         return Ok(());
     } else {
         // gets the current configuration of the user
@@ -573,7 +573,7 @@ async fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> Com
             user_data.osu_id, user_data.name, user_data.mode.unwrap(), user_data.pp.unwrap(), user_data.short_recent.unwrap()
         );
 
-        msg.channel_id.send_message(&ctx, |m| m.embed(|e| {
+        msg.channel_id.send_message(ctx, |m| m.embed(|e| {
             e.title("Your current configuration:");
             e.description(current_conf)
         })).await?;
@@ -606,7 +606,7 @@ async fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> Com
    
     // if the id obtained is 0, it means the user doesn't exist.
     if user_data.osu_id == 0 {
-        msg.channel_id.say(&ctx, "It looks like your osu ID is 0, Is the Username correct?").await?;
+        msg.channel_id.say(ctx, "It looks like your osu ID is 0, Is the Username correct?").await?;
     }
 
     let current_conf = format!("
@@ -618,7 +618,7 @@ async fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> Com
         user_data.osu_id, user_data.name, user_data.mode.unwrap(), user_data.pp.unwrap(), user_data.short_recent.unwrap()
     );
 
-    msg.channel_id.send_message(&ctx, |m| m.embed(|e| {
+    msg.channel_id.send_message(ctx, |m| m.embed(|e| {
         e.title("Successfully changed your configuration!");
         e.description(current_conf)
     })).await?;
@@ -638,7 +638,7 @@ async fn configure_osu(ctx: &mut Context, msg: &Message, arguments: Args) -> Com
 /// `osu_profile -GN`
 #[command]
 #[aliases("oprofile", "oprof", "osuprofile", "osuprof", "osu_prof", "osu_p", "osup", "osu_p", "osu")]
-async fn osu_profile(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn osu_profile(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     // Obtains the osu! api key from the "global" data
     let osu_key: &str = {
         let data = ctx.data.read().await; // set inmutable global data.
@@ -679,7 +679,7 @@ async fn osu_profile(ctx: &mut Context, msg: &Message, args: Args) -> CommandRes
         }
     } else {
         if username.is_empty() {
-            if let Some(m) = msg.member(&ctx).await {
+            if let Some(m) = msg.member(ctx).await {
                 username = m.display_name().to_string();
             } else {
                 username = msg.author.name.to_string();
@@ -690,14 +690,14 @@ async fn osu_profile(ctx: &mut Context, msg: &Message, args: Args) -> CommandRes
     let resp = get_osu_user(&username, &osu_key).await?;
 
     let user = if !resp.is_empty() { &resp[0] } else {
-        msg.channel_id.say(&ctx, format!("A user with the name of `{}` was not found.", username)).await?;
+        msg.channel_id.say(ctx, format!("A user with the name of `{}` was not found.", username)).await?;
         return Ok(());
     };
 
     let country_url = format!("https://raw.githubusercontent.com/stevenrskelton/flag-icon/master/png/75/country-squared/{}.png", &user.country.to_lowercase());
     
     if let None = user.total_score {
-        msg.channel_id.send_message(&ctx, |m| {
+        msg.channel_id.send_message(ctx, |m| {
             m.embed(|e| {
                 e.timestamp(user.join_date.clone());
                 e.thumbnail(format!("https://a.ppy.sh/{}", &user.user_id));
@@ -710,7 +710,7 @@ async fn osu_profile(ctx: &mut Context, msg: &Message, args: Args) -> CommandRes
         }).await?;
 
     } else {
-        msg.channel_id.send_message(&ctx, |m| {
+        msg.channel_id.send_message(ctx, |m| {
             m.embed(|e| {
                 e.color(Colour::new(user.user_id.parse::<u32>().expect("The ID was too large for u32 :thinking:")));
                 e.timestamp(user.join_date.clone());
@@ -786,10 +786,10 @@ async fn osu_profile(ctx: &mut Context, msg: &Message, args: Args) -> CommandRes
 /// Usage: `score 124217`
 #[command]
 #[aliases("compare")]
-async fn score(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn score(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let bmap_id = match args.parse::<u64>() {
         Err(_) => {
-            msg.reply(&ctx, "An invalid id was provided").await?;
+            msg.reply(ctx, "An invalid id was provided").await?;
             return Ok(());
         },
         Ok(x) => x,
@@ -825,7 +825,7 @@ async fn score(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         username = row.osu_username;
         osu_id = row.osu_id;
     } else {
-        if let Some(m) = msg.member(&ctx).await {
+        if let Some(m) = msg.member(ctx).await {
             username = m.display_name().to_string();
         } else {
             username = msg.author.name.to_string();
@@ -835,7 +835,7 @@ async fn score(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let score = get_osu_scores(osu_id, &username, bmap_id, mode, &osu_key).await?;
 
     let s = if let Some(x) = score.get(0) { x } else {
-        msg.channel_id.say(&ctx, format!("The user `{}` does not have any scores on the specified map.", &username)).await?;
+        msg.channel_id.say(ctx, format!("The user `{}` does not have any scores on the specified map.", &username)).await?;
         return Ok(());
     };
 
@@ -848,7 +848,7 @@ async fn score(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 
     let rating_url = format!("https://s.ppy.sh/images/{}.png", s.rank.to_uppercase());
 
-    msg.channel_id.send_message(&ctx, |m| {
+    msg.channel_id.send_message(ctx, |m| {
         m.embed(|e| {
             e.color(Colour::new(osu_id as u32));
 
@@ -906,7 +906,7 @@ async fn score(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 /// `recent nitsuga5124`
 #[command]
 #[aliases("rs", "rc")]
-async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandResult {
+async fn recent(ctx: &Context, msg: &Message, arguments: Args) -> CommandResult {
     let mut arg_user = String::from("");
     if !arguments.is_empty() {
         let args = arguments.raw_quoted().collect::<Vec<&str>>();
@@ -949,7 +949,7 @@ async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRes
             user_data.short_recent = x.short_recent;
     } else {
         if arg_user == "" {
-            msg.channel_id.say(&ctx, "It looks like you don't have a configured osu! username, consider configuring one with `n!osuc`").await?;
+            msg.channel_id.say(ctx, "It looks like you don't have a configured osu! username, consider configuring one with `n!osuc`").await?;
         }
         user_data.name = arg_user;
         user_data.mode = Some(0);
@@ -962,19 +962,19 @@ async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRes
     if user_data.osu_id == 0 {
         let user_id = get_osu_id(&user_data.name, &osu_key).await?;
         if user_id == 0 {
-            msg.channel_id.say(&ctx, format!("Could not find any osu! user with the name of '{}'", user_data_name)).await?;
+            msg.channel_id.say(ctx, format!("Could not find any osu! user with the name of '{}'", user_data_name)).await?;
             return Ok(());
         } else {
             user_data.osu_id = user_id;
         }
     }
 
-    let bot_msg = msg.channel_id.say(&ctx, format!("Obtaining **{}** recent data", user_data_name)).await?;
+    let bot_msg = msg.channel_id.say(ctx, format!("Obtaining **{}** recent data", user_data_name)).await?;
 
     let user_recent_raw = get_osu_user_recent(user_data.osu_id, &osu_key).await?;
 
     if user_recent_raw.is_empty() {
-        bot_msg.clone().edit(&ctx, |m| {
+        bot_msg.clone().edit(ctx, |m| {
             m.content(format!("The user **{}** has not played in the last 24 hours.", user_data_name));
             m
         }).await?;
@@ -997,11 +997,11 @@ async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRes
     let left = ReactionType::Unicode(String::from("⬅️"));
     let right = ReactionType::Unicode(String::from("➡️"));
 
-    bot_msg.react(&ctx, left).await?;
-    bot_msg.react(&ctx, right).await?;
+    bot_msg.react(ctx, left).await?;
+    bot_msg.react(ctx, right).await?;
 
     loop {
-        if let Some(reaction) = &bot_msg.await_reaction(&ctx).author_id(msg.author.id.0).timeout(Duration::from_secs(20)).await {
+        if let Some(reaction) = &bot_msg.await_reaction(ctx).author_id(msg.author.id.0).timeout(Duration::from_secs(20)).await {
             let emoji = &reaction.as_inner_ref().emoji;
 
             match emoji.as_data().as_str() {
@@ -1019,9 +1019,9 @@ async fn recent(ctx: &mut Context, msg: &Message, arguments: Args) -> CommandRes
             }
 
             short_recent_builder(ctx.http.clone(), &event_data, bot_msg.clone(), page).await?;
-            reaction.as_inner_ref().delete(&ctx).await?;
+            reaction.as_inner_ref().delete(ctx).await?;
         } else {
-            bot_msg.delete_reactions(&ctx).await?;
+            bot_msg.delete_reactions(ctx).await?;
             break
         };
     }

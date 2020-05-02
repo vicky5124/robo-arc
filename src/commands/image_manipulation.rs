@@ -87,7 +87,7 @@ async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Erro
 
 #[command]
 #[aliases(grayscale)]
-async fn gray(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
+async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     // obtains the first attachment on the message or None if the message doesn't have one.
     let first_attachment = &msg.attachments.get(0);
     let mut filename = &String::new();
@@ -105,7 +105,7 @@ async fn gray(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
             // else we download the image. Download returns a Result Vec<u8>
             } else {
                 if dimensions.unwrap().0 > 7680 || dimensions.unwrap().1 >  4320 {
-                    msg.reply(&ctx, "The provided image is too large").await?;
+                    msg.reply(ctx, "The provided image is too large").await?;
                     return Ok(());
                 }
 
@@ -124,7 +124,7 @@ async fn gray(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
 
     // if an error was returned from the previous checks, say the error and finish the command.
     if bytes == vec![0] {
-        msg.channel_id.say(&ctx, image_url).await?;
+        msg.channel_id.say(ctx, image_url).await?;
         return Ok(());
     }
 
@@ -137,7 +137,7 @@ async fn gray(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
     };
 
     // Sends an embed with a link to the original image ~~and the prided image attached~~.
-    msg.channel_id.send_message(&ctx, |m| {
+    msg.channel_id.send_message(ctx, |m| {
         m.add_file(attachment);
         m.embed(|e| {
             e.title("Original Image");
@@ -152,7 +152,7 @@ async fn gray(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
 }
 #[command]
 #[aliases(gay)]
-async fn pride(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
+async fn pride(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let first_attachment = &msg.attachments.get(0);
     let mut filename = &String::new();
 
@@ -169,7 +169,7 @@ async fn pride(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
             // else we download the image. Download returns a Result Vec<u8>
             } else {
                 if dimensions.unwrap().0 > 7680 || dimensions.unwrap().1 >  4320 {
-                    msg.reply(&ctx, "The provided image is too large").await?;
+                    msg.reply(ctx, "The provided image is too large").await?;
                     return Ok(());
                 }
 
@@ -188,7 +188,7 @@ async fn pride(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
 
     // if an error was returned from the previous checks, say the error and finish the command.
     if bytes == vec![0] {
-        msg.channel_id.say(&ctx, image_url).await?;
+        msg.channel_id.say(ctx, image_url).await?;
         return Ok(());
     }
 
@@ -201,7 +201,7 @@ async fn pride(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
     };
 
     // Sends an embed with a link to the original image ~~and the prided image attached~~.
-    msg.channel_id.send_message(&ctx, |m| {
+    msg.channel_id.send_message(ctx, |m| {
         m.add_file(attachment);
         m.embed(|e| {
             e.title("Original Image");

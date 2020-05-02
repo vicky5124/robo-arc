@@ -33,7 +33,10 @@ use futures::stream::StreamExt;
 
 use serenity::{
     prelude::Context,
-    model::channel::Message,
+    model::channel::{
+        Message,
+        ReactionType,
+    },
     framework::standard::{
         Args,
         Delimiter,
@@ -160,10 +163,10 @@ struct PostsE621 {
 }
 
 // Function to get the booru data and send it.
-pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Args) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+pub async fn get_booru(ctx: &Context, msg: &Message, booru: &Booru, args: Args) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // TODO: behoimi needs login.
 
-    let channel = &ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
+    let channel = ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
     // Checks if the command was invoked on a DM
     let dm_channel = msg.guild_id == None;
 
@@ -289,7 +292,7 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
                 break;
             }
             if y > (&resp.len()*2) {
-                msg.channel_id.say(&ctx, "All the content matching the requested tags is too big to be sent or illegal.").await?;
+                msg.channel_id.say(ctx, "All the content matching the requested tags is too big to be sent or illegal.").await?;
                 return Ok(());
             }
         }
@@ -348,7 +351,7 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
 
     // https://github.com/serenity-rs/serenity/blob/current/examples/11_create_message_builder/src/main.rs
     // builds a message with an embed containing any data used.
-    msg.channel_id.send_message(&ctx, |m| { // say method doesn't work for the message builder.
+    msg.channel_id.send_message(ctx, |m| { // say method doesn't work for the message builder.
         m.embed( |e| {
             e.description(format!("[Sample]({}) | [Full Size]({})", &sample_size, &full_size));
             e.image(sample_size);
@@ -406,7 +409,7 @@ pub async fn get_booru(ctx: &mut Context, msg: &Message, booru: &Booru, args: Ar
 #[usage("test")]
 #[usage("testing")]
 #[aliases("picture", "pic", "booru", "boorus")]
-pub async fn booru_command(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+pub async fn booru_command(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     // open the context data lock in read mode.
     let data = ctx.data.read().await;
     // get the database connection from the context data.
@@ -446,10 +449,10 @@ pub async fn booru_command(ctx: &mut Context, msg: &Message, args: Args) -> Comm
 
     // if the preffered booru is idol, invoke the idol command.
     if booru == "idol" {
-        idol(&mut ctx.clone(), &msg, args).await?;
+        idol(ctx, msg, args).await?;
     // if the preffered booru is sankaku or chan, invoke the chan command.
     } else if booru == "sankaku" || booru == "chan" {
-        chan(&mut ctx.clone(), &msg, args).await?;
+        chan(ctx, msg, args).await?;
     // if the command is a part of the boorus.json file, invoke the get_booru() function.
     } else if commands.as_ref().unwrap().contains(&booru.to_string()) {
         // obtain the rest of the data from the boorus.json file, of the specific booru.
@@ -464,16 +467,16 @@ pub async fn booru_command(ctx: &mut Context, msg: &Message, args: Args) -> Comm
             x
         };
         // invoke the get_booru command with the args and booru.
-        get_booru(&mut ctx.clone(), &msg, &b, args).await?;
+        get_booru(ctx, msg, &b, args).await?;
     // else, the booru they have configured is not supported or it's not configured, so we default to chan.
     } else {
         let msg = if booru == "default" {
-            msg.reply(&ctx, "No configured booru was found. Defaulting to SankakuChan").await?
+            msg.reply(ctx, "No configured booru was found. Defaulting to SankakuChan").await?
         } else {
-            msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan").await?
+            msg.reply(ctx, "An invalid booru name was found. Defaulting to SankakuChan").await?
         };
-        chan(&mut ctx.clone(), &msg, args).await?;
-        msg.delete(&ctx).await?;
+        chan(ctx, &msg, args).await?;
+        msg.delete(ctx).await?;
     }
 
     Ok(())
@@ -486,7 +489,7 @@ pub async fn booru_command(ctx: &mut Context, msg: &Message, args: Args) -> Comm
 /// Usage: `bestgirl <additional tags>`
 #[command]
 #[aliases(bg, bestgirl, waifu, wife)]
-pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+pub async fn best_girl(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     // open the context data lock in read mode.
     let data = ctx.data.read().await;
     // get the database connection from the context data.
@@ -509,12 +512,12 @@ pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandR
     let row = if let Some(x) = data {
         x
     } else {
-        msg.reply(&ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`").await?;
+        msg.reply(ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`").await?;
         return Ok(());
     };
 
     if row.best_girl == None {
-        msg.reply(&ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`").await?;
+        msg.reply(ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`").await?;
         return Ok(());
     }
 
@@ -543,7 +546,7 @@ pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandR
         // add an exclamation mark to the end.
         name += "!";
         // output should look like "Kou from granblue fantasy!" from the original "koy_(granblue_fantasy)"
-        msg.channel_id.say(&ctx, capitalize_first(&name).await).await?;
+        msg.channel_id.say(ctx, capitalize_first(&name).await).await?;
     }
 
     // combine the command arguments with the saved tags on the database.
@@ -555,10 +558,10 @@ pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandR
 
     // if the preffered booru is idol, invoke the idol command.
     if booru == "idol" {
-        idol(&mut ctx.clone(), &msg, args_tags).await?;
+        idol(ctx, msg, args_tags).await?;
     // if the preffered booru is sankaku or chan, invoke the chan command.
     } else if booru == "sankaku" || booru == "chan" {
-        chan(&mut ctx.clone(), &msg, args_tags).await?;
+        chan(ctx, msg, args_tags).await?;
     // if the command is a part of the boorus.json file, invoke the get_booru() function.
     } else if commands.as_ref().unwrap().contains(&booru.to_string()) {
         // obtain the rest of the data from the boorus.json file, of the specific booru.
@@ -573,11 +576,11 @@ pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandR
             x
         };
         // invoke the get_booru command with the args and booru.
-        get_booru(&mut ctx.clone(), &msg, &b, args_tags).await?;
+        get_booru(ctx, msg, &b, args_tags).await?;
     // else, the booru they have configured is not supported, so we default to chan.
     } else {
-        msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan").await?;
-        chan(&mut ctx.clone(), &msg, args_tags).await?;
+        msg.reply(ctx, "An invalid booru name was found. Defaulting to SankakuChan").await?;
+        chan(ctx, msg, args_tags).await?;
     }
 
     Ok(())
@@ -590,7 +593,7 @@ pub async fn best_girl(ctx: &mut Context, msg: &Message, args: Args) -> CommandR
 /// Usage: `bestboy <additional tags>`
 #[command]
 #[aliases(bb, bestboy, husbando, husband)]
-pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+pub async fn best_boy(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     // open the context data lock in read mode.
     let data = ctx.data.read().await;
     // get the database connection from the context data.
@@ -613,12 +616,12 @@ pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
     let row = if let Some(x) = data {
         x
     } else {
-        msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`conf user best_boy your_best_boy_tag`").await?;
+        msg.reply(ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`conf user best_boy your_best_boy_tag`").await?;
         return Ok(());
     };
 
     if row.best_boy == None {
-        msg.reply(&ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`conf user best_boy your_best_boy_tag`").await?;
+        msg.reply(ctx, "You don't have any husbando :(\nBut don't worry! You can obtain one with the power of the internet running the command\n`conf user best_boy your_best_boy_tag`").await?;
         return Ok(());
     }
 
@@ -647,7 +650,7 @@ pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
         // add an exclamation mark to the end.
         name += "!";
         // output should look like "Kou from granblue fantasy!" from the original "koy_(granblue_fantasy)"
-        msg.channel_id.say(&ctx, capitalize_first(&name).await).await?;
+        msg.channel_id.say(ctx, capitalize_first(&name).await).await?;
     }
 
     // combine the command arguments with the saved tags on the database.
@@ -659,10 +662,10 @@ pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
 
     // if the preffered booru is idol, invoke the idol command.
     if booru == "idol" {
-        idol(&mut ctx.clone(), &msg, args_tags).await?;
+        idol(ctx, msg, args_tags).await?;
     // if the preffered booru is sankaku or chan, invoke the chan command.
     } else if booru == "sankaku" || booru == "chan" {
-        chan(&mut ctx.clone(), &msg, args_tags).await?;
+        chan(ctx, msg, args_tags).await?;
     // if the command is a part of the boorus.json file, invoke the get_booru() function.
     } else if commands.as_ref().unwrap().contains(&booru.to_string()) {
         // obtain the rest of the data from the boorus.json file, of the specific booru.
@@ -677,11 +680,11 @@ pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
             x
         };
         // invoke the get_booru command with the args and booru.
-        get_booru(&mut ctx.clone(), &msg, &b, args_tags).await?;
+        get_booru(ctx, msg, &b, args_tags).await?;
     // else, the booru they have configured is not supported, so we default to chan.
     } else {
-        msg.reply(&ctx, "An invalid booru name was found. Defaulting to SankakuChan").await?;
-        chan(&mut ctx.clone(), &msg, args_tags).await?;
+        msg.reply(ctx, "An invalid booru name was found. Defaulting to SankakuChan").await?;
+        chan(ctx, msg, args_tags).await?;
     }
 
     Ok(())
@@ -702,16 +705,16 @@ pub async fn best_boy(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
 #[command]
 #[aliases(nh, nhentai)]
 #[min_args(1)]
-pub async fn n_hentai(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    if let Some(channel) = msg.channel(&ctx).await {
+pub async fn n_hentai(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    if let Some(channel) = msg.channel(ctx).await {
         if !channel.is_nsfw() && !channel.guild().is_none() {
-            msg.channel_id.say(&ctx, "This command can only be ran on nsfw channels or in dm's").await?;
+            msg.channel_id.say(ctx, "This command can only be ran on nsfw channels or in dm's").await?;
             return Ok(());
         }
     }
 
     let reqwest = ReqwestClient::new();
-    let mut bot_msg = msg.channel_id.say(&ctx, "Obtaining manga... Please wait.").await?;
+    let mut bot_msg = msg.channel_id.say(ctx, "Obtaining manga... Please wait.").await?;
 
     let urls = {
         let search = args.message();
@@ -748,18 +751,21 @@ pub async fn n_hentai(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
                     .await?;
 
                 if resp.result.is_empty() {
-                    bot_msg.edit(&ctx, |m| m.content("There are no search results.")).await?;
+                    bot_msg.edit(ctx, |m| m.content("There are no search results.")).await?;
                     return Ok(());
                 }
 
                 let mut index = 0;
                 let id;
 
-                bot_msg.react(&ctx, "⬅️").await?;
-                bot_msg.react(&ctx, "➡️").await?;
-                bot_msg.react(&ctx, "✅").await?;
+                let left = ReactionType::Unicode(String::from("⬅️"));
+                let right = ReactionType::Unicode(String::from("➡️"));
 
-                bot_msg.edit(&ctx, |m| {
+                bot_msg.react(ctx, left).await?;
+                bot_msg.react(ctx, right).await?;
+                bot_msg.react(ctx, '✅').await?;
+
+                bot_msg.edit(ctx, |m| {
                     m.content(&resp.result[index].id);
                     m.embed(|e| {
                         e.title(&resp.result[index].title.english);
@@ -789,7 +795,7 @@ pub async fn n_hentai(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
                 }).await?;
 
                 loop {
-                    if let Some(reaction) = &bot_msg.await_reaction(&ctx).author_id(msg.author.id.0).timeout(Duration::from_secs(30)).await {
+                    if let Some(reaction) = &bot_msg.await_reaction(ctx).author_id(msg.author.id.0).timeout(Duration::from_secs(30)).await {
                         let emoji = &reaction.as_inner_ref().emoji;
 
                         match emoji.as_data().as_str() {
@@ -809,7 +815,7 @@ pub async fn n_hentai(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
                             },
                             _ => (),
                         }
-                        bot_msg.edit(&ctx, |m| {
+                        bot_msg.edit(ctx, |m| {
                             m.content(&resp.result[index].id);
                             m.embed(|e| {
                                 e.title(&resp.result[index].title.english);
@@ -837,13 +843,13 @@ pub async fn n_hentai(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
                                 })
                             })
                         }).await?;
-                        reaction.as_inner_ref().delete(&ctx).await?;
+                        reaction.as_inner_ref().delete(ctx).await?;
                     } else {
-                        bot_msg.edit(&ctx, |m| {
+                        bot_msg.edit(ctx, |m| {
                             m.content("Timeout")
                         }).await?;
                         ctx.http.edit_message(bot_msg.channel_id.0, bot_msg.id.0, &serde_json::json!({"flags" : 4})).await?;
-                        bot_msg.delete_reactions(&ctx).await?;
+                        bot_msg.delete_reactions(ctx).await?;
                         return Ok(());
                     };
                 }
@@ -864,12 +870,15 @@ pub async fn n_hentai(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
         .json::<NHentaiSearchResult>()
         .await?;
 
-    bot_msg.react(&ctx, "⬅️").await?;
-    bot_msg.react(&ctx, "➡️").await?;
+    let left = ReactionType::Unicode(String::from("⬅️"));
+    let right = ReactionType::Unicode(String::from("➡️"));
+
+    bot_msg.react(ctx, left).await?;
+    bot_msg.react(ctx, right).await?;
 
     let mut index = 0;
 
-    bot_msg.edit(&ctx, |m| {
+    bot_msg.edit(ctx, |m| {
         m.content(&resp.id);
         m.embed(|e| {
             e.title(&resp.title.pretty);
@@ -899,7 +908,7 @@ pub async fn n_hentai(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
     }).await?;
 
     loop {
-        if let Some(reaction) = &bot_msg.await_reaction(&ctx).author_id(msg.author.id.0).timeout(Duration::from_secs(120)).await {
+        if let Some(reaction) = &bot_msg.await_reaction(ctx).author_id(msg.author.id.0).timeout(Duration::from_secs(120)).await {
             let emoji = &reaction.as_inner_ref().emoji;
 
             match emoji.as_data().as_str() {
@@ -916,9 +925,9 @@ pub async fn n_hentai(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
                 _ => (),
             }
 
-            reaction.as_inner_ref().delete(&ctx).await?;
+            reaction.as_inner_ref().delete(ctx).await?;
 
-            bot_msg.edit(&ctx, |m| {
+            bot_msg.edit(ctx, |m| {
                 m.content(&resp.id);
                 m.embed(|e| {
                     e.title(&resp.title.pretty);
@@ -944,7 +953,7 @@ pub async fn n_hentai(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
             }).await?;
 
         } else {
-            bot_msg.edit(&ctx, |m| {
+            bot_msg.edit(ctx, |m| {
                 m.embed(|e| {
                     e.title(&resp.title.pretty);
                     e.url(format!("https://nhentai.net/g/{}/", &resp.id));
@@ -955,7 +964,7 @@ pub async fn n_hentai(ctx: &mut Context, msg: &Message, args: Args) -> CommandRe
                     }))
                 })
             }).await?;
-            bot_msg.delete_reactions(&ctx).await?;
+            bot_msg.delete_reactions(ctx).await?;
             break
         };
     }

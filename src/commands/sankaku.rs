@@ -48,7 +48,7 @@ struct SankakuData {
 
 #[command]
 #[aliases(idol_complex, idolcomplex, sankaku_idol, sankakuidol)]
-pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let (login, pass) = {
         let data = ctx.data.read().await; // set inmutable global data.
         let tokens = data.get::<Tokens>().unwrap(); 
@@ -58,7 +58,7 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
         (login, pass)
     };
 
-    let channel = &ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
+    let channel = ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
     // Checks if the command was invoked on a DM
     let dm_channel = msg.guild_id == None;
 
@@ -97,7 +97,7 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
         .await?;
 
     if resp.is_empty() {
-        msg.channel_id.say(&ctx, "No posts match the provided tags.").await?;
+        msg.channel_id.say(ctx, "No posts match the provided tags.").await?;
         return Ok(());
     }
 
@@ -135,7 +135,7 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
                 }
             }
             if y > (&resp.len()*2) {
-                msg.channel_id.say(&ctx, "All the content matching the requested tags is too big to be sent or illegal.").await?;
+                msg.channel_id.say(ctx, "All the content matching the requested tags is too big to be sent or illegal.").await?;
                 return Ok(());
             }
         }
@@ -180,7 +180,7 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
         fields.push(("Source", &source_md, true));
     }
 
-    msg.channel_id.send_message(&ctx, |m| {
+    msg.channel_id.send_message(ctx, |m| {
         m.add_file(attachment);
         m.embed(|e| {
             e.image(format!("attachment://{}", filename));
@@ -198,8 +198,8 @@ pub async fn idol(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
 
 #[command]
 #[aliases(sankaku, complex, sc, sankakuchan, sankakublack, sankakuwhite, sankaku_chan, sankaku_black, sankaku_white, sankaku_complex)]
-pub async fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    let channel = &ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
+pub async fn chan(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let channel = ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
     // Checks if the command was invoked on a DM
     let dm_channel = msg.guild_id == None;
 
@@ -240,14 +240,14 @@ pub async fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
     let resp = match raw_resp {
         Ok(x) => x,
         Err(_) => {
-            msg.reply(&ctx, "There's a 4 tag limit to the requests.\nWhat counts as a tag? Most of the tags that have `:` on the name don't count as a tag.").await?;
+            msg.reply(ctx, "There's a 4 tag limit to the requests.\nWhat counts as a tag? Most of the tags that have `:` on the name don't count as a tag.").await?;
             return Ok(());
         }
     };
 
 
     if resp.is_empty() {
-        msg.channel_id.say(&ctx, "No posts match the provided tags.").await?;
+        msg.channel_id.say(ctx, "No posts match the provided tags.").await?;
         return Ok(());
     }
 
@@ -285,7 +285,7 @@ pub async fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
                 }
             }
             if y > (&resp.len()*2) {
-                msg.channel_id.say(&ctx, "All the content matching the requested tags is too big to be sent or illegal.").await?;
+                msg.channel_id.say(ctx, "All the content matching the requested tags is too big to be sent or illegal.").await?;
                 return Ok(());
             }
         }
@@ -336,7 +336,7 @@ pub async fn chan(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
     }
 
 
-    msg.channel_id.send_message(&ctx, |m| {
+    msg.channel_id.send_message(ctx, |m| {
         m.add_file(attachment);
         m.embed(|e| {
             e.image(format!("attachment://{}", filename));
