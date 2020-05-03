@@ -304,7 +304,12 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
                     .json::<TwitchUserData>()
                     .await?;
 
-                let game_name = game_resp.data[0].name.clone().unwrap_or("No Game".to_string());
+                let game_data = game_resp.data.get(0);
+                let game_name = if let Some(x) = game_data {
+                    x.name.clone().unwrap_or("No Game".to_string())
+                } else {
+                    "Unknown game".to_string()
+                }
                 let streamer_name = notification_place.streamer.clone();
 
                 let message = ChannelId(notification_place.channel_id.unwrap() as u64).send_message(&ctx, |m| {
