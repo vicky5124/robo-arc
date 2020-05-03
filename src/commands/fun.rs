@@ -54,12 +54,14 @@ static IV: [u8; 16] =  [41, 61, 154, 40, 255, 51, 217, 146, 228, 10, 58, 62, 217
 #[name = "bot_has_manage_messages"]
 async fn bot_has_manage_messages_check(ctx: &Context, msg: &Message) -> CheckResult {
     let bot_id = (ctx.cache.read().await).user.id.0.clone();
-    if !ctx.http.get_member(msg.guild_id.unwrap().0, bot_id)
+    if !msg.channel(ctx)
         .await
-        .expect("What even")
-        .permissions(ctx)
+        .unwrap()
+        .guild()
+        .unwrap()
+        .permissions_for_user(ctx, bot_id)
         .await
-        .expect("What even 2")
+        .expect("what even")
         .manage_messages()
     {
         CheckResult::new_user("I'm unable to run this command due to missing the `Manage Messages` permission.")
