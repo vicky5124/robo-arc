@@ -187,10 +187,12 @@ async fn check_changes(data: &TwitchStreamData, sent_streams: Arc<RwLock<Vec<Twi
 }
 
 async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
-    let token = {
+    let (token, client_id) = {
         let data_read = ctx.data.read().await;
         let tokens = data_read.get::<Tokens>().unwrap();
-        tokens["twitch"].as_str().unwrap().to_string()
+        let token = tokens["twitch"].as_str().unwrap().to_string();
+        let client_id = tokens["twitch_client_id"].as_str().unwrap().to_string();
+        (token, client_id)
     };
 
     let data_read = ctx.data.read().await;
@@ -207,6 +209,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
         let url = Url::parse_with_params("https://api.twitch.tv/helix/streams", &[("user_login", &i.streamer)])?;
         let mut headers = HeaderMap::new();
         headers.insert(AUTHORIZATION, format!("Bearer {}", token).parse().unwrap());
+        headers.insert("Client-ID", format!("{}", client_id).parse().unwrap());
 
         let resp = reqwest.get(url)
             .headers(headers.clone())
