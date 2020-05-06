@@ -141,6 +141,7 @@ pub struct Booru {
     names: Vec<String>, // Default Vec<String>[String::new()]
     url: String, // String::new()
     typ: u8, // 0
+    post_url: String,
 }
 
 // Because "boorus.json" boorus key is a list of values.

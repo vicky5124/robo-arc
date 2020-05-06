@@ -124,6 +124,8 @@ struct Tags {
 // defining the Post type to be used for the xml deserialized on the Posts vector.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 struct Post {
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    id: u64,
     score: Option<String>,
     actual_score: Option<String>,
     source: Option<String>,
@@ -138,6 +140,8 @@ struct Post {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 struct PostE621 {
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    id: u64,
     score: Option<ScoreData>,
     actual_score: Option<String>,
     source: Option<String>,
@@ -327,13 +331,13 @@ pub async fn get_booru(ctx: &Context, msg: &Message, booru: &Booru, args: Args) 
     };
     
     // Sets the score the post has. this score is basically how many favorites the post has.
-    let mut score = choice.actual_score.unwrap_or("0".to_string()).to_string();
+    let mut score = choice.actual_score.clone().unwrap_or("0".to_string()).to_string();
     if score == "".to_string() {
         score = "0".to_string();
     }
     let score_string = score.to_string();
     // Changes the single letter ratings into the more descriptive names.
-    let rating = match &choice.rating.unwrap_or_default()[..] {
+    let rating = match &choice.rating.clone().unwrap_or_default()[..] {
         "s" => "Safe".to_string(),
         "q" => "Questionable".to_string(),
         "e" => "Explicit".to_string(),
@@ -359,6 +363,8 @@ pub async fn get_booru(ctx: &Context, msg: &Message, booru: &Booru, args: Args) 
     // builds a message with an embed containing any data used.
     msg.channel_id.send_message(ctx, |m| { // say method doesn't work for the message builder.
         m.embed( |e| {
+            e.title("Original Post");
+            e.url(format!("{}{}", &booru.post_url, &choice.id));
             e.description(format!("[Sample]({}) | [Full Size]({})", &sample_size, &full_size));
             e.image(sample_size);
             e.fields(fields);

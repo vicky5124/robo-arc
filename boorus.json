@@ -3,57 +3,68 @@
         {
             "names" : ["e621", "e6", "621", "furry", "yiff"],
             "url" : "e621.net",
-            "typ" : 4
+            "typ" : 4,
+            "post_url" : "https://e621.net/posts/"
         },
         {
             "names" : ["furrybooru", "furryb","fur"],
             "url" : "furry.booru.org",
-            "typ" : 1
+            "typ" : 1,
+            "post_url" : "https://furry.booru.org/index.php?page=post&s=view&id="
         },
         {
             "names" : ["realbooru", "rb", "rbooru", "realb"],
             "url" : "realbooru.com",
-            "typ" : 1
+            "typ" : 1,
+            "post_url" : "https://realbooru.com/index.php?page=post&s=view&id="
         },
         {
             "names" : ["safebooru", "safeb", "sbooru", "safe", "sb"],
             "url" : "safebooru.org",
-            "typ" : 1
+            "typ" : 1,
+            "post_url" : "https://safebooru.org/index.php?page=post&s=view&id="
         },
         {
             "names" : ["gelbooru", "gelb", "gbooru", "gb"],
             "url" : "gelbooru.com",
-            "typ" : 1
+            "typ" : 1,
+            "post_url" : "https://gelbooru.com/index.php?page=post&s=view&id="
         },
         {
             "names" : ["rule34", "r34", "34", "xxx"],
             "url" : "rule34.xxx",
-            "typ" : 1
+            "typ" : 1,
+            "post_url" : "https://rule34.xxx/index.php?page=post&s=view&id="
         },
         {
             "names" : ["konachan", "kc", "konac", "kchan"],
             "url" : "konachan.com",
-            "typ" : 2
+            "typ" : 2,
+            "post_url" : "https://konachan.com/post/show/"
         },
         {
             "names" : ["hypnohub", "hypno", "hypnob", "hypnobooru", "hypnohubb", "hypnohubbooru", "hh"],
             "url" : "hypnohub.net",
-            "typ" : 2
+            "typ" : 2,
+            "post_url" : "https://hypnohub.net/post/show/"
         },
         {
             "names" : ["danbooru", "danb", "db", "dbooru"],
             "url" : "danbooru.donmai.us",
-            "typ" : 2
+            "typ" : 2,
+            "post_url" : "https://danbooru.donmai.us/post/show/"
         },
         {
             "names" : ["yandere", "yande", "yre", "yd", "yr"],
             "url" : "yande.re",
-            "typ" : 2
+            "typ" : 2,
+            "post_url" : "https://yande.re/post/show/"
         },
         {
             "names" : ["behoimi", "bhimi", "bhm", "3db"],
             "url" : "behoimi.org",
-            "typ" : 3
+            "typ" : 3,
+            "post_url" : "http://behoimi.org/post/show/"
         }
     ]
 }
