@@ -135,7 +135,7 @@ pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 }
             }
             if y > (&resp.len()*2) {
-                msg.channel_id.say(ctx, "All the content matching the requested tags is too big to be sent or illegal.").await?;
+                msg.channel_id.say(ctx, "All the content matching the requested tags is either too large, unsafe or illegal to be sent.").await?;
                 return Ok(());
             }
         }

@@ -257,7 +257,13 @@ pub async fn get_booru(ctx: &Context, msg: &Message, booru: &Booru, args: Args) 
 
         new_posts
     } else  {
-        let mut posts: Posts = quick_xml::de::from_str(&resp.as_str())?;
+        let posts_result = quick_xml::de::from_str::<Posts>(&resp.as_str());
+        if let Err(_) = posts_result {
+            msg.reply(ctx, "There are no posts containing the requested tags.").await?;
+            return Ok(());
+        }
+
+        let mut posts = posts_result.unwrap();
         for (index, post) in posts.clone().post.iter().enumerate() {
             posts.post[index].actual_score = post.score.clone();
         }
@@ -292,7 +298,7 @@ pub async fn get_booru(ctx: &Context, msg: &Message, booru: &Booru, args: Args) 
                 break;
             }
             if y > (&resp.len()*2) {
-                msg.channel_id.say(ctx, "All the content matching the requested tags is too big to be sent or illegal.").await?;
+                msg.channel_id.say(ctx, "All the content matching the requested tags is either too large, unsafe or illegal to be sent.").await?;
                 return Ok(());
             }
         }
