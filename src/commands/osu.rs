@@ -268,7 +268,8 @@ pub struct EventData {
 }
 
 fn pacman(value: &str) -> String {
-    let x = value.split('.').nth(1).unwrap()[..3].parse::<u32>().unwrap();
+    let mod_value = value.to_owned() + "000";
+    let x = mod_value.split('.').nth(1).unwrap()[..3].parse::<u32>().unwrap();
     let tm = x / 50;
 
     let mut s = "".to_string();
