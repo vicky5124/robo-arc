@@ -1018,11 +1018,13 @@ async fn recent(ctx: &Context, msg: &Message, arguments: Args) -> CommandResult 
                 _ => (),
             }
 
-            short_recent_builder(ctx.http.clone(), &event_data, bot_msg.clone(), page).await?;
+            if let Err(_) = short_recent_builder(ctx.http.clone(), &event_data, bot_msg.clone(), page).await {
+                break;
+            }
             reaction.as_inner_ref().delete(ctx).await?;
         } else {
-            bot_msg.delete_reactions(ctx).await?;
-            break
+            let _ = bot_msg.delete_reactions(ctx).await;
+            break;
         };
     }
 

@@ -927,7 +927,7 @@ pub async fn n_hentai(ctx: &Context, msg: &Message, args: Args) -> CommandResult
 
             reaction.as_inner_ref().delete(ctx).await?;
 
-            bot_msg.edit(ctx, |m| {
+            if let Err(_) = bot_msg.edit(ctx, |m| {
                 m.content(&resp.id);
                 m.embed(|e| {
                     e.title(&resp.title.pretty);
@@ -950,10 +950,12 @@ pub async fn n_hentai(ctx: &Context, msg: &Message, args: Args) -> CommandResult
                         f.text(format!("{}/{} | {} Favs", index + 1,&resp.num_pages, &resp.num_favorites))
                     })
                 })
-            }).await?;
+            }).await {
+                break
+            };
 
         } else {
-            bot_msg.edit(ctx, |m| {
+            if let Err(_) = bot_msg.edit(ctx, |m| {
                 m.embed(|e| {
                     e.title(&resp.title.pretty);
                     e.url(format!("https://nhentai.net/g/{}/", &resp.id));
@@ -963,7 +965,9 @@ pub async fn n_hentai(ctx: &Context, msg: &Message, args: Args) -> CommandResult
                         tags
                     }))
                 })
-            }).await?;
+            }).await {
+                break
+            };
             bot_msg.delete_reactions(ctx).await?;
             break
         };
