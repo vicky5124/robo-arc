@@ -124,7 +124,7 @@ pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 } else {
                     let mut is_unsafe = false;
                     for tag in &x.tags {
-                        if SAFE_BANLIST.contains(&tag.name.as_str()) {
+                        if SAFE_BANLIST.contains(&tag.name.as_str()) || &x.rating != "s" {
                             is_unsafe = true;
                         }
                     }
@@ -274,7 +274,7 @@ pub async fn chan(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 } else {
                     let mut is_unsafe = false;
                     for tag in &x.tags {
-                        if SAFE_BANLIST.contains(&tag.name.as_str()) {
+                        if SAFE_BANLIST.contains(&tag.name.as_str()) || x.rating != "s" {
                             is_unsafe = true;
                         }
                     }

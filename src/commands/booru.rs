@@ -282,7 +282,7 @@ pub async fn get_booru(ctx: &Context, msg: &Message, booru: &Booru, args: Args) 
                 }
             } else {
                 for tag in x.clone().tags.unwrap_or("gore".to_string()).split(' ').into_iter() {
-                    if SAFE_BANLIST.contains(&tag) {
+                    if SAFE_BANLIST.contains(&tag) || x.clone().rating.unwrap_or("x".to_string()) != "s" {
                         is_unsafe = true;
                     }
                 }

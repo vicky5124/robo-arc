@@ -1,9 +1,9 @@
 use serenity::framework::standard::Args;
 use rand::Rng;
 
-pub static SAFE_BANLIST: [&str; 11] = ["swastika", "gore", "guro", "smoking", "jailbait", "extreme_content", "extremely_large_filesize", "pussy", "dick", "nude", "partial_nude"];
+pub static SAFE_BANLIST: [&str; 12] = ["swastika", "gore", "guro", "smoking", "jailbait", "extreme_content", "extremely_large_filesize", "pussy", "dick", "nude", "partial_nude", "tagme"];
 
-pub static UNSAFE_BANLIST: [&str; 16] = ["loli", "lolicon", "shota", "shotacon", "swastika", "gore", "guro", "smoking", "underage", "underaged", "jailbait", "extreme_content", "extremely_large_filesize", "contentious_content", "cub", "young"];
+pub static UNSAFE_BANLIST: [&str; 17] = ["loli", "lolicon", "shota", "shotacon", "swastika", "gore", "guro", "smoking", "underage", "underaged", "jailbait", "extreme_content", "extremely_large_filesize", "contentious_content", "cub", "young", "tagme"];
 
 // This function parses the arguments on the booru commands and returns a list of the tags.
 pub async fn obtain_tags_unsafe(raw_args: Args) -> Vec<String> {
@@ -54,7 +54,7 @@ pub async fn obtain_tags_safe(raw_args: Args) -> Vec<String> {
         // we don't want to search for images other than safe rating.
         // we also block -rating: because you can't search "rating:Safe -rating:Sage" in most
         // boorus. It just crashes the search.
-        if !arg.starts_with("rating:") || !arg.starts_with("-rating:") {
+        if !arg.contains("rating:") {
             tags.push(arg);
         }
     }
