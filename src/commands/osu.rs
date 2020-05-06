@@ -39,8 +39,7 @@ use num_format::{
     ToFormattedString,
 };
 
-use regex::Regex;
-use reqwest;
+use reqwest::Url;
 use serde::Deserialize;
 
 // This is a map to convert the bitwhise number obtained from the api
@@ -350,12 +349,12 @@ async fn get_osu_id(name: &str, osu_key: &str) -> Result<i32, Box<dyn std::error
 
 // Requests to the api the user data
 async fn get_osu_user(name: &str, osu_key: &str) -> Result<Vec<OsuUserData>, Box<dyn std::error::Error>> {
-    let re = Regex::new("[^0-9A-Za-z\\[\\]'_ ]").unwrap();
-    let mut sanitized_name = re.replace_all(name, "").into_owned();
-    sanitized_name = sanitized_name.replace(" ", "%20");
-
-    let url = format!("https://osu.ppy.sh/api/get_user?k={}&u={}&type=string", osu_key, sanitized_name);
-    let resp = reqwest::get(&url)
+    let url = Url::parse_with_params("https://osu.ppy.sh/api/get_user", &[
+        ("k", osu_key),
+        ("u", name),
+        ("type", "string"),
+    ])?;
+    let resp = reqwest::get(url)
         .await?
         .json::<Vec<OsuUserData>>()
         .await?;
@@ -365,12 +364,24 @@ async fn get_osu_user(name: &str, osu_key: &str) -> Result<Vec<OsuUserData>, Box
 // Requests to the api the scores of a map 
 async fn get_osu_scores(user_id: i32, user_name: &str, map_id: u64, mode: i32, osu_key: &str) -> Result<Vec<OsuScores>, Box<dyn std::error::Error>> {
     let url = if user_id != 0 {
-        format!("https://osu.ppy.sh/api/get_scores?k={}&u={}&b={}&m={}&type=id", osu_key, user_id, map_id, mode)
+        Url::parse_with_params("https://osu.ppy.sh/api/get_scores", &[
+            ("k", osu_key),
+            ("u", &user_id.to_string()),
+            ("b", &map_id.to_string()),
+            ("m", &mode.to_string()),
+            ("type", "id"),
+        ])?
     } else {
-        format!("https://osu.ppy.sh/api/get_scores?k={}&u={}&b={}&m={}&type=string", osu_key, user_name, map_id, mode)
+        Url::parse_with_params("https://osu.ppy.sh/api/get_scores", &[
+            ("k", osu_key),
+            ("u", user_name),
+            ("b", &map_id.to_string()),
+            ("m", &mode.to_string()),
+            ("type", "string"),
+        ])?
     };
 
-    let resp = reqwest::get(&url)
+    let resp = reqwest::get(url)
         .await?
         .json::<Vec<OsuScores>>()
         .await?;
