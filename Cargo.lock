@@ -44,6 +44,7 @@ name = "arc_bot"
 version = "0.1.13-alpha"
 dependencies = [
  "bitflags",
+ "dotenv",
  "futures",
  "hex",
  "http",
@@ -1358,8 +1359,7 @@ dependencies = [
 [[package]]
 name = "photon-rs"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57003202274fc593e3be13ef45670adc519b3b932f8e6757e01ea0793b4a2ea5"
+source = "git+https://github.com/silvia-odwyer/photon#febf48643102412850f4771511821d305f04714e"
 dependencies = [
  "base64 0.11.0",
  "console_error_panic_hook",

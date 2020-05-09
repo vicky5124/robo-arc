@@ -52,6 +52,7 @@ use std::{
 
 use tokio::sync::Mutex;
 
+use dotenv;
 use tracing::{
     // Log macros.
     info,
@@ -62,7 +63,10 @@ use tracing::{
     instrument
 };
 
-use tracing_subscriber::FmtSubscriber;
+use tracing_subscriber::{
+    FmtSubscriber,
+    EnvFilter,
+};
 use tracing_log::LogTracer;
 //use tracing_futures::Instrument;
 //use log;
@@ -672,6 +676,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
 
+
     // gets the data from the config.toml file
     let configuration = contents.parse::<Value>().unwrap();
     
@@ -691,10 +696,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         info!("Tracer initialized.");
 
-        let subscriber = FmtSubscriber::builder()
-            .with_max_level(level)
-            .finish();
-        tracing::subscriber::set_global_default(subscriber)?;
+        if let Ok(_) = dotenv::dotenv() {
+            let subscriber = FmtSubscriber::builder()
+                .with_env_filter(EnvFilter::from_default_env())
+                .finish();
+            tracing::subscriber::set_global_default(subscriber)?;
+        } else {
+            let subscriber = FmtSubscriber::builder()
+                .with_max_level(level)
+                .finish();
+            tracing::subscriber::set_global_default(subscriber)?;
+        };
+
 
         info!("Subscriber initialized.");
     }
