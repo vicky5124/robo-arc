@@ -22,6 +22,7 @@ futures = "0.3.4" # https://github.com/rust-lang/futures-rs
 http = "0.2.1" # https://github.com/hyperium/http
 rust-crypto = "0.2.36" # https://github.com/dagenix/rust-crypto
 hex = "0.4.2" # https://github.com/KokaKiwi/rust-hex
+photon-rs = "0.2.0" # 
  
 # https://github.com/rust-random/rand
 [dependencies.rand]

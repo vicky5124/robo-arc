@@ -1,11 +1,21 @@
 use image;
+use photon_rs::{
+    PhotonImage,
+    native::open_image,
+    multiple::blend,
+    transform::{
+        resize,
+        SamplingFilter,
+    },
+};
 
-use std::fs::File;
-use std::io::Write;
+//use std::fs::File;
+//use std::io::Write;
 use std::borrow::Cow;
 use std::sync::{
     Arc,
     Mutex,
+    RwLock,
 };
 
 use serenity::{
@@ -20,35 +30,41 @@ use serenity::{
 };
 use tokio::task::block_in_place;
 
-async fn gay(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error>>{
-    // Load the image as a buffer.
-    let imgbuf = image::load_from_memory(&image_vec)?
-        .into_rgba();
+async fn pride_image(image_vec: &[u8], name: String) -> Result<Vec<u8>, Box<dyn std::error::Error>>{
+    let mut og_image = PhotonImage::new_from_byteslice(image_vec.to_vec());
+    let pride_path = format!("pride/{}.png", name);
+    let mut pride_image = open_image(Box::leak(pride_path.into_boxed_str()));
 
-    let x = imgbuf.width();
-    let y = imgbuf.height();
-    let (mut pos_x, mut pos_y, mut iteration) = (0, 0, 0);
+    let og_image_arc = Arc::new(RwLock::new(&mut og_image));
+    let og_image_clone = Arc::clone(&og_image_arc);
+    let og_image_clone_clone = Arc::clone(&og_image_arc);
 
-    let mut imgbuf_clone = imgbuf.clone();
-    let mut gay_bytes = Vec::new();
+    block_in_place(move || {
+        pride_image = {
+            let og_x = og_image_clone_clone.read().unwrap().get_width();
+            let og_y = og_image_clone_clone.read().unwrap().get_height();
 
-    //imgbuf = image::imageops::resize(&imgbuf, 100, 100, image::imageops::FilterType::Triangle);
-    while x > pos_x + 20 + iteration && y > pos_y + 20 + iteration {
-        iteration += 5;
-        pos_x += 20 + iteration;
-        pos_y += 20 + iteration;
+            resize(&pride_image, og_x, og_y, SamplingFilter::Nearest)
+        };
 
-        image::imageops::overlay(&mut imgbuf_clone, &imgbuf, pos_x, pos_y);
-    }
+        let mut og_img_mut = og_image_clone.write().unwrap();
 
-    // Save the image as “fractal.png”, the format is deduced from the path
-    // imgbuf.save("grayscale.png")?;
-    image::DynamicImage::ImageRgba8(imgbuf_clone)
-        .write_to(&mut gay_bytes, image::ImageOutputFormat::Jpeg(255))
-        .expect("There was an error writing the image.");
+        blend(&mut og_img_mut, &pride_image, "overlay");
+    });
 
-    Ok(gay_bytes.to_vec())
-    //Ok(Vec::new())
+    let mut result = Vec::new();
+
+    let raw_pixels = og_image.get_raw_pixels();
+    let width = og_image.get_width();
+    let height = og_image.get_height();
+
+    let img_buffer = image::ImageBuffer::from_vec(width, height, raw_pixels).unwrap();
+    image::DynamicImage::ImageRgba8(img_buffer)
+        .write_to(&mut result, image::ImageOutputFormat::Jpeg(255))?;
+
+
+    //save_image(result, "lol_test_overlay.png");
+    Ok(result)
 }
 
 async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error>>{
@@ -112,8 +128,8 @@ async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
                 let bytes = x.download().await?;
                 filename = &x.filename;
 
-                let mut file = File::create(filename)?;
-                file.write_all(&bytes)?;
+                //let mut file = File::create(filename)?;
+                //file.write_all(&bytes)?;
 
                 (x.url.to_owned(), bytes)
             }
@@ -150,9 +166,54 @@ async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
     Ok(())
 }
+
+/// Prides by adding a flag to the image.
+/// (broken with some image types) ([Issue 17](https://github.com/silvia-odwyer/photon/issues/17))
+///
+/// Default: gay_gradient
+/// Usage: `pride transgender_gradient` and attach an image.
+///
+/// Available flags:
+/// **Agender**
+/// - agender
+/// - agender_gradient
+///
+/// **Asexual**
+/// - asexual
+/// - asexual_gradient
+///
+/// **Bisexual**
+/// - bi
+/// - bi_feminine
+/// - bi_masculine
+/// - bi_gradient
+///
+/// **Gay**
+/// - gay
+/// - gay_gradient
+///
+/// **Lesbian (2018)**
+/// - lesbian
+/// - lesbian_gradient
+///
+/// **Non-Binary**
+/// - nonbinary
+/// - nonbinary_gradient
+///
+/// **Pansexual**
+/// - pan
+/// - pan_feminine
+/// - pan_masculine
+/// - pan_gradient
+///
+/// **Transgender**
+/// - transgender
+/// - transgender_reverse
+/// - transgender_gradient
 #[command]
-#[aliases(gay)]
-async fn pride(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+//#[aliases(gay)]
+async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let arg = if let Ok(x) = args.single::<String>() { x } else { "gay_gradient".to_string() };
     let first_attachment = &msg.attachments.get(0);
     let mut filename = &String::new();
 
@@ -176,8 +237,8 @@ async fn pride(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
                 let bytes = x.download().await?;
                 filename = &x.filename;
 
-                let mut file = File::create(filename)?;
-                file.write_all(&bytes)?;
+                //let mut file = File::create(filename)?;
+                //file.write_all(&bytes)?;
 
                 (x.url.to_owned(), bytes)
             }
@@ -194,7 +255,7 @@ async fn pride(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
     // Uploads the grayscaled image bytes as an attachment
     // this is necessary to do as im never saving the image, just have the bytes as a vector.
-    let grayscaled_bytes = gay(&bytes).await?;
+    let grayscaled_bytes = pride_image(&bytes, arg).await?;
     let attachment = AttachmentType::Bytes {
         data: Cow::from(grayscaled_bytes),
         filename: filename.to_owned(),
