@@ -229,7 +229,7 @@ async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 (err_message, vec![0])
             // else we download the image. Download returns a Result Vec<u8>
             } else {
-                if dimensions.unwrap().0 > 7680 || dimensions.unwrap().1 >  4320 {
+                if dimensions.unwrap().0 > 4096 || dimensions.unwrap().1 >  2160 {
                     msg.reply(ctx, "The provided image is too large").await?;
                     return Ok(());
                 }
