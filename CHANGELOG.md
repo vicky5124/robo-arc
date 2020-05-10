@@ -1,3 +1,27 @@
+# 0.1.14-alpha
+
+### Commands:
+- pride:
+  Mostly fixed, it fails in some situations.
+- recent:
+  Fixed unknown message error when the message gets deleted.
+- configure_osu:
+  Fixed improper username management.
+- osu_profile:
+  Fixed pacman not doing well with not long enough decimal points.
+
+### Notifications:
+- Twitch:
+  No longer fails in nonexisting games.
+  Updated to use the new authentication system.
+
+### Boorus:
+- Heavily improved content safety.
+- Blacklisted tagme.
+- Notify about nonexisting tags.
+- Added a link to the original post.
+
+
 # 0.1.13-alpha
 
 ### Events:
