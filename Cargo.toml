@@ -3,6 +3,11 @@ name = "arc_bot"
 version = "0.1.14-alpha"
 authors = ["nitsuga5124 <nitsuga5124@gmail.com>"]
 edition = "2018"
+license = "MPL-v2"
+readme = "README.md"
+description = "A Highly General-Purpose, Multi-Guild Discord bot"
+keywords = ["discord", "bot", "serenity"]
+repository = "https://gitlab.com/nitsuga5124/robo-arc/"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -24,7 +29,7 @@ rust-crypto = "0.2.36" # https://github.com/dagenix/rust-crypto
 hex = "0.4.2" # https://github.com/KokaKiwi/rust-hex
 #photon-rs = "0.2.0" # https://github.com/silvia-odwyer/photon
 photon-rs = { git = "https://github.com/silvia-odwyer/photon" }
-dotenv = "0.15.0" #
+dotenv = "0.15.0" # https://github.com/dotenv-rs/dotenv
  
 # https://github.com/rust-random/rand
 [dependencies.rand]
