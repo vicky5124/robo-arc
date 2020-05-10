@@ -6,3 +6,6 @@ config.toml
 i_want_to_see.txt
 *.log
 /algorythms
+/dev*
+*.dev
+Pip*
