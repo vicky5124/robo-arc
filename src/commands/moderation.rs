@@ -147,9 +147,9 @@ async fn ban(mut ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
     match member {
         Ok(m) => {
             if let Some(r) = reason {
-                m.ban(ctx, &r).await?;
+                m.ban_with_reason(ctx, 1, &r).await?;
             } else {
-                m.ban(ctx, &1).await?;
+                m.ban(ctx, 1).await?;
             }
             msg.reply(ctx, format!("Successfully banned member `{}#{}` with id `{}`", m.user.name, m.user.discriminator, m.user.id.0)).await?;
         },

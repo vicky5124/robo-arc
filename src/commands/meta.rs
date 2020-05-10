@@ -352,7 +352,9 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
             //e.field("Creator", "Tag: nitsuga5124#2207\nID: 182891574139682816", true);
             e.field("Hoster", format!("Tag: {}\nID: {}", hoster_tag, hoster_id), true);
             e.field("Memory usage", format!("Complete:\n`{} KB`\nBase:\n`{} KB`",
-                                    &full_mem.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en), &reasonable_mem.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en)), true);
+                                            &full_mem.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en),
+                                            &reasonable_mem.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en)
+                                            ), true);
             e.field("Guild Data", format!("Guilds: {}\nUsers: {}\nChannels: {}\nShards: {}", num_guilds, num_users, num_channels, num_shards), true);
 
             if let Some(x) = bot_icon {

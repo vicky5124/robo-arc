@@ -20,6 +20,7 @@ use serenity::{
 use serde_json;
 use regex::Regex;
 
+/// Joins me to the voice channel you are currently on.
 #[command]
 #[aliases("connect")]
 async fn join(ctx: &Context, msg: &Message) -> CommandResult {
@@ -62,8 +63,18 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
+/// Stops or skips the current song that's playing.
 #[command]
-#[aliases("stop", "skip")]
+#[aliases("skip")]
+async fn stop(ctx: &Context, msg: &Message) -> CommandResult {
+    let data = ctx.data.read().await;
+    let lava_client = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+    lava_client.stop(&msg.guild_id.unwrap()).await?;
+    Ok(())
+}
+
+/// Disconnects me from the voice channel if im in one.
+#[command]
 async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
     let guild_id = match ctx.cache.read().await.guild_channel(msg.channel_id) {
         Some(channel) => channel.read().await.guild_id,
@@ -81,6 +92,10 @@ async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
 
     if has_handler {
         manager.remove(guild_id);
+
+        let data = ctx.data.read().await;
+        let lava_client = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+        lava_client.destroy(&msg.guild_id.unwrap()).await?;
     } else {
         msg.reply(ctx, "Not in a voice channel").await?;
     }
@@ -88,6 +103,10 @@ async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
+/// Plays a song
+///
+/// Usage: `play starmachine2000`
+/// or `play https://www.youtube.com/watch?v=dQw4w9WgXcQ`
 #[command]
 #[min_args(1)]
 async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
@@ -132,7 +151,7 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             return Ok(());
         }
 
-        if let Err(why) = lava_client.play(&handler, &query_information.tracks[0]).await {
+        if let Err(why) = lava_client.play(&handler, &query_information.tracks[0]).start().await {
             msg.channel_id.say(ctx, format!("There was an error playing the audio: {}", why)).await?;
             return Ok(());
         };

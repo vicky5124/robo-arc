@@ -1,5 +1,6 @@
 use crate::{
     ConnectionPool,
+    Lavalink,
     Tokens,
     SentTwitchStreams,
     VoiceManager,
@@ -421,6 +422,10 @@ async fn check_empty_vc(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Err
                     if let Ok(members) = guild_channel.members(&ctx).await {
                         if members.len() == 1 {
                             manager.remove(guild_id);
+
+                            let data = ctx.data.read().await;
+                            let lava_client = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+                            lava_client.destroy(guild_id).await?;
                         }
                     }
             };
