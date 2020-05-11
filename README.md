@@ -1,9 +1,9 @@
 # **Robo Arc**
-Learning Rust project. Yes, im very original and full of ideas, so im remaking what i already did with python, but hopefully better this time.
+Learning Rust project. Yes, I'm very original and full of ideas, so I'm remaking what I already did with python, but hopefully better this time.
 
 ![Bot profile picture](PFP.png "Bot's profile picture")
 
-This bot is made using [serenity.rs](https://github.com/serenity-rs/serenity/) (currently using the development release [serenity.await](https://github.com/Lakelezz/serenity/blob/await/)), an async discord api wrapper for [Rust](https://www.rust-lang.org/)
+This bot is made using [serenity.rs](https://github.com/serenity-rs/serenity/) (currently using the development release [serenity.await](https://github.com/Lakelezz/serenity/blob/await/)), an async discord api wrapper for [Rust](https://www.rust-lang.org/).
 
 ## __Running the bot for yourself__
 
@@ -19,9 +19,9 @@ mv config.toml.example config.toml
 
 ### __**Discord token**__:
 
-First, create an application [Here](https://discordapp.com/developers/applications/)
+First, create an application [Here](https://discordapp.com/developers/applications/).
 \
-Go the thw newly created application and head over the `Bot` tab.
+Go to the newly created application and head over the `Bot` tab.
 \
 In here you create a bot, enable the Server Member Intent, and copy the token. The token is what will be put on the `discord` variable inside `config.toml`.
 \
@@ -35,11 +35,11 @@ In here you create a bot, enable the Server Member Intent, and copy the token. T
 \
     NOTE: You will need to create an account if you do not already have one.
 \
-    NOTE: Do not create more than 1 account in the case of already having one, it's a banable offence.
+    NOTE: Do not create more than 1 account in the case of already having one, it's a bannable offence.
 
 - __Sankaku__
 \
-    Create an account [HERE](https://idol.sankakucomplex.com/user/signup)
+    Create an account [HERE](https://idol.sankakucomplex.com/user/signup).
 \
     Obtain the "passhash" from the location [THIS](https://forum.sankakucomplex.com/t/channel-api-for-discord-integration/2204/7) image shows.
 \
@@ -48,11 +48,11 @@ In here you create a bot, enable the Server Member Intent, and copy the token. T
 
 ### __**PostgreSQL Database**__:
 
-You'll need to have a psql server running. If you don't know how, i recommend using docker. [Here's](https://www.youtube.com/watch?v=aHbE3pTyG-Q) a video that will help you with that.
+You'll need to have a psql server running. If you don't know how, I recommend using docker. [Here's](https://www.youtube.com/watch?v=aHbE3pTyG-Q) a video that will help you with that.
 
-    NOTE: if you are using windows, docker requires the hyper-V module to be enabled, which breaks other virualization software like VirtualBox or VMWare. If you use any of those software's, consider setting the database on the system natively.
+    NOTE: if you are using windows, docker requires the hyper-V module to be enabled, which breaks other virualization software like VirtualBox or VMWare. If you use any of those softwares, consider setting the database on the system natively.
 
-With a created database and you connected with a user, youll need to create different tables, required by the bot.
+With a created database and you connected with a user, you'll need to create different tables, required by the bot.
 ```sql
 CREATE TABLE public.osu_user (
     discord_id bigint NOT NULL,
@@ -155,7 +155,7 @@ It's as simple as just running:
 ```bash
 export DATABASE_URL="postgres://`postgres_username`:`postgres_user_password`@`postgres_ip`:`postgres_port`/`postgres_database`"
 # example: postgres://postgres:123456@localhost:5432/arcbot
-# this values are the same as the ones you put on config.toml
+# these values are the same as the ones you put on config.toml
 cargo run --release
 ```
 
