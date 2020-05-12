@@ -750,13 +750,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         .group(&META_GROUP) // Load `Meta` command group
         .group(&FUN_GROUP) // Load `Fun` command group
+        .group(&MUSIC_GROUP) // Load `music` command group
         .group(&OSU_GROUP) // Load `osu!` command group
-        .group(&MOD_GROUP) // Load `moderation` command group
         .group(&SANKAKU_GROUP) // Load `SankakuComplex` command group
         .group(&ALLBOORUS_GROUP) // Load `Boorus` command group
-        .group(&CONFIGURATION_GROUP) // Load `Configuration` command group
         .group(&IMAGEMANIPULATION_GROUP) // Load `image manipulaiton` command group
-        .group(&MUSIC_GROUP) // Load `music` command group
+        .group(&CONFIGURATION_GROUP) // Load `Configuration` command group
+        .group(&MOD_GROUP) // Load `moderation` command group
         .help(&MY_HELP); // Load the custom help command.
 
     let mut client = Client::new(&bot_token)
