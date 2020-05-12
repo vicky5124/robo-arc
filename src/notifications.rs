@@ -425,7 +425,7 @@ async fn check_empty_vc(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Err
 
                             let data = ctx.data.read().await;
                             let lava_client = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
-                            lava_client.destroy(guild_id).await?;
+                            lava_client.write().await.destroy(guild_id).await?;
                         }
                     }
             };

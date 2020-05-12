@@ -209,7 +209,7 @@ impl TypeMapKey for VoiceManager {
 }
 
 impl TypeMapKey for Lavalink {
-    type Value = LavalinkClient;
+    type Value = Arc<RwLock<LavalinkClient>>;
 }
 
 impl TypeMapKey for SentTwitchStreams {
@@ -278,7 +278,7 @@ struct Mod;
 #[group("Music")]
 #[description = "All the voice and music related commands."]
 #[only_in("guilds")]
-#[commands(play, join, leave, stop)]
+#[commands(join, leave, play, stop, skip, seek, queue, now_playing)]
 struct Music;
 
 // The configuration command.
@@ -806,7 +806,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             lava_client.port = port.try_into().unwrap();
             lava_client.initialize().await?;
 
-            data.insert::<Lavalink>(lava_client);
+            data.insert::<Lavalink>(Arc::new(RwLock::new(lava_client)));
         }
 
         {
