@@ -61,9 +61,9 @@ async def _eval(ctx, *, code):
         await ctx.send(f'```{traceback.format_exc()}```')
         await ctx.message.add_reaction('❌')
 
-@BOT.event
-async def on_error(_):
-    return
+#@BOT.event
+#async def on_error(_):
+#    return
 
 @BOT.event
 async def on_command_error(_1, _2):
