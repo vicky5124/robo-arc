@@ -7,7 +7,10 @@ use std::{
     fs::File,
     io::prelude::*,
     process::id,
-    time::Duration,
+    time::{
+        Duration,
+        Instant,
+    },
 };
 
 use sqlx;
@@ -34,6 +37,7 @@ use num_format::{
 };
 use toml::Value;
 use tokio::process::Command;
+use serde_json::json;
 
 
 #[command] // Sets up a command
@@ -71,12 +75,18 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
         },
     };
    
-    let latency;
-    match runner.latency {
-        Some(ms) => latency = format!("{:.2}ms", ms.as_micros() as f32 / 1000.0),
-        _ => latency = String::new(),
-    }
-    msg.reply(ctx, format!("Ping? {}", latency)).await?;
+    let shard_latency = match runner.latency {
+        Some(ms) => format!("{:.2}ms", ms.as_micros() as f32 / 1000.0),
+        _ => String::new(),
+    };
+
+    let map = json!({"content" : "Calculating latency..."});
+
+    let now = Instant::now();
+    let mut message = ctx.http.send_message(msg.channel_id.0, &map).await?;
+    let rest_latency = now.elapsed().as_millis();
+
+    message.edit(ctx, |m| m.content(format!("Ping?\nGateway: {}\nREST: {}ms", shard_latency, rest_latency))).await?;
 
     Ok(())
 }
