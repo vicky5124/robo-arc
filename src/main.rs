@@ -32,6 +32,7 @@ use commands::fun::*; // Import everything from the fun module.
 use commands::moderation::*; // Import everything from the moderation module.
 use commands::configuration::*; // Import everything from the configuration module.
 use commands::music::*; // Import everything from the configuration module.
+use commands::dictionary::*; // Import everything from the dictionary module.
 
 use utils::database::obtain_pool; // Obtain the get_database function from the utilities.
 use utils::basic_functions::capitalize_first; // Obtain the capitalize_first function from the utilities.
@@ -47,7 +48,8 @@ use std::{
 
     // For having refferences between threads
     sync::Arc,
-    convert::TryInto
+    convert::TryInto,
+    time::Instant,
 };
 
 use tokio::sync::Mutex;
@@ -166,6 +168,7 @@ struct NotificationStatus; // This is the status of the thread checking for noti
 struct VoiceManager; //  This is the struct for the voice manager.
 struct Lavalink; //  This is the struct for the lavalink client.
 struct SentTwitchStreams; //  This is the struct for the stream data that has already been sent.
+struct Uptime; //  This is for the startup time of the bot.
 
 // Implementing a type for each structure
 // This is made to make a Map<Struct, TypeValue>
@@ -214,6 +217,10 @@ impl TypeMapKey for Lavalink {
 
 impl TypeMapKey for SentTwitchStreams {
     type Value = Arc<RwLock<Vec<TwitchStreamData>>>;
+}
+
+impl TypeMapKey for Uptime {
+    type Value = Instant;
 }
 
 
@@ -273,6 +280,13 @@ struct Fun;
 #[description = "All the moderation related commands."]
 #[commands(kick, ban, clear)]
 struct Mod;
+
+// The dictionary command group.
+#[group("Dictionaries")]
+#[description = "All the dictionaries.
+If you just want english, you can call the dictionary command directly."]
+#[commands(dictionary_en, dictionary_es, dictionary_fr, dictionary_de, dictionary_it, dictionary_pt, dictionary_ja, dictionary_ko, dictionary_zh, dictionary_ru, dictionary_ar, dictionary_tr, dictionary_hi)]
+struct Dictionaries;
 
 // The music command group.
 #[group("Music")]
@@ -751,12 +765,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .group(&META_GROUP) // Load `Meta` command group
         .group(&FUN_GROUP) // Load `Fun` command group
         .group(&MUSIC_GROUP) // Load `music` command group
+        .group(&DICTIONARIES_GROUP) // Load `Dictionaries` command group
         .group(&OSU_GROUP) // Load `osu!` command group
         .group(&SANKAKU_GROUP) // Load `SankakuComplex` command group
         .group(&ALLBOORUS_GROUP) // Load `Boorus` command group
         .group(&IMAGEMANIPULATION_GROUP) // Load `image manipulaiton` command group
-        .group(&CONFIGURATION_GROUP) // Load `Configuration` command group
         .group(&MOD_GROUP) // Load `moderation` command group
+        .group(&CONFIGURATION_GROUP) // Load `Configuration` command group
         .help(&MY_HELP); // Load the custom help command.
 
     let mut client = Client::new(&bot_token)
@@ -790,6 +805,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         data.insert::<VoiceManager>(Arc::clone(&client.voice_manager));
         // Add the sent streams.
         data.insert::<SentTwitchStreams>(Arc::new(RwLock::new(Vec::new())));
+        data.insert::<Uptime>(Instant::now());
 
         {
             // TODO: get the real shard amount.

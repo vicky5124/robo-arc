@@ -7,3 +7,4 @@ pub mod fun;
 pub mod moderation;
 pub mod configuration;
 pub mod music;
+pub mod dictionary;

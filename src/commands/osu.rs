@@ -5,6 +5,10 @@ use crate::{
     Tokens,
     MY_HELP,
     OSU_GROUP,
+    utils::basic_functions::{
+        pacman,
+        seconds_to_days,
+    },
 };
 
 use serenity::{
@@ -265,37 +269,6 @@ pub struct EventData {
     user_db_data: Option<OsuUserDBData>,
     user_recent_raw: Option<Vec<OsuUserRecentData>>,
     osu_key: Option<String>,
-}
-
-fn pacman(value: &str) -> String {
-    let mod_value = value.to_owned() + "000";
-    let x = mod_value.split('.').nth(1).unwrap()[..3].parse::<u32>().unwrap();
-    let tm = x / 50;
-
-    let mut s = "".to_string();
-
-    for _ in 0..tm {
-        s += ". ";
-    }
-    s += "C ";
-
-    for _ in tm..20 {
-        s += "o ";
-    }
-    s
-}
-
-fn seconds_to_days(seconds: u64) -> String {
-    let days = seconds / 60 / 60 / 24;
-    let hours = seconds / 3600 % 24;
-    let minutes = seconds % 3600 / 60;
-    let sec = seconds % 3600 % 60;
-
-    if days == 0 {
-        format!("{}:{}:{}", hours, minutes, sec)
-    } else {
-        format!("{}D {}:{}:{}", days, hours, minutes, sec)
-    }
 }
 
 // Calculates the accuracy % from the number of 300's 100's 50's and misses.

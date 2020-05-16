@@ -1,10 +1,17 @@
 use crate::{
     ShardManagerContainer,
     ConnectionPool,
-    utils::database::obtain_pool,
+    utils::{
+        database::obtain_pool,
+        basic_functions::seconds_to_days,
+    },
+    Uptime,
 };
 use std::{
-    fs::File,
+    fs::{
+        File,
+        read_to_string,
+    },
     io::prelude::*,
     process::id,
     time::{
@@ -38,6 +45,7 @@ use num_format::{
 use toml::Value;
 use tokio::process::Command;
 use serde_json::json;
+use walkdir::WalkDir;
 
 
 #[command] // Sets up a command
@@ -305,6 +313,37 @@ async fn prefix(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases(info)]
 async fn about(ctx: &Context, msg: &Message) -> CommandResult {
+    let shard_latency = {
+        let data = ctx.data.read().await;
+        let shard_manager = data.get::<ShardManagerContainer>().unwrap();
+
+        let manager = shard_manager.lock().await;
+        let runners = manager.runners.lock().await;
+
+        let runner_raw = runners.get(&ShardId(ctx.shard_id));
+        if let Some(runner) = runner_raw {
+            match runner.latency {
+                Some(ms) => format!("{}ms", ms.as_millis()),
+                _ => "?ms".to_string(),
+            }
+        } else {
+            "?ms".to_string()
+        }
+    };
+
+    let uptime = {
+        let data = ctx.data.read().await;
+        let instant = data.get::<Uptime>().unwrap();
+        let duration = instant.elapsed();
+        seconds_to_days(duration.as_secs())
+    };
+
+    let map = json!({"content" : "Calculating latency..."});
+
+    let now = Instant::now();
+    let mut message = ctx.http.send_message(msg.channel_id.0, &map).await?;
+    let rest_latency = now.elapsed().as_millis();
+
     let pid = id().to_string();
 
     let full_stdout = Command::new("sh")
@@ -328,13 +367,6 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
     reasonable_mem.pop();
     reasonable_mem.pop();
 
-    let cache = ctx.cache.read().await;
-    let current_user = ctx.http.get_current_user().await?;
-    let app_info = ctx.http.get_current_application_info().await?;
-
-    let hoster_tag = &app_info.owner.tag();
-    let hoster_id = &app_info.owner.id;
-
     let version = {
         let mut file = File::open("Cargo.toml")?;
         let mut contents = String::new();
@@ -345,27 +377,61 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
         version.to_string()
     };
 
+    let (hoster_tag, hoster_id) = {
+        let app_info = ctx.http.get_current_application_info().await?;
+
+        (app_info.owner.tag(), app_info.owner.id)
+    };
+
+    let cache = ctx.cache.read().await;
+    let current_user = &cache.user;
+
     let bot_name = &current_user.name;
     let bot_icon = &current_user.avatar_url();
 
     let num_guilds = &cache.guilds.len();
     let num_shards = &cache.shard_count;
-    let num_users = &cache.users.len();
     let num_channels = &cache.channels.len();
+    let num_priv_channels = &cache.private_channels.len();
 
+    let mut c_blank = 0;
+    let mut c_comment = 0;
+    let mut c_code = 0;
+    let mut c_lines = 0;
+    let mut command_count = 0;
 
-    msg.channel_id.send_message(ctx, |m| {
+    for entry in WalkDir::new("src") {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        if path.is_file() {
+            let count = loc::count(path.to_str().unwrap());
+            let text = read_to_string(&path)?;
+
+            command_count += text.match_indices("#[command]").count();
+            c_blank += count.blank;
+            c_comment += count.comment;
+            c_code += count.code;
+            c_lines += count.lines;
+        }
+    }
+
+    message.edit(ctx, |m| {
+        m.content("");
         m.embed(|e| {
-            e.title(format!("**{}** - Version: {}", bot_name, version));
-            e.description("General Purpose Discord Bot made in [Rust](https://www.rust-lang.org/) using [serenity.rs](https://github.com/serenity-rs/serenity)\n\nHaving any issues? join the [Support Server](https://discord.gg/kH7z85n)");
+            e.title(format!("**{}** - v{}", bot_name, version));
+            e.url("https://gitlab.com/nitsuga5124/robo-arc");
+            e.description("General Purpose Discord Bot made in [Rust](https://www.rust-lang.org/) using [serenity.rs](https://github.com/serenity-rs/serenity)\n\nHaving any issues? join the [Support Server](https://discord.gg/kH7z85n)\nBe sure to `invite` me to your server if you like what i can do!");
 
             //e.field("Creator", "Tag: nitsuga5124#2207\nID: 182891574139682816", true);
-            e.field("Hoster", format!("Tag: {}\nID: {}", hoster_tag, hoster_id), true);
-            e.field("Memory usage", format!("Complete:\n`{} KB`\nBase:\n`{} KB`",
+            e.field("Statistics:", format!("Shards: {}\nGuilds: {}\nChannels: {}\nPrivate Channels: {}", num_shards, num_guilds, num_channels, num_priv_channels), true);
+            e.field("Lines of code:", format!("Blank: {}\nComment: {}\nCode: {}\nTotal Lines: {}", c_blank, c_comment, c_code, c_lines), true);
+            e.field("Currently hosted by:", format!("Tag: {}\nID: {}", hoster_tag, hoster_id), true);
+            e.field("Latency:", format!("Gateway:\n`{}`\nREST:\n`{}ms`", shard_latency, rest_latency), true);
+            e.field("Memory usage:", format!("Complete:\n`{} KB`\nBase:\n`{} KB`",
                                             &full_mem.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en),
                                             &reasonable_mem.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en)
                                             ), true);
-            e.field("Guild Data", format!("Guilds: {}\nUsers: {}\nChannels: {}\nShards: {}", num_guilds, num_users, num_channels, num_shards), true);
+            e.field("Somewhat Static Stats:", format!("Command Count:\n`{}`\nUptime:\n`{}`", command_count, uptime), true);
 
             if let Some(x) = bot_icon {
                 e.thumbnail(x);
