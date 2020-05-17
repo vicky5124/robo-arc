@@ -324,7 +324,7 @@ checksum = "0dbbb57365263e881e805dc77d94697c9118fd94d8da011240555aa7b23445bd"
 [[package]]
 name = "command_attr"
 version = "0.2.0"
-source = "git+https://github.com/Lakelezz/serenity/?branch=await#27262217083cf695ab382e905875d859ac3cbfa7"
+source = "git+https://github.com/Lakelezz/serenity/?branch=await#4cd6f4d9186f76d627d0aa90a68cd846cbc5c84e"
 dependencies = [
  "futures",
  "proc-macro2 1.0.13",
@@ -2086,7 +2086,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.8.6"
-source = "git+https://github.com/Lakelezz/serenity/?branch=await#27262217083cf695ab382e905875d859ac3cbfa7"
+source = "git+https://github.com/Lakelezz/serenity/?branch=await#4cd6f4d9186f76d627d0aa90a68cd846cbc5c84e"
 dependencies = [
  "async-trait",
  "async-tungstenite",

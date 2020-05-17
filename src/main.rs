@@ -595,11 +595,12 @@ async fn after(ctx: &Context, msg: &Message, cmd_name: &str, error: CommandResul
     // inform the user about an error when it happens.
     if let Err(why) = &error {
         error!("Error while running command {}", &cmd_name);
-        error!("Error {:?}", &error);
+        error!("{:?}", &error);
 
-        eprintln!("Error while running {}:\n{:?}", &cmd_name, &error);
         let err = why.0.to_string();
-        let _ = msg.channel_id.say(ctx, &err).await;
+        if let Err(_) = msg.channel_id.say(ctx, &err).await {
+            error!("Unable to send messages on channel id {}", &msg.channel_id.0);
+        };
     }
 }
 
