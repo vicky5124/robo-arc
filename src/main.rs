@@ -265,7 +265,7 @@ struct AllBoorus;
 // This group contains all the commands that manipulate images.
 #[group("Image Manipulation")]
 #[description = "All the image manipulaiton based commands."]
-#[commands(pride, gray)]
+#[commands(gray, pride, pride_pre_grayscaled)]
 struct ImageManipulation;
 
 // The FUN command group.

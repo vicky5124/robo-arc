@@ -101,6 +101,10 @@ async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Erro
     Ok(result.clone().to_vec())
 }
 
+/// Grayscales the attached image.
+/// - Currently only works with attached images, with a maximum size of 8k
+///
+/// Usage: `gray` and attach an image.
 #[command]
 #[aliases(grayscale)]
 async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
@@ -167,8 +171,8 @@ async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
 
-/// Prides by adding a flag to the image.
-/// (broken with some image types) ([Issue 17](https://github.com/silvia-odwyer/photon/issues/17))
+/// Prides the attached image.
+/// - Currently only works with attached images, with a maximum size of 8k
 ///
 /// Default: gay_gradient
 /// Usage: `pride transgender_gradient` and attach an image.
@@ -211,7 +215,6 @@ async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 /// - transgender_reverse
 /// - transgender_gradient
 #[command]
-//#[aliases(gay)]
 async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let arg = if let Ok(x) = args.single::<String>() { x } else { "gay_gradient".to_string() };
     let first_attachment = &msg.attachments.get(0);
@@ -229,7 +232,7 @@ async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 (err_message, vec![0])
             // else we download the image. Download returns a Result Vec<u8>
             } else {
-                if dimensions.unwrap().0 > 4096 || dimensions.unwrap().1 >  2160 {
+                if dimensions.unwrap().0 > 7680 || dimensions.unwrap().1 >  4320 {
                     msg.reply(ctx, "The provided image is too large").await?;
                     return Ok(());
                 }
@@ -255,9 +258,77 @@ async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
     // Uploads the grayscaled image bytes as an attachment
     // this is necessary to do as im never saving the image, just have the bytes as a vector.
-    let grayscaled_bytes = pride_image(&bytes, arg).await?;
+    let prided_bytes = pride_image(&bytes, arg).await?;
     let attachment = AttachmentType::Bytes {
-        data: Cow::from(grayscaled_bytes),
+        data: Cow::from(prided_bytes),
+        filename: filename.to_owned(),
+    };
+
+    // Sends an embed with a link to the original image ~~and the prided image attached~~.
+    msg.channel_id.send_message(ctx, |m| {
+        m.add_file(attachment);
+        m.embed(|e| {
+            e.title("Original Image");
+            e.url(image_url);
+            e.image(format!("attachment://{}", filename));
+            e
+        });
+        m
+    }).await?;
+
+    Ok(())
+}
+
+/// Same as `pride`, but it grayscales the image before applying the filter.
+#[command]
+#[aliases(pridegray, pride_gray, pride_grayscale, pridegrayscale, pg, pride_g, prideg, pgray, p_gray, p_grayscale, pgrayscale)]
+async fn pride_pre_grayscaled(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let arg = if let Ok(x) = args.single::<String>() { x } else { "gay_gradient".to_string() };
+    let first_attachment = &msg.attachments.get(0);
+    let mut filename = &String::new();
+
+    let (image_url, bytes) = match first_attachment {
+        // if there was an attachment on the first possition, unwrap it.
+        Some(x) => {
+            // get the dimensions of the image.
+            let dimensions = x.dimensions();
+
+            // if the dimensions is None, it means it's not an image, but a normal file, so we respond acordingly.
+            if dimensions == None { 
+                let err_message = "The provided file is not a valid image.".to_string();
+                (err_message, vec![0])
+            // else we download the image. Download returns a Result Vec<u8>
+            } else {
+                if dimensions.unwrap().0 > 7680 || dimensions.unwrap().1 >  4320 {
+                    msg.reply(ctx, "The provided image is too large").await?;
+                    return Ok(());
+                }
+
+                let bytes = x.download().await?;
+                filename = &x.filename;
+
+                //let mut file = File::create(filename)?;
+                //file.write_all(&bytes)?;
+
+                (x.url.to_owned(), bytes)
+            }
+        },
+        // else say that an image was not provided.
+        None => ("No image was provided.".to_string(), vec![0])
+    };
+
+    // if an error was returned from the previous checks, say the error and finish the command.
+    if bytes == vec![0] {
+        msg.channel_id.say(ctx, image_url).await?;
+        return Ok(());
+    }
+
+    // Uploads the grayscaled image bytes as an attachment
+    // this is necessary to do as im never saving the image, just have the bytes as a vector.
+    let grayscaled_bytes = grayscale(&bytes).await?;
+    let prided_bytes = pride_image(&grayscaled_bytes, arg).await?;
+    let attachment = AttachmentType::Bytes {
+        data: Cow::from(prided_bytes),
         filename: filename.to_owned(),
     };
 
