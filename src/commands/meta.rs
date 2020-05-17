@@ -233,7 +233,6 @@ async fn todo(ctx: &Context, msg: &Message) -> CommandResult {
 TODO:
 
 #Random/Fun
-Dictionary (dictionary search)
 Calculator (maths)
 Reminder (reminds you of a message after X time)
 
@@ -268,9 +267,6 @@ Logging (set a channel to log specific events)
 \"Fix behoimi\"
 Sauce (sends the source of an image, using iqdb and saucenao)
 Exclude (excludes tags automatically from your search)
-
-# Music
-\"Make a better lavalink wrapper for serenity\"
 ```").await?;
     Ok(())
 }

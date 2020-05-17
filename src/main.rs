@@ -628,7 +628,7 @@ async fn unrecognised_command(ctx: &Context, msg: &Message, command_name: &str) 
         if let Err(why) = booru {
             // Handle any error that may occur.
             let why = why.to_string();
-            let reason = format!("There was an error executing the command: {}", capitalize_first(&why).await);
+            let reason = format!("There was an error executing the command: {}", capitalize_first(&why));
             let _ = msg.channel_id.say(ctx, reason).await;
         }
     }

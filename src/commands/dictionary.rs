@@ -1,3 +1,4 @@
+use crate::utils::basic_functions::capitalize_first;
 use serenity::{
     prelude::Context,
     model::channel::Message,
@@ -22,7 +23,7 @@ pub struct DictionaryElement {
 #[derive(Debug, Deserialize)]
 pub struct Meaning {
     #[serde(rename = "partOfSpeech")]
-    pub part_of_speech: String,
+    pub part_of_speech: Option<String>,
     pub definitions: Vec<Definition>,
 }
 
@@ -50,12 +51,74 @@ async fn define(ctx: &Context, msg: &Message, lang: &str, word: String) -> Comma
     };
 
     for definition in &definitions {
-        dbg!(definition);
+        msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
+            embed.title(capitalize_first(&definition.word));
+
+            if let Some(origin) = &definition.origin {
+                if origin != &"".to_string() {
+                    embed.field("Origin:", &origin, true);
+                }
+            }
+
+            if let Some(phonetic) = &definition.phonetic {
+                if phonetic != &"".to_string() {
+                    embed.field("Phonetic pronounciation:", &phonetic, true);
+                }
+            }
+
+            let mut text_definitions = String::new();
+            for meaning in &definition.meanings {
+                if let Some(pos) = &meaning.part_of_speech {
+                    if pos != &"".to_string() {
+                        text_definitions += &format!("\n\n**{}**:\n", capitalize_first(&pos));
+                    } else {
+                        text_definitions += "\n\n**Unknown**:\n"
+                    }
+                } else {
+                    text_definitions += "\n\n**Unknown**:\n"
+                }
+
+                for definition in &meaning.definitions  {
+                    text_definitions += "\n**---**\n";
+                    text_definitions += "- Definition:\n";
+                    text_definitions += &definition.definition;
+                    if let Some(example) = &definition.example {
+                        if example != &"".to_string() {
+                            text_definitions += "\n- Example:\n";
+                            text_definitions += &example;
+                        }
+                    }
+                }
+            }
+            embed.description(&text_definitions)
+        })).await?;
     }
 
     Ok(())
 }
 
+/// Gives the definition of a word.
+///
+/// Usage:
+/// `define hello`
+/// `define ja こんにちは`
+///
+/// Supported languages:
+/// ```
+/// en -> English (Default)
+/// es -> Spanish
+/// fr -> French
+/// it -> Italian
+/// de -> German
+/// pt -> Brazilian Portuguese
+/// ja -> Japanese
+/// ko -> Korean
+/// zh -> Chinese (Simplified)
+/// hi -> Hindi
+/// ru -> Russian
+/// ar -> Arabic
+/// tr -> Turkish
+/// ```
 #[command]
 #[aliases(dict)]
 #[min_args(1)]
@@ -74,7 +137,7 @@ async fn dictionary(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
             let word = args.single_quoted::<String>()?;
             define(ctx, msg, "fr", word).await
         },
-        "ja" => {
+        "ja" | "jp" => {
             let word = args.single_quoted::<String>()?;
             define(ctx, msg, "ja", word).await
         },
@@ -90,7 +153,7 @@ async fn dictionary(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
             let word = args.single_quoted::<String>()?;
             define(ctx, msg, "it", word).await
         },
-        "ko" => {
+        "ko" | "kr" => {
             let word = args.single_quoted::<String>()?;
             define(ctx, msg, "ko", word).await
         },
@@ -110,7 +173,7 @@ async fn dictionary(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
             let word = args.single_quoted::<String>()?;
             define(ctx, msg, "hi", word).await
         },
-        "pt" => {
+        "pt" | "br" => {
             let word = args.single_quoted::<String>()?;
             define(ctx, msg, "pt", word).await
         },

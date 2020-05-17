@@ -558,7 +558,7 @@ pub async fn best_girl(ctx: &Context, msg: &Message, args: Args) -> CommandResul
         // add an exclamation mark to the end.
         name += "!";
         // output should look like "Kou from granblue fantasy!" from the original "koy_(granblue_fantasy)"
-        msg.channel_id.say(ctx, capitalize_first(&name).await).await?;
+        msg.channel_id.say(ctx, capitalize_first(&name)).await?;
     }
 
     // combine the command arguments with the saved tags on the database.
@@ -662,7 +662,7 @@ pub async fn best_boy(ctx: &Context, msg: &Message, args: Args) -> CommandResult
         // add an exclamation mark to the end.
         name += "!";
         // output should look like "Kou from granblue fantasy!" from the original "koy_(granblue_fantasy)"
-        msg.channel_id.say(ctx, capitalize_first(&name).await).await?;
+        msg.channel_id.say(ctx, capitalize_first(&name)).await?;
     }
 
     // combine the command arguments with the saved tags on the database.
