@@ -41,10 +41,9 @@ pub async fn parse_member(ctx: &Context, msg: &Message, member_name: String) -> 
         }
     } else {
         let guild = &msg.guild(ctx).await.unwrap();
-        let rguild = &guild.read().await;
         let member_name = member_name.split('#').next().unwrap();
 
-        for m in rguild.members.values() {
+        for m in guild.members.values() {
             if m.display_name() == std::borrow::Cow::Borrowed(member_name) ||
                 m.user.name == member_name
             {
@@ -53,7 +52,7 @@ pub async fn parse_member(ctx: &Context, msg: &Message, member_name: String) -> 
         }
 
         if members.is_empty() {
-            let similar_members = &rguild.members_containing(&member_name, false, false).await;
+            let similar_members = &guild.members_containing(&member_name, false, false).await;
 
             let mut members_string =  stream::iter(similar_members.iter())
                 .map(|m| async move {

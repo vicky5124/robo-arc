@@ -403,21 +403,17 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
 async fn check_empty_vc(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
     let manager_lock = ctx.data.read().await
         .get::<VoiceManager>().cloned().expect("Expected VoiceManager in ShareMap.");
-    let user_id = ctx.cache.read().await.user.id;
+    let user_id = ctx.cache.current_user().await.id;
 
-    for (guild_id, guild_lock) in &ctx.cache.read().await.guilds {
+    for guild_id in &ctx.cache.guilds().await {
         let mut manager = manager_lock.lock().await;
         let has_handler = manager.get(guild_id).is_some();
 
         if has_handler {
-            let guild = guild_lock.read().await;
+            let guild = ctx.cache.guild(guild_id).await.unwrap();
             if let Some(channel) = guild.voice_states.get(&user_id)
                 .and_then(|v| v.channel_id) {
-                    let guild_channel_lock = {
-                        let cache = ctx.cache.read().await;
-                        cache.guild_channel(channel).unwrap()
-                    };
-                    let guild_channel = guild_channel_lock.read().await;
+                    let guild_channel = ctx.cache.guild_channel(channel).await.unwrap();
 
                     if let Ok(members) = guild_channel.members(&ctx).await {
                         if members.len() == 1 {

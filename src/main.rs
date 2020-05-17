@@ -272,7 +272,7 @@ struct ImageManipulation;
 // Where all the random commands go into lol
 #[group("Fun")]
 #[description = "All the random and fun commands."]
-#[commands(qr, urban, translate, duck_duck_go, encrypt, decrypt, tic_tac_toe)]
+#[commands(qr, urban, dictionary, translate, duck_duck_go, encrypt, decrypt, tic_tac_toe)]
 struct Fun;
 
 // The moderation command group.
@@ -280,13 +280,6 @@ struct Fun;
 #[description = "All the moderation related commands."]
 #[commands(kick, ban, clear)]
 struct Mod;
-
-// The dictionary command group.
-#[group("Dictionaries")]
-#[description = "All the dictionaries.
-If you just want english, you can call the dictionary command directly."]
-#[commands(dictionary_en, dictionary_es, dictionary_fr, dictionary_de, dictionary_it, dictionary_pt, dictionary_ja, dictionary_ko, dictionary_zh, dictionary_ru, dictionary_ar, dictionary_tr, dictionary_hi)]
-struct Dictionaries;
 
 // The music command group.
 #[group("Music")]
@@ -484,7 +477,7 @@ impl EventHandler for Handler {
     /// This function triggers every time a reaction gets added to a message.
     async fn reaction_add(&self, ctx: Context, add_reaction: Reaction) {
         // Ignores all reactions that come from the bot itself.
-        if &add_reaction.user_id.0 == ctx.cache.read().await.user.id.as_u64() {
+        if &add_reaction.user_id.0 == ctx.cache.current_user().await.id.as_u64() {
             return;
         }
 
@@ -536,7 +529,7 @@ impl EventHandler for Handler {
                             .get_message(add_reaction.channel_id.0, add_reaction.message_id.0)
                             .await
                             .expect("Error while obtaining message");
-                        if msg.author.id == ctx.cache.read().await.user.id {
+                        if msg.author.id == ctx.cache.current_user().await.id {
                             let _ = msg.delete(&ctx).await;
                         }
                     }
@@ -765,7 +758,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .group(&META_GROUP) // Load `Meta` command group
         .group(&FUN_GROUP) // Load `Fun` command group
         .group(&MUSIC_GROUP) // Load `music` command group
-        .group(&DICTIONARIES_GROUP) // Load `Dictionaries` command group
         .group(&OSU_GROUP) // Load `osu!` command group
         .group(&SANKAKU_GROUP) // Load `SankakuComplex` command group
         .group(&ALLBOORUS_GROUP) // Load `Boorus` command group

@@ -56,83 +56,68 @@ async fn define(ctx: &Context, msg: &Message, lang: &str, word: String) -> Comma
     Ok(())
 }
 
+#[command]
+#[aliases(dict)]
+#[min_args(1)]
+async fn dictionary(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let lang = args.single_quoted::<String>()?;
+    match lang.as_str() {
+        "en" => {
+            let word = args.single_quoted::<String>()?;
+            define(ctx, msg, "en", word).await
+        },
+        "es" => {
+            let word = args.single_quoted::<String>()?;
+            define(ctx, msg, "es", word).await
+        },
+        "fr" => {
+            let word = args.single_quoted::<String>()?;
+            define(ctx, msg, "fr", word).await
+        },
+        "ja" => {
+            let word = args.single_quoted::<String>()?;
+            define(ctx, msg, "ja", word).await
+        },
+        "ru" => {
+            let word = args.single_quoted::<String>()?;
+            define(ctx, msg, "ru", word).await
+        },
+        "de" => {
+            let word = args.single_quoted::<String>()?;
+            define(ctx, msg, "de", word).await
+        },
+        "it" => {
+            let word = args.single_quoted::<String>()?;
+            define(ctx, msg, "it", word).await
+        },
+        "ko" => {
+            let word = args.single_quoted::<String>()?;
+            define(ctx, msg, "ko", word).await
+        },
+        "ar" => {
+            let word = args.single_quoted::<String>()?;
+            define(ctx, msg, "ar", word).await
+        },
+        "tr" => {
+            let word = args.single_quoted::<String>()?;
+            define(ctx, msg, "tr", word).await
+        },
+        "zh" => {
+            let word = args.single_quoted::<String>()?;
+            define(ctx, msg, "zh", word).await
+        },
+        "hi" => {
+            let word = args.single_quoted::<String>()?;
+            define(ctx, msg, "hi", word).await
+        },
+        "pt" => {
+            let word = args.single_quoted::<String>()?;
+            define(ctx, msg, "pt", word).await
+        },
+        _ => {
+            let word = lang;
+            define(ctx, msg, "en", word).await
+        },
+    }
+}
 
-
-#[command]
-#[aliases(dictionary, dict_en, dicten, dictionaryen)]
-async fn dictionary_en(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let word = args.single::<String>()?;
-    define(ctx, msg, "en", word).await
-}
-#[command]
-#[aliases(dict_es, dictes, dictionaryes)]
-async fn dictionary_es(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let word = args.single::<String>()?;
-    define(ctx, msg, "es", word).await
-}
-#[command]
-#[aliases(dict_fr, dictfr, dictionaryfr)]
-async fn dictionary_fr(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let word = args.single::<String>()?;
-    define(ctx, msg, "fr", word).await
-}
-#[command]
-#[aliases(dict_ja, dictja, dictionaryja)]
-async fn dictionary_ja(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let word = args.single::<String>()?;
-    define(ctx, msg, "ja", word).await
-}
-#[command]
-#[aliases(dict_ru, dictru, dictionaryru)]
-async fn dictionary_ru(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let word = args.single::<String>()?;
-    define(ctx, msg, "ru", word).await
-}
-#[command]
-#[aliases(dict_de, dictde, dictionaryde)]
-async fn dictionary_de(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let word = args.single::<String>()?;
-    define(ctx, msg, "de", word).await
-}
-#[command]
-#[aliases(dict_it, dictit, dictionaryit)]
-async fn dictionary_it(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let word = args.single::<String>()?;
-    define(ctx, msg, "it", word).await
-}
-#[command]
-#[aliases(dict_ko, dictko, dictionaryko)]
-async fn dictionary_ko(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let word = args.single::<String>()?;
-    define(ctx, msg, "ko", word).await
-}
-#[command]
-#[aliases(dict_ar, dictar, dictionaryar)]
-async fn dictionary_ar(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let word = args.single::<String>()?;
-    define(ctx, msg, "ar", word).await
-}
-#[command]
-#[aliases(dict_tr, dicttr, dictionarytr)]
-async fn dictionary_tr(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let word = args.single::<String>()?;
-    define(ctx, msg, "tr", word).await
-}
-#[command]
-#[aliases(dict_zh, dictzh, dictionaryzh)]
-async fn dictionary_zh(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let word = args.single::<String>()?;
-    define(ctx, msg, "zh", word).await
-}
-#[command]
-#[aliases(dict_hi, dicthi, dictionaryhi)]
-async fn dictionary_hi(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let word = args.single::<String>()?;
-    define(ctx, msg, "hi", word).await
-}
-#[command]
-#[aliases(dict_pt, dictpt, dictionarypt)]
-async fn dictionary_pt(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let word = args.single::<String>()?;
-    define(ctx, msg, "pt", word).await
-}

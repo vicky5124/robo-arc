@@ -125,7 +125,7 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
 
     // Creates the invite link for the bot with the permissions specified earlier.
     // Error handling in rust is so nice.
-    let url = match ctx.cache.read().await.user.invite_url(ctx, permissions).await {
+    let url = match ctx.cache.current_user().await.invite_url(ctx, permissions).await {
         Ok(v) => v,
         Err(why) => {
             println!("Error creating invite url: {:?}", why);
@@ -383,16 +383,15 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
         (app_info.owner.tag(), app_info.owner.id)
     };
 
-    let cache = ctx.cache.read().await;
-    let current_user = &cache.user;
+    let current_user = ctx.cache.current_user().await;
 
     let bot_name = &current_user.name;
     let bot_icon = &current_user.avatar_url();
 
-    let num_guilds = &cache.guilds.len();
-    let num_shards = &cache.shard_count;
-    let num_channels = &cache.channels.len();
-    let num_priv_channels = &cache.private_channels.len();
+    let num_guilds = ctx.cache.guilds().await.len();
+    let num_shards = ctx.cache.shard_count().await;
+    let num_channels = ctx.cache.guild_channel_count().await;
+    let num_priv_channels = ctx.cache.private_channels().await.len();
 
     let mut c_blank = 0;
     let mut c_comment = 0;

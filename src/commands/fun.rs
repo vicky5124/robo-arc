@@ -53,7 +53,7 @@ static IV: [u8; 16] =  [41, 61, 154, 40, 255, 51, 217, 146, 228, 10, 58, 62, 217
 #[check]
 #[name = "bot_has_manage_messages"]
 async fn bot_has_manage_messages_check(ctx: &Context, msg: &Message) -> CheckResult {
-    let bot_id = (ctx.cache.read().await).user.id.0.clone();
+    let bot_id = ctx.cache.current_user().await.id.0;
     if !msg.channel(ctx)
         .await
         .unwrap()

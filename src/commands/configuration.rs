@@ -41,7 +41,7 @@ use serenity::{
 #[check]
 #[name = "bot_has_manage_roles"]
 async fn bot_has_manage_roles_check(ctx: &Context, msg: &Message) -> CheckResult {
-    let bot_id = (ctx.cache.read().await).user.id.0.clone();
+    let bot_id = ctx.cache.current_user().await.id.0;
     if !ctx.http.get_member(msg.guild_id.unwrap().0, bot_id)
         .await
         .expect("What even")
@@ -272,10 +272,7 @@ async fn yande_re_webhook(ctx: &Context, msg: &mut Message, author: &User) -> Re
     let hooks = msg.channel_id.webhooks(ctx).await?;
     let mut existing_hook = false;
 
-    let bot_id = {
-        let cache_read = ctx.cache.read().await;
-        cache_read.user.id
-    };
+    let bot_id = ctx.cache.current_user().await.id;
 
     let mut hook_index = 0;
 
