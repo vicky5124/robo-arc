@@ -1,3 +1,24 @@
+# 0.1.15-alpha
+
+### Commands:
+- Dictionary:
+  New command.
+  Defines a word.
+- ping:
+  Added rest latency.
+- about:
+  Added additional information.
+- help:
+  Updated the order so it looks better and smaller.
+- pride_pre_grayscale:
+  New command.
+  Just like pride, but grayscales beforehand.
+  (Useful for dark images)
+
+### Dependencies:
+- Updated serenity, no more cache deadlocks.
+- Updated photon-rs, pride now works!
+
 # 0.1.14-alpha
 
 ### Commands:
