@@ -8,3 +8,4 @@ pub mod moderation;
 pub mod configuration;
 pub mod music;
 pub mod dictionary;
+pub mod serenity_docs;

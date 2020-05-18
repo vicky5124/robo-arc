@@ -33,6 +33,7 @@ use commands::moderation::*; // Import everything from the moderation module.
 use commands::configuration::*; // Import everything from the configuration module.
 use commands::music::*; // Import everything from the configuration module.
 use commands::dictionary::*; // Import everything from the dictionary module.
+use commands::serenity_docs::*; // Import everything from the serenity_docs module.
 
 use utils::database::obtain_pool; // Obtain the get_database function from the utilities.
 use utils::basic_functions::capitalize_first; // Obtain the capitalize_first function from the utilities.
@@ -226,7 +227,7 @@ impl TypeMapKey for Uptime {
 
 
 #[group("Master")]
-#[sub_groups(Meta, Sankaku, Osu, Fun, Music, AllBoorus, ImageManipulation, Mod)]
+#[sub_groups(Meta, Sankaku, Osu, Fun, Music, AllBoorus, ImageManipulation, Mod, SerenityDocs)]
 struct Master;
 
 // The basic commands group is being defined here.
@@ -292,6 +293,11 @@ struct Mod;
 #[only_in("guilds")]
 #[commands(join, leave, play, play_playlist, stop, skip, seek, shuffle, queue, now_playing)]
 struct Music;
+
+#[group("Serenity Documentation")]
+#[description = "All the commands related to serenity's documentation."]
+#[commands(example)]
+struct SerenityDocs;
 
 // The configuration command.
 // Technically a group, but it only has a single command.
@@ -806,6 +812,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .group(&IMAGEMANIPULATION_GROUP) // Load `image manipulaiton` command group
         .group(&MOD_GROUP) // Load `moderation` command group
         .group(&CONFIGURATION_GROUP) // Load `Configuration` command group
+        .group(&SERENITYDOCS_GROUP) // Load `serenity_docs` command group
         .help(&MY_HELP); // Load the custom help command.
 
     let mut client = Client::new(&bot_token)
