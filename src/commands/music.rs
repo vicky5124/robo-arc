@@ -26,6 +26,9 @@ use serenity_lavalink::nodes::Node;
 use serde_json;
 use regex::Regex;
 
+use rand::seq::SliceRandom;
+use rand::thread_rng;
+
 /// Joins me to the voice channel you are currently on.
 #[command]
 #[aliases("connect")]
@@ -72,6 +75,26 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
+/// Shuffles the order of the current queue.
+#[command]
+#[aliases(randomize)]
+async fn shuffle(ctx: &Context, msg: &Message) -> CommandResult {
+    let data = ctx.data.read().await;
+    let lava_client_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+    let mut lava_client = lava_client_lock.write().await;
+    if let Some(node) = lava_client.nodes.get_mut(&msg.guild_id.unwrap()) {
+        {
+            let mut rng = thread_rng();
+            let mut queue = node.queue.clone();
+            queue.shuffle(&mut rng);
+            node.queue = queue.clone();
+        }
+        msg.channel_id.say(ctx, "Successfully shuffled the queue.").await?;
+    };
+
+    Ok(())
+}
+
 /// Skips the current song being played.
 #[command]
 async fn skip(ctx: &Context, msg: &Message) -> CommandResult {
@@ -87,6 +110,7 @@ async fn skip(ctx: &Context, msg: &Message) -> CommandResult {
 
 /// Displays the current song queue.
 #[command]
+#[aliases(que)]
 async fn queue(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.read().await;
     let lava_client_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
@@ -217,7 +241,7 @@ async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
-/// Plays a song
+/// Adds a song to the queue.
 ///
 /// Usage: `play starmachine2000`
 /// or `play https://www.youtube.com/watch?v=dQw4w9WgXcQ`
@@ -312,3 +336,84 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     Ok(())
 }
 
+/// Adds an entire playlist to the queue.
+///
+/// Usage: `play https://www.youtube.com/playlist?list=PLTktV6LgA75yif8RR7yUiSttZD7GKtl_5`
+#[command]
+#[min_args(1)]
+#[aliases(playlist, playplaylist, play_list, pl, playl, plist)]
+async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let mut embeded = false;
+    let mut query = args.message().to_string();
+
+    if query.starts_with('<') && query.ends_with('>') {
+        embeded = true;
+        let re = Regex::new("[<>]").unwrap();
+        query = re.replace_all(&query, "").into_owned();
+    }
+    if !query.starts_with("http") {
+        msg.reply(ctx, "Provide a valid URL").await?;
+        return Ok(());
+    }
+
+    if !embeded {
+        if let Err(_) = ctx.http.edit_message(msg.channel_id.0, msg.id.0, &serde_json::json!({"flags" : 4})).await  {
+            msg.channel_id.say(ctx, "Please, put the url between <> so it doesn't embed.").await?;
+        }
+    }
+
+    let guild_id = match ctx.cache.guild_channel(msg.channel_id).await {
+        Some(channel) => channel.guild_id,
+        None => {
+            msg.channel_id.say(ctx, "Error finding channel info").await?;
+
+            return Ok(());
+        },
+    };
+
+    let manager_lock = ctx.data.read().await
+        .get::<VoiceManager>().cloned().expect("Expected VoiceManager in ShareMap.");
+    let mut manager = manager_lock.lock().await;
+
+    if let Some(handler) = manager.get_mut(guild_id) {
+        let data = ctx.data.read().await;
+        let lava_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+        let mut lava_client = lava_lock.write().await;
+
+        let query_information = lava_client.get_tracks(&query).await?;
+
+        if query_information.tracks.is_empty() {
+            msg.channel_id.say(&ctx, "Could not find any video of the search query.").await?;
+            return Ok(());
+        }
+
+        {
+            let node = lava_client.nodes.get_mut(&guild_id).unwrap();
+
+            for track in &query_information.tracks {
+                node.play(track.clone()).queue();
+            }
+        }
+        let node = lava_client.nodes.get(&guild_id).unwrap();
+
+        if !lava_client.loops.contains(&guild_id) {
+            node.start_loop(Arc::clone(lava_lock), Arc::new(handler.clone())).await;
+        }
+
+        msg.channel_id.send_message(ctx, |m| {
+            m.content("Added playlist to queue.");
+            m.embed(|e| {
+                e.title("Playlist link");
+                e.url(query);
+                e.footer(|f| f.text(format!("Submited by {}", &msg.author.name)))
+            })
+        }).await?;
+    } else {
+        msg.channel_id.say(ctx, "Please, connect the bot to the voice channel you are currently on first with the `join` command.").await?;
+
+        //join(ctx, msg, args.clone()).await?;
+        //play(ctx, msg, args.clone()).await?;
+    }
+
+    Ok(())
+}

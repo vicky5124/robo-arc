@@ -290,7 +290,7 @@ struct Mod;
 #[group("Music")]
 #[description = "All the voice and music related commands."]
 #[only_in("guilds")]
-#[commands(join, leave, play, stop, skip, seek, queue, now_playing)]
+#[commands(join, leave, play, play_playlist, stop, skip, seek, shuffle, queue, now_playing)]
 struct Music;
 
 // The configuration command.
