@@ -224,6 +224,11 @@ impl TypeMapKey for Uptime {
 }
 
 
+
+#[group("Master")]
+#[sub_groups(Meta, Sankaku, Osu, Fun, Music, AllBoorus, ImageManipulation, Mod)]
+struct Master;
+
 // The basic commands group is being defined here.
 // this group includes the commands that basically every bot has, nothing really special.
 #[group("Meta")]
@@ -581,7 +586,26 @@ async fn on_dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
 
 // This function executes before a command is called.
 #[hook]
-async fn before(_ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
+async fn before(ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
+    if let Some(guild_id) = msg.guild_id {
+        let data_read = ctx.data.read().await;
+        let pool = data_read.get::<ConnectionPool>().unwrap();
+
+        let disallowed_commands = sqlx::query!("SELECT disallowed_commands FROM prefixes WHERE guild_id = $1", guild_id.0 as i64)
+            .fetch_optional(pool)
+            .await
+            .unwrap();
+
+        if let Some(x) = disallowed_commands {
+            if let Some(disallowed_commands) = x.disallowed_commands {
+                if disallowed_commands.contains(&cmd_name.to_string()) {
+                    let _ = msg.reply(ctx, "This command has been disabled by an administrtor of this guild.").await;
+                    return false;
+                }
+            }
+        }
+    }
+
     info!("Running command: {}", &cmd_name);
     trace!("Message: {}", &msg.content);
     true
@@ -608,6 +632,23 @@ async fn after(ctx: &Context, msg: &Message, cmd_name: &str, error: CommandResul
 #[hook]
 async fn unrecognised_command(ctx: &Context, msg: &Message, command_name: &str) {
     let data_read = ctx.data.read().await;
+    if let Some(guild_id) = msg.guild_id {
+        let pool = data_read.get::<ConnectionPool>().unwrap();
+
+        let disallowed_commands = sqlx::query!("SELECT disallowed_commands FROM prefixes WHERE guild_id = $1", guild_id.0 as i64)
+            .fetch_optional(pool)
+            .await
+            .unwrap();
+
+        if let Some(x) = disallowed_commands {
+            if let Some(disallowed_commands) = x.disallowed_commands {
+                if disallowed_commands.contains(&"booru_command".to_string()) {
+                    let _ = msg.reply(ctx, "This command has been disabled by an administrtor of this guild.").await;
+                    return;
+                }
+            }
+        }
+    }
 
     let commands = data_read.get::<BooruCommands>();
     let boorus = data_read.get::<BooruList>().unwrap();
@@ -741,7 +782,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Time to configure the Command Framework!
     // This is what allows for easier and faster commaands.
-    let framework = StandardFramework::new() // Create a new framework
+    let std_framework = StandardFramework::new() // Create a new framework
         .configure(|c| c
             //.prefixes(vec![".", "arc!"]) // Add a list of prefixes to be used to invoke commands.
             .on_mention(Some(bot_id)) // Add a bot mention as a prefix.
@@ -769,7 +810,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut client = Client::new(&bot_token)
         .event_handler(Handler)
-        .framework(framework)
+        .framework(std_framework)
         .add_intent({
             let mut intents = GatewayIntents::all();
             intents.remove(GatewayIntents::GUILD_PRESENCES);

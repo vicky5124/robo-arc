@@ -2,7 +2,9 @@ use crate::{
     utils::booru,
     ConnectionPool,
     AnnoyedChannels,
+    BooruCommands,
     notifications::Post,
+    MASTER_GROUP,
 };
 
 use std::time::Duration;
@@ -507,11 +509,13 @@ async fn annoy(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 ///
 /// Configurable aspects:
 /// `prefix`: Changes the bot prefix.
+/// `disable_command`: Disables a command.
+/// `enable_command`: Enables a disabled command.
 #[command]
 #[required_permissions(MANAGE_GUILD)]
 #[only_in("guilds")]
 #[aliases(server)]
-#[sub_commands(prefix)]
+#[sub_commands(prefix, disable_command, enable_command)]
 async fn guild(_ctx: &Context, _msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
@@ -550,5 +554,112 @@ async fn prefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let bad_success_message = format!("Successfully changed your prefix to `{}`", prefix);
     let success_message = content_safe(ctx, bad_success_message, &content_safe_options).await;
     msg.reply(ctx, success_message).await?;
+    Ok(())
+}
+
+/// Disables a command on this guild.
+/// Note: Disablig any booru command will disable all the booru commands but Sankaku Chan and Idol.
+///
+/// Usage: `config guild disable_command urban`
+#[command]
+#[min_args(1)]
+async fn disable_command(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let data_read = ctx.data.read().await;
+    let booru_commands = data_read.get::<BooruCommands>().unwrap();
+
+    let mut command_name = args.single_quoted::<String>()?;
+    if booru_commands.contains(&command_name) {
+        command_name = "picture".to_string();
+    }
+
+    for group in MASTER_GROUP.options.sub_groups {
+        for command in group.options.commands {
+            if command.options.names.contains(&command_name.as_str()) {
+                let pool = data_read.get::<ConnectionPool>().unwrap();
+
+                let command_name = command.options.names[0];
+
+                let disallowed_commands = sqlx::query!(
+                    "SELECT disallowed_commands FROM prefixes WHERE guild_id = $1",
+                    msg.guild_id.unwrap().0 as i64,
+                ).fetch_optional(pool).await?;
+
+                if let Some(x) = disallowed_commands {
+                    if let Some(mut disallowed_commands) = x.disallowed_commands {
+                        disallowed_commands.push(command_name.to_string());
+                        sqlx::query!("UPDATE prefixes SET disallowed_commands = $1 WHERE guild_id = $2",
+                            &disallowed_commands,
+                            msg.guild_id.unwrap().0 as i64,
+                        ).execute(pool).await?;
+                    } else {
+                        let disallowed_commands = vec![command_name.to_string()];
+                        sqlx::query!("UPDATE prefixes SET disallowed_commands = $1 WHERE guild_id = $2",
+                            &disallowed_commands,
+                            msg.guild_id.unwrap().0 as i64,
+                        ).execute(pool).await?;
+                    }
+                } else {
+                    let disallowed_commands = vec![command_name.to_string()];
+                    sqlx::query!("INSERT INTO prefixes (disallowed_commands, guild_id, prefix) VALUES ($1, $2, $3)",
+                        &disallowed_commands,
+                        msg.guild_id.unwrap().0 as i64,
+                        ".".to_string(),
+                    ).execute(pool).await?;
+                }
+
+                msg.reply(ctx, format!("Command `{}` successfully disabled.", command_name)).await?;
+                return Ok(())
+            }
+        }
+    }
+    msg.reply(ctx, "Command not found.").await?;
+
+    Ok(())
+}
+
+/// Enables a disabled command on this guild.
+///
+/// Usage: `config guild enable_command urban`
+#[command]
+async fn enable_command(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let data_read = ctx.data.read().await;
+    let booru_commands = data_read.get::<BooruCommands>().unwrap();
+
+    let mut command_name = args.single_quoted::<String>()?;
+    if booru_commands.contains(&command_name) {
+        command_name = "picture".to_string();
+    }
+
+    for group in MASTER_GROUP.options.sub_groups {
+        for command in group.options.commands {
+            if command.options.names.contains(&command_name.as_str()) {
+                let command_name = command.options.names[0];
+
+                let pool = data_read.get::<ConnectionPool>().unwrap();
+
+                let disallowed_commands = sqlx::query!(
+                    "SELECT disallowed_commands FROM prefixes WHERE guild_id = $1",
+                    msg.guild_id.unwrap().0 as i64,
+                ).fetch_optional(pool).await?;
+
+                if let Some(x) = disallowed_commands {
+                    if let Some(mut disallowed_commands) = x.disallowed_commands {
+                        if disallowed_commands.contains(&command_name.to_string()) {
+                            disallowed_commands.remove_item(&command_name);
+                            sqlx::query!("UPDATE prefixes SET disallowed_commands = $1 WHERE guild_id = $2",
+                                &disallowed_commands,
+                                msg.guild_id.unwrap().0 as i64,
+                            ).execute(pool).await?;
+
+                            msg.reply(ctx, format!("Command `{}` successfully enabled.", command_name)).await?;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    msg.reply(ctx, "Command not disabled.").await?;
+
     Ok(())
 }
