@@ -120,7 +120,7 @@ async fn define(ctx: &Context, msg: &Message, lang: &str, word: String) -> Comma
 /// tr -> Turkish
 /// ```
 #[command]
-#[aliases(dict)]
+#[aliases(dict, define)]
 #[min_args(1)]
 async fn dictionary(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let lang = args.single_quoted::<String>()?;
