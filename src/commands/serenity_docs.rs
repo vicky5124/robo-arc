@@ -1,3 +1,4 @@
+//use std::path::Path;
 use serenity::{
     prelude::Context,
     model::channel::Message,
@@ -62,3 +63,13 @@ async fn example(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     };
     Ok(())
 }
+
+#[command]
+#[aliases(rtfd, rtfw, rtm, rtd, rtw)]
+async fn rtfm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    //let query = args.message();
+    msg.channel_id.say(ctx, "<https://5124.mywire.org/tmp/serenity-await/serenity/>").await?;
+
+    Ok(())
+}
+

@@ -32,6 +32,7 @@ photon-rs = { git = "https://github.com/silvia-odwyer/photon" }
 dotenv = "0.15.0" # https://github.com/dotenv-rs/dotenv
 loc = "0.5.0" # https://github.com/cgag/loc
 walkdir = "2.3.1" # https://github.com/BurntSushi/walkdir
+failure = "0.1.8" # https://github.com/rust-lang-nursery/failure
  
 # https://github.com/rust-random/rand
 [dependencies.rand]

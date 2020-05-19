@@ -296,7 +296,7 @@ struct Music;
 
 #[group("Serenity Documentation")]
 #[description = "All the commands related to serenity's documentation."]
-#[commands(example)]
+#[commands(example, rtfm)]
 struct SerenityDocs;
 
 // The configuration command.

@@ -9,6 +9,7 @@ use std::{
 };
 
 use serenity::{
+    client::bridge::voice::ClientVoiceManager,
     framework::{
         standard::{
             Args, CommandResult,
@@ -26,13 +27,17 @@ use serenity_lavalink::nodes::Node;
 use serde_json;
 use regex::Regex;
 
+use failure::Error;
+use failure::Fail;
+
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 
-/// Joins me to the voice channel you are currently on.
-#[command]
-#[aliases("connect")]
-async fn join(ctx: &Context, msg: &Message) -> CommandResult {
+#[derive(Debug, Fail)]
+#[fail(display = "Not in a voice channel.")]
+struct JoinError;
+
+async fn _join(ctx: &Context, msg: &Message, manager: &mut ClientVoiceManager) -> Result<(), Error> {
     let guild = match msg.guild(ctx).await {
         Some(guild) => guild,
         None => {
@@ -57,10 +62,6 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
         }
     };
 
-    let manager_lock = ctx.data.read().await.
-        get::<VoiceManager>().cloned().expect("Expected VoiceManager in ShareMap.");
-    let mut manager = manager_lock.lock().await;
-
     if manager.join(guild_id, connect_to).is_some() {
         let data = ctx.data.read().await;
         let lava_client_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
@@ -70,7 +71,21 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
         msg.channel_id.say(ctx, &format!("Joined {}", connect_to.mention())).await?;
     } else {
         msg.channel_id.say(ctx, "Error joining the channel").await?;
+        return Err(JoinError.into());
     }
+    
+    Ok(())
+}
+
+/// Joins me to the voice channel you are currently on.
+#[command]
+#[aliases("connect")]
+async fn join(ctx: &Context, msg: &Message) -> CommandResult {
+    let manager_lock = ctx.data.read().await
+        .get::<VoiceManager>().cloned().expect("Expected VoiceManager in ShareMap.");
+    let mut manager = manager_lock.lock().await;
+
+    _join(ctx, msg, &mut manager).await?;
 
     Ok(())
 }
@@ -278,6 +293,13 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .get::<VoiceManager>().cloned().expect("Expected VoiceManager in ShareMap.");
     let mut manager = manager_lock.lock().await;
 
+    if manager.get(guild_id).is_none() {
+        _join(ctx, msg, &mut manager).await?;
+        std::mem::drop(manager);
+        tokio::time::delay_for(Duration::from_secs(1)).await;
+        manager = manager_lock.lock().await;
+    }
+
     if let Some(handler) = manager.get_mut(guild_id) {
         let data = ctx.data.read().await;
         let lava_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
@@ -294,8 +316,6 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             let node = lava_client.nodes.get_mut(&guild_id).unwrap();
 
             node.play(query_information.tracks[0].clone())
-                //.start_time(Duration::from_secs(61))
-                //.replace(true)
                 .queue();
         }
         let node = lava_client.nodes.get(&guild_id).unwrap();
@@ -374,6 +394,13 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
     let manager_lock = ctx.data.read().await
         .get::<VoiceManager>().cloned().expect("Expected VoiceManager in ShareMap.");
     let mut manager = manager_lock.lock().await;
+
+    if manager.get(guild_id).is_none() {
+        _join(ctx, msg, &mut manager).await?;
+        std::mem::drop(manager);
+        tokio::time::delay_for(Duration::from_secs(1)).await;
+        manager = manager_lock.lock().await;
+    }
 
     if let Some(handler) = manager.get_mut(guild_id) {
         let data = ctx.data.read().await;
