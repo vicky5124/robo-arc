@@ -1,6 +1,6 @@
 [package]
 name = "arc_bot"
-version = "0.1.15-alpha"
+version = "0.1.16-alpha"
 authors = ["nitsuga5124 <nitsuga5124@gmail.com>"]
 edition = "2018"
 license = "MPL-v2"

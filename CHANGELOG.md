@@ -1,3 +1,26 @@
+# 0.1.16-alpha
+
+### Commands:
+- disable_command / enable_command:
+  New commands.
+  Disables or Enables a command on the guild respectively.
+- shuffle:
+  New command.
+  Shuffles current queue.
+- play_playlist:
+  New command.
+  Adds a whole playlist to the queue.
+- play / play_playlist:
+  Now they automatically join a voice channel when called if they are not in one already.
+- define:
+  Moved alias from urban to dictionary.
+- example:
+  New command.
+  Sends you a link to the serenity examples.
+
+### Dependencies:
+- Updated dependencies.
+
 # 0.1.15-alpha
 
 ### Commands:
