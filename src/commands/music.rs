@@ -216,9 +216,12 @@ async fn stop(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.read().await;
     let lava_client_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
     let mut lava_client = lava_client_lock.write().await;
-    let mut node = lava_client.nodes.get_mut(&msg.guild_id.unwrap()).unwrap().clone();
+    if let Some(node) = lava_client.nodes.get_mut(&msg.guild_id.unwrap()) {
+        node.clone().stop(&mut lava_client, &msg.guild_id.unwrap()).await?;
+    } else {
+        msg.channel_id.say(ctx, "Nothing to stop.").await?;
+    };
 
-    node.stop(&mut lava_client, &msg.guild_id.unwrap()).await?;
     Ok(())
 }
 
