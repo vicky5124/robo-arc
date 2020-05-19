@@ -50,7 +50,10 @@ use std::{
     // For having refferences between threads
     sync::Arc,
     convert::TryInto,
-    time::Instant,
+    time::{
+        Instant,
+        Duration,
+    },
 };
 
 use tokio::sync::Mutex;
@@ -113,7 +116,9 @@ use serenity::{
         id::{
             UserId,
             ChannelId,
+            GuildId,
         },
+        event::VoiceServerUpdateEvent,
     },
     prelude::{
         EventHandler,
@@ -170,6 +175,7 @@ struct VoiceManager; //  This is the struct for the voice manager.
 struct Lavalink; //  This is the struct for the lavalink client.
 struct SentTwitchStreams; //  This is the struct for the stream data that has already been sent.
 struct Uptime; //  This is for the startup time of the bot.
+struct VoiceGuildUpdate; //  This is for the startup time of the bot.
 
 // Implementing a type for each structure
 // This is made to make a Map<Struct, TypeValue>
@@ -224,6 +230,9 @@ impl TypeMapKey for Uptime {
     type Value = Instant;
 }
 
+impl TypeMapKey for VoiceGuildUpdate {
+    type Value = Arc<RwLock<HashSet<GuildId>>>;
+}
 
 
 #[group("Master")]
@@ -551,6 +560,15 @@ impl EventHandler for Handler {
             //_ => {}, // incomplete code / may be longer in the future
         }
     }
+
+    async fn voice_server_update(&self, ctx: Context, voice: VoiceServerUpdateEvent) {
+        if let Some(guild_id) = voice.guild_id {
+            let data = ctx.data.read().await;
+            let voice_server_lock = data.get::<VoiceGuildUpdate>().unwrap();
+            let mut voice_server = voice_server_lock.write().await;
+            voice_server.insert(guild_id);
+        }
+    }
 }
 
 
@@ -607,6 +625,32 @@ async fn before(ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
                 if disallowed_commands.contains(&cmd_name.to_string()) {
                     let _ = msg.reply(ctx, "This command has been disabled by an administrtor of this guild.").await;
                     return false;
+                }
+            }
+        }
+
+        if cmd_name == "play" || cmd_name == "play_playlist" {
+            let manager_lock = ctx.data.read().await
+                .get::<VoiceManager>().cloned().expect("Expected VoiceManager in ShareMap.");
+            let mut manager = manager_lock.lock().await;
+
+            if manager.get(guild_id).is_none() {
+                if let Err(why) =  _join(ctx, msg, &mut manager).await {
+                    error!("While running command: {}", cmd_name);
+                    error!("{:?}", why);
+                    return false;
+                }
+                std::mem::drop(manager);
+                loop {
+                    let data = ctx.data.read().await;
+                    let vgu_lock = data.get::<VoiceGuildUpdate>().unwrap();
+                    let mut vgu = vgu_lock.write().await;
+                    if !vgu.contains(&guild_id) {
+                        tokio::time::delay_for(Duration::from_millis(500)).await;
+                    } else {
+                        vgu.remove(&guild_id);
+                        break;
+                    }
                 }
             }
         }
@@ -847,6 +891,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Add the sent streams.
         data.insert::<SentTwitchStreams>(Arc::new(RwLock::new(Vec::new())));
         data.insert::<Uptime>(Instant::now());
+        data.insert::<VoiceGuildUpdate>(Arc::new(RwLock::new(HashSet::new())));
 
         {
             // TODO: get the real shard amount.
