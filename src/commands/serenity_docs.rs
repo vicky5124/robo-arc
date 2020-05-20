@@ -50,7 +50,7 @@ async fn example(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         "10" | "record" | "record voice" | "recieve voice" | "recieve" =>
             msg.channel_id.say(ctx, "<https://github.com/Lakelezz/serenity/tree/await/examples/10_voice_receive>").await?,
 
-        "11" | "embeds" | "file" | "files" | "send file" | "send files" =>
+        "11" | "embeds" | "file" | "files" | "send file" | "send files" | "embed" =>
             msg.channel_id.say(ctx, "<https://github.com/Lakelezz/serenity/tree/await/examples/11_create_message_builder>").await?,
 
         "12" | "collectors" | "await for" | "reactions" | "reply" | "wait for" =>
