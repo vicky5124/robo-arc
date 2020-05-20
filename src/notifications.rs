@@ -400,7 +400,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
     Ok(())
 }
 
-async fn check_empty_vc(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
+async fn _check_empty_vc(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
     let manager_lock = ctx.data.read().await
         .get::<VoiceManager>().cloned().expect("Expected VoiceManager in ShareMap.");
     let user_id = ctx.cache.current_user().await.id;
@@ -451,13 +451,13 @@ pub async fn notification_loop(ctx: Arc<Context>) {
             }
         });
 
-        let ctx3 = Arc::clone(&ctx);
-        tokio::spawn(async move {
-            if let Err(why) = check_empty_vc(Arc::clone(&ctx3)).await {
-                error!("check_empty_vc :: {}", why);
-                eprintln!("An error occurred while running check_empty_vc() >>> {}", why);
-            }
-        });
+        //let ctx3 = Arc::clone(&ctx);
+        //tokio::spawn(async move {
+        //    if let Err(why) = check_empty_vc(Arc::clone(&ctx3)).await {
+        //        error!("check_empty_vc :: {}", why);
+        //        eprintln!("An error occurred while running check_empty_vc() >>> {}", why);
+        //    }
+        //});
         info!("Notification loop finished.");
 
         tokio::time::delay_for(Duration::from_secs(120)).await;
