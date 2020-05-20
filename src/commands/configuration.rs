@@ -162,8 +162,9 @@ async fn streamrole(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
     } else if role_id == 0 {
         msg.channel_id.say(ctx, "The mentioned streamer is not being notified on this server").await?;
     } else {
-        if !msg.member(ctx).await.unwrap().roles.contains(&RoleId(role_id as u64)) {
-            if let Err(_) = msg.member(ctx).await.unwrap().add_role(ctx, role_id as u64).await {
+        let mut member = ctx.http.get_member(msg.guild_id.unwrap().0, msg.author.id.0).await?;
+        if !member.roles.contains(&RoleId(role_id as u64)) {
+            if let Err(_) = member.add_role(ctx, role_id as u64).await {
                 msg.channel_id.say(ctx, "The configured role does not exist, contact the server administrators about the issue.").await?;
             } else {
                 msg.channel_id.say(ctx, format!("Successfully obtained the role `{}`",
@@ -171,7 +172,7 @@ async fn streamrole(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                     .await?;
             }
         } else {
-            if let Err(why) = msg.member(ctx).await.unwrap().remove_role(ctx, role_id as u64).await {
+            if let Err(why) = member.remove_role(ctx, role_id as u64).await {
                 msg.channel_id.say(ctx, format!("I was unable to remove your role: {}", why)).await?;
             } else {
                 msg.channel_id.say(ctx, format!("Successfully removed the role `{}`",
