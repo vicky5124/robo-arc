@@ -116,6 +116,7 @@ async fn qr(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 /// Defines a term, using the urban dictionary.
 /// Usage: `urban lmao`
 #[command]
+#[aliases(udic, udefine, define_urban, defineurban, udict, udictonary, urban_dictionary, u_dictionary, u_define, urban_define, define_urban)]
 async fn urban(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let term = args.message();
     let url = Url::parse_with_params("http://api.urbandictionary.com/v0/define",
