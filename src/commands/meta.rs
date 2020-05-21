@@ -244,7 +244,8 @@ MapPP (calculates pp of a map, like ezpp or tillerino)
 Search (searches term on duckduckgo)
 
 #Twitch
-ConfigureStream (configures stream notifications for the channel)
+ConfigureMessage (to configure the live message)
+RemoveNotification (to remove notifications)
 
 #Reddit
 Subreddit (posts a random post from the subreddit specified)

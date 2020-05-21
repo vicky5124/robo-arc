@@ -16,6 +16,8 @@ use futures::stream::StreamExt;
 use serde_json;
 use reqwest::Url;
 
+use regex::Regex;
+
 use serenity::{
     prelude::Context,
     model::channel::{
@@ -119,6 +121,7 @@ async fn set_best_tags(sex: &str, ctx: &Context, msg: &Message, mut tags: String
 /// `booru`: Sets the booru to be used for the best_X commands ~~and `picture`~~
 /// `streamrole`: Gives you the configured streamrole of a streamer the guild gets notifications on.
 #[command]
+#[aliases("self", "me")]
 #[sub_commands(best_boy, best_girl, booru, streamrole)]
 async fn user(_ctx: &Context, _msg: &Message, _args: Args) -> CommandResult {
     Ok(())
@@ -246,6 +249,101 @@ async fn channel(_ctx: &Context, _message: &Message, _args: Args) -> CommandResu
     Ok(())
 }
 
+async fn twitch_channel(ctx: &Context, msg: &mut Message, author: &User) -> Result<(), Box<dyn std::error::Error>> {
+    msg.edit(ctx, |m| {
+        m.content(format!("<@{}>", author.id));
+        m.embed(|e| {
+            e.title("Say the name of the streamer, whether or not you let the discord user bound to the twitch account to change the notification message and an optional notification role.");
+            e.description("Examples:
+                `bobross yes @jop_notifications`
+                `raysworks no @technical_minecraft`
+                `the8bitdrummer no`")
+        })
+    }).await?;
+
+    loop {
+        if let Some(reply) = author.await_reply(ctx).timeout(Duration::from_secs(120)).await {
+            let content = reply.content.split(' ').collect::<Vec<&str>>();
+
+            if content.len() < 2 {
+                msg.edit(ctx, |m| {
+                    m.content(format!("<@{}>", author.id));
+                    m.embed(|e| {
+                        e.title("Not enough arguments provided.");
+                        e.description("Examples:
+                            `bobross yes @jop_notifications`
+                            `raysworks no @technical_minecraft`
+                            `the8bitdrummer no`")
+                    })
+                }).await?;
+            } else {
+                let allow_user = match content[1].to_lowercase().as_str() {
+                    "yes" | "1" | "true" => Some(true),
+                    "no" | "0" | "false" => Some(false),
+                    _ => None,
+                };
+
+                if allow_user.is_none() {
+                    msg.edit(ctx, |m| {
+                        m.content(format!("<@{}>", author.id));
+                        m.embed(|e| {
+                            e.title("Invalid argumnet passed on the second possition.");
+                            e.description("Examples:
+                                `bobross yes @jop_notifications`
+                                `raysworks no @technical_minecraft`
+                                `the8bitdrummer no`")
+                        })
+                    }).await?;
+                } else {
+                    let streamer = content[0];
+                    let use_default = allow_user.unwrap();
+                    let mut role = None;
+
+                    if let Some(role_id_raw) = content.get(2) {
+                        let re = Regex::new("[<@&>]").unwrap();
+                        let role_id = re.replace_all(&role_id_raw, "").into_owned();
+
+                        if let Ok(x) = role_id.parse::<i64>() {
+                            role = Some(x)
+                        } else {
+                            msg.reply(ctx, "You provided an invalid role, Defaulting to no role.").await?;
+                        }
+                    }
+
+                    let data_read = ctx.data.read().await;
+                    let pool = data_read.get::<ConnectionPool>().unwrap();
+
+                    let streamer_data = sqlx::query!("SELECT streamer FROM streamers WHERE streamer = $1", streamer)
+                        .fetch_optional(pool)
+                        .await?;
+
+                    if streamer_data.is_none() {
+                        sqlx::query!("INSERT INTO streamers (streamer) VALUES ($1)", streamer)
+                            .execute(pool)
+                            .await?;
+                    }
+
+                    sqlx::query!("INSERT INTO streamer_notification_channel (streamer, role_id, use_default, channel_id) VALUES ($1, $2, $3, $4)", streamer, role, use_default, msg.channel_id.0 as i64)
+                        .execute(pool)
+                        .await?;
+
+                    msg.edit(ctx, |m| {
+                        m.content(format!("<@{}>", author.id));
+                        m.embed(|e| {
+                            e.title("Success!");
+                            e.description(format!("Streamer: `{}`
+                                Use Default Text: `{}`
+                                Role: {:?}", streamer, use_default, role))
+                        })
+                    }).await?;
+                    break;
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
 async fn yande_re_channel(ctx: &Context, msg: &mut Message, author: &User) -> Result<(), Box<dyn std::error::Error>> {
     msg.edit(ctx, |m| {
         m.content(format!("<@{}>", author.id));
@@ -416,18 +514,18 @@ async fn yande_re_webhook(ctx: &Context, msg: &mut Message, author: &User) -> Re
 }
 
 /// Configure the notifications of the channel.
-/// WIP
+/// WIP means that is basically doesn't work, so don't use those.
 #[command]
 async fn notifications(ctx: &Context, message: &Message, _args: Args) -> CommandResult {
     let mut msg = message.channel_id.send_message(ctx, |m| {
         m.content(format!("<@{}>", message.author.id));
         m.embed(|e| {
             e.title("Select the number of option that you want");
-            e.description("Choose what notification type you want:\n\n1: yande.re posts (WebHook)\n2: yande.re posts (Bot Message)  `WIP`")
+            e.description("Choose what notification type you want:\n\n1: yande.re posts (WebHook)\n2: yande.re posts (Bot Message)  `WIP`\n3: Twitch Notification (Bot Message)")
         })
     }).await?;
 
-    for i in 1..3_u8 {
+    for i in 1..4_u8 {
         let num = ReactionType::Unicode(String::from(format!("{}\u{fe0f}\u{20e3}", i)));
         msg.react(ctx, num).await?;
     }
@@ -440,6 +538,7 @@ async fn notifications(ctx: &Context, message: &Message, _args: Args) -> Command
             match emoji.as_data().as_str() {
                 "1\u{fe0f}\u{20e3}" => {yande_re_webhook(ctx, &mut msg, &message.author).await?; break},
                 "2\u{fe0f}\u{20e3}" => {yande_re_channel(ctx, &mut msg, &message.author).await?; break},
+                "3\u{fe0f}\u{20e3}" => {twitch_channel(ctx, &mut msg, &message.author).await?; break},
                 _ => (),
             }
 
