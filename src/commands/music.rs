@@ -225,6 +225,24 @@ async fn stop(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
+/// Pauses or resumes the current player.
+#[command]
+#[aliases(resume, unpause)]
+async fn pause(ctx: &Context, msg: &Message) -> CommandResult {
+    let data = ctx.data.read().await;
+    let lava_client_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+    let mut lava_client = lava_client_lock.write().await;
+    let lava_client_clone = lava_client.clone();
+    if let Some(node) = lava_client.nodes.get_mut(&msg.guild_id.unwrap()) {
+        let p = !node.clone().is_paused;
+        node.set_pause(&lava_client_clone, &msg.guild_id.unwrap(), p).await?;
+    } else {
+        msg.channel_id.say(ctx, "Nothing to stop.").await?;
+    };
+
+    Ok(())
+}
+
 /// Disconnects me from the voice channel if im in one.
 #[command]
 async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
@@ -243,6 +261,7 @@ async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
 
             node.destroy(&mut lava_client, &msg.guild_id.unwrap()).await?;
         }
+        msg.react(ctx, '✅').await?;
     } else {
         msg.reply(ctx, "Not in a voice channel").await?;
     }
