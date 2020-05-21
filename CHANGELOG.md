@@ -1,3 +1,23 @@
+# 0.1.17-alpha
+
+### Commands:
+- pause/unapuse:
+  New command.
+  Pauses or unpauses the player, depending on status.
+- configure channel notifications:
+  Can now configure new streams.
+- stop:
+  No longer panics if there's no player.
+- urban:
+  Added several aliases.
+- configure user streamrole:
+  Fixed panic due to not having members in cache, due to missing pressence intents.
+- example:
+  Added keyword event to example 11.
+
+### Loops:
+- disabled automatic disconnection from voice chat while i investigate how to fix it.
+
 # 0.1.16-alpha
 
 ### Commands:
