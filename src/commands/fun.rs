@@ -4,6 +4,7 @@ use crate::{
 };
 
 use std::time::Duration;
+use std::fs;
 
 use serenity::{
     prelude::Context,
@@ -24,6 +25,8 @@ use serenity::{
         },
     },
 };
+
+use serde::Deserialize;
 use tracing::error;
 use qrcode::{
     QrCode,
@@ -33,7 +36,8 @@ use reqwest::{
     Client as ReqwestClient,
     Url,
 };
-use serde::Deserialize;
+
+use hex;
 use crypto::{
     symmetriccipher,
     buffer,
@@ -45,7 +49,10 @@ use crypto::buffer::{
     WriteBuffer,
     BufferResult
 };
-use hex;
+
+use rand::seq::SliceRandom;
+use rand::rngs::StdRng;
+use rand::SeedableRng;
 
 static KEY: [u8; 32] =  [244, 129, 85, 125, 252, 92, 208, 68, 29, 125, 160, 4, 146, 245, 193, 135, 12, 68, 162, 84, 202, 123, 90, 165, 194, 126, 12, 117, 87, 195, 9, 202];
 static IV: [u8; 16] =  [41, 61, 154, 40, 255, 51, 217, 146, 228, 10, 58, 62, 217, 128, 96, 7];
@@ -640,6 +647,113 @@ async fn tic_tac_toe(mut ctx: &Context, msg: &Message, mut args: Args) -> Comman
         
         iteration += 1;
     }
+
+    Ok(())
+}
+
+/// Play some Higher or Lower.
+/// You don't get anything in reward for playing this, gambling is bad.
+#[command]
+#[aliases(hol, higherorlower)]
+async fn higher_or_lower(ctx: &Context, msg: &Message) -> CommandResult {
+    let cards = fs::read_dir("poker_cards")?.map(|i| {
+        let f = i.unwrap();
+        f.file_name().into_string().unwrap()
+    }).collect::<Vec<String>>();
+
+    let mut rng = StdRng::from_entropy();
+    let choice = &cards.choose(&mut rng).unwrap();
+
+    let mut message = msg.channel_id.send_message(ctx, |m| {
+        m.embed(|e| {
+            e.title("Higher or Lower");
+            e.image(format!("https://5124.mywire.org/HDD/poker_cards/{}", choice))
+        })
+    }).await?;
+
+    let up = ReactionType::Unicode("⬆️".to_string());
+    let down = ReactionType::Unicode("⬇️".to_string());
+
+    message.react(ctx, up).await?;
+    message.react(ctx, down).await?;
+
+    let mut iteration = 1u8;
+    let mut current_value = choice.split('.').next().unwrap()[1..].parse::<u8>()?;
+
+    loop {
+        if let Some(reaction) = message.await_reaction(ctx).author_id(msg.author.id).timeout(Duration::from_secs(120)).await {
+            let emoji = &reaction.as_inner_ref().emoji;
+            let emoji_data = emoji.as_data();
+            let emoji_str = emoji_data.as_str();
+
+            match emoji_str {
+                "⬆️" | "⬇️" => {
+                    let higher = emoji_str == "⬆️";
+
+                    let choice = &cards.choose(&mut rng).unwrap();
+                    let new_value = choice.split('.').next().unwrap()[1..].parse::<u8>()?;
+
+
+                    if higher {
+                        if new_value < current_value {
+                            message.edit(ctx, |m| {
+                                m.embed(|e| {
+                                    e.title(format!("{} lost.", msg.author.name));
+                                    e.image(format!("https://5124.mywire.org/HDD/poker_cards/{}", choice))
+                                })
+                            }).await?;
+
+                            break
+                        }
+                    } else {
+                        if new_value > current_value {
+                            message.edit(ctx, |m| {
+                                m.embed(|e| {
+                                    e.title(format!("{} lost.", msg.author.name));
+                                    e.image(format!("https://5124.mywire.org/HDD/poker_cards/{}", choice))
+                                })
+                            }).await?;
+
+                            break 
+                        }
+                    }
+
+                    current_value = new_value;
+
+                    iteration += 1;
+
+                    if iteration > 3 {
+                        message.edit(ctx, |m| {
+                            m.embed(|e| {
+                                e.title(format!("{} won!", msg.author.name));
+                                e.image(format!("https://5124.mywire.org/HDD/poker_cards/{}", choice))
+                            })
+                        }).await?;
+
+                        break 
+                    } else {
+                        message.edit(ctx, |m| {
+                            m.embed(|e| {
+                                e.title("Higher or Lower");
+                                e.image(format!("https://5124.mywire.org/HDD/poker_cards/{}", choice))
+                            })
+                        }).await?;
+                    }
+                },
+                _ => (),
+            }
+        } else {
+            message.edit(ctx, |m| {
+                m.embed(|e| {
+                    e.title("Timeout!")
+                })
+            }).await?;
+            break
+        }
+    }
+
+    let _ = message.delete_reactions(ctx).await;
+    dbg!(&current_value);
 
     Ok(())
 }

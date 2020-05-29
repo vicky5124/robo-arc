@@ -287,7 +287,7 @@ struct ImageManipulation;
 // Where all the random commands go into lol
 #[group("Fun")]
 #[description = "All the random and fun commands."]
-#[commands(qr, urban, dictionary, translate, duck_duck_go, encrypt, decrypt, tic_tac_toe)]
+#[commands(qr, urban, dictionary, translate, duck_duck_go, encrypt, decrypt, tic_tac_toe, higher_or_lower)]
 struct Fun;
 
 // The moderation command group.
@@ -313,9 +313,9 @@ struct SerenityDocs;
 #[group("Configuration")]
 #[description = "All the configuration related commands.
 Basic usage:
-`.config user VALUE DATA`
-`.config guild VALUE DATA`
-`.config channel VALUE DATA`"]
+`config user VALUE DATA`
+`config guild VALUE DATA`
+`config channel VALUE DATA`"]
 #[prefixes("config", "configure", "conf")]
 #[commands(guild, channel, user)]
 struct Configuration;
