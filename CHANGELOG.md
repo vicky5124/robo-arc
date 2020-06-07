@@ -1,3 +1,16 @@
+# 0.1.18-alpha
+
+### Commands:
+- higher_or_lower:
+  New command.
+  Plays higher or lower.
+- rtfm:
+  Tried to do something, but failed hard at it lol.
+
+### Web Server:
+- Added a web server.
+- Added a system to know if the bot is in a guild.
+
 # 0.1.17-alpha
 
 ### Commands:
