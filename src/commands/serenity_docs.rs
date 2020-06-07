@@ -1,4 +1,8 @@
 //use std::path::Path;
+//use std::fs::File;
+//use std::io::prelude::*;
+//use walkdir::WalkDir;
+
 use serenity::{
     prelude::Context,
     model::channel::Message,
@@ -68,6 +72,36 @@ async fn example(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[aliases(rtfd, rtfw, rtm, rtd, rtw)]
 async fn rtfm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     //let query = args.message();
+    
+    //let path = std::path::Path::new(".");
+    //let cache = racer::FileCache::default();
+    //let session = racer::Session::new(&cache, Some(path));
+
+    //for entry in WalkDir::new("/mnt/storage/Projects/Rust/serenity-await/src") {
+    //    let entry = entry.unwrap();
+    //    let path = entry.path();
+    //    if path.is_file() {
+    //        let file_path = path.to_str().unwrap();
+    //        if file_path.ends_with(".rs") {
+    //            let mut f = File::open(path.to_str().unwrap())?;
+    //            let mut src = String::new();
+    //            //dbg!(&f);
+    //            f.read_to_string(&mut src)?;
+    //            session.cache_file_contents(path.to_str().unwrap(), src);
+    //        }
+    //    }
+    //}
+
+    //
+    //for m in racer::complete_fully_qualified_name("src::http::client::Htt", &path, &session) {
+    //    dbg!(&m);
+    //};
+    //for m in racer::complete_fully_qualified_name("std::tim", &path, &session) {
+    //    dbg!(&m);
+    //};
+
+    //println!("done");
+
     msg.channel_id.say(ctx, "<https://5124.mywire.org/tmp/serenity-await/serenity/>").await?;
 
     Ok(())

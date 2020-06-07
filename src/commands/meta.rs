@@ -15,7 +15,7 @@ use std::{
     io::prelude::*,
     process::id,
     time::{
-        Duration,
+        //Duration,
         Instant,
     },
 };
@@ -29,7 +29,7 @@ use serenity::{
     model::{
         channel::Message,
         Permissions,
-        channel::ReactionType,
+        //channel::ReactionType,
     },
     client::bridge::gateway::ShardId,
     framework::standard::{
@@ -172,48 +172,31 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
 #[owners_only] // to only allow the owner of the bot to use this command
 //#[min_args(3)] // Sets the minimum ammount of arguments the command requires to be ran. This is used to trigger the `NotEnoughArguments` error.
 // Testing command, please ignore.
-async fn test(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    //let guild_lock = msg.guild(ctx.cache).await.unwrap();
-    //let guild = guild_lock.read().await;
-    //for role in guild.roles.values() {
-    //    msg.channel_id.say(ctx.http, format!("{}", role.name)).await?;
-    //}
+async fn test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let mut embed_json = args.message().to_string();
+    dbg!(&embed_json);
 
-    let mut m = msg.channel_id.say(ctx, "test 1").await?;
-    println!("{}", m.guild_id == None);
-
-    let _left = ReactionType::Unicode(String::from("⬅️"));
-    let _right = ReactionType::Unicode(String::from("➡️"));
-
-    //m.react(ctx, left).await?;
-    //m.react(ctx, right).await?;
-    
-    if let Some(answer) = msg.author.await_reply(ctx).timeout(Duration::from_secs(120)).await {
-        if !answer.content.starts_with('<') {
-            m.edit(ctx, |m| m.content("test 2")).await?;
-            if let Some(answer) = msg.author.await_reply(ctx).timeout(Duration::from_secs(120)).await {
-                if !answer.content.starts_with('<') {
-                    m.edit(ctx, |m| m.content("test 3")).await?;
-                }
-            } else {
-                return Ok(());
-            }
-        }
-    } else {
-        return Ok(());
+    if embed_json.starts_with("```json") {
+        embed_json = embed_json[7..].to_string()
+    }
+    if embed_json.starts_with("```") {
+        embed_json = embed_json[3..].to_string()
+    }
+    if embed_json.ends_with("```") {
+        embed_json = embed_json[0 .. embed_json.len() - 3].to_string()
     }
 
+    if !embed_json.ends_with("}") {
+        embed_json += "}";
+    }
+    if !embed_json.starts_with("{") {
+        embed_json = "{".to_string() + &embed_json;
+    }
 
-    //source(&mut ctx.clone(), &msg.clone(), args.clone()).await?;
-    //std::thread::sleep(std::time::Duration::from_secs(50));
-    //let x = args.single::<String>()?;
-    //let y = args.single::<i32>()?;
-    //let z = args.single::<i32>()?;
-    //
-    //let multiplied = y * z;
-    //msg.channel_id.say(ctx, format!("{} nice: {}", x, multiplied)).await?;
-    //let f = vec![123; 1000];
-    //msg.channel_id.say(ctx, format!("{:?}", &f)).await?;
+    let embed = serde_json::from_str::<Value>(&embed_json)?;
+    let message = json!({ "embed" : embed });
+
+    ctx.http.send_message(msg.channel_id.0, &message).await?;
 
     Ok(())
 }
