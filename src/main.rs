@@ -54,6 +54,9 @@ use std::{
         Instant,
         Duration,
     },
+
+    net::SocketAddr,
+    str::FromStr,
 };
 
 use tokio::sync::Mutex;
@@ -83,7 +86,16 @@ use futures::stream::StreamExt;
 
 use toml::Value; // To parse the data of .toml files
 use serde_json; // To parse the data of .json files (where's serde_toml smh)
-use serde::Deserialize; // To deserialize data into structures
+use serde::{
+    Deserialize, // To deserialize data into structures
+    Serialize,
+};
+
+use warp::{
+    Filter,
+    reply::json,
+    reply::Json
+};
 
 use serenity_lavalink::LavalinkClient;
 
@@ -160,6 +172,11 @@ pub struct Booru {
 #[derive(Debug, Deserialize)]
 struct BooruRaw {
     boorus: Vec<Booru>,
+}
+
+#[derive(Serialize)]
+struct Allow {
+    allowed: bool,
 }
 
 // Defining the structures to be used for "global" data
@@ -374,11 +391,43 @@ impl EventHandler for Handler {
         // https://docs.rs/serenity/0.8.0/serenity/model/gateway/struct.Activity.html#methods
         // for all the available activities.
 
-        let info = {
+        let ctx = Arc::new(ctx);
+        let ctx_clone = Arc::clone(&ctx);
+
+        let (info, web_server_info) = {
             let read_data = ctx.data.read().await;
             let config = read_data.get::<Tokens>().unwrap();
-            config["presence"].clone()
+            (
+                config["presence"].clone(),
+                config["web_server"].clone(),
+            )
         };
+
+        tokio::spawn(async move {
+            let guilds = ctx_clone.clone().cache
+                .guilds()
+                .await
+                .iter()
+                .map(|i| i.0)
+                .collect::<Vec<_>>();
+
+            let routes = warp::path::param().map(move |guild_id: u64| -> Json {
+                let data = Allow {
+                    allowed: guilds.contains(&guild_id.clone())
+                };
+            
+                json(&data)
+            });
+
+            let ip = web_server_info["server_ip"].as_str().unwrap();
+            let port = web_server_info["server_port"].as_integer().unwrap();
+
+            warp::serve(routes)
+                .run(SocketAddr::from_str(
+                    format!("{}:{}", ip, port).as_str()
+                ).unwrap()
+            ).await;
+        });
 
         if info["play_or_listen"].as_str().unwrap() == "playing" {
             ctx.set_presence(
@@ -392,6 +441,7 @@ impl EventHandler for Handler {
             ).await;
         }
 
+
         let status = {
             let read_data = ctx.data.read().await;
             read_data.get::<NotificationStatus>().unwrap().clone()
@@ -400,8 +450,8 @@ impl EventHandler for Handler {
         println!("{} is ready to rock!", ready.user.name);
 
         if !status {
-            let ctx = Arc::new(ctx);
             let ctx_clone = Arc::clone(&ctx);
+
             let notification_loop = tokio::spawn(async move {notification_loop(ctx_clone).await});
             {
                 let mut data = ctx.data.write().await;
@@ -413,6 +463,7 @@ impl EventHandler for Handler {
                 data.insert::<NotificationStatus>(false);
             }
         }
+
     }
 
     // on_message event on d.py

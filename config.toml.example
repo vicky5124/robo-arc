@@ -32,3 +32,7 @@ idol_passhash = "" # https://forum.sankakucomplex.com/t/channel-api-for-discord-
 host = "127.0.0.1"
 port = 2333
 password = "youshallnotpass"
+
+[web_server]
+server_ip = "127.0.0.1" # only an ip is supported
+server_port = 54424
