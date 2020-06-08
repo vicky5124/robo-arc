@@ -14,6 +14,7 @@ use serenity::{
         ReactionType,
     },
     model::user::User,
+    model::id::UserId,
     framework::standard::{
         Args,
         CommandResult,
@@ -754,6 +755,40 @@ async fn higher_or_lower(ctx: &Context, msg: &Message) -> CommandResult {
 
     let _ = message.delete_reactions(ctx).await;
     dbg!(&current_value);
+
+    Ok(())
+}
+
+/// Shows the information of a user.
+/// (not bound to a guild)
+#[command]
+#[aliases(pfp, avatar, discord_profile, prof, user, u)]
+async fn profile(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let user = if let Ok(user_id) = args.single_quoted::<UserId>() {
+        user_id.to_user(ctx).await?
+    } else {
+        msg.author.clone()
+    };
+
+    msg.channel_id.send_message(ctx, |m| {
+        m.embed(|e| {
+            if user.bot {
+                e.title(format!("[BOT] {}", user.tag(),));
+            } else {
+                e.title(user.tag());
+            }
+
+            e.field("ID:", user.id.0, false);
+            e.field("Created at:", format!("{}UTC\n({} ago)", user.created_at().to_rfc2822().replace("+0000", ""), {
+                let date = chrono::Utc::now();
+                let time = date.timestamp() - user.created_at().timestamp();
+                let duration = Duration::from_secs(time as u64);
+                humantime::format_duration(duration)
+            }), false);
+
+            e.image(user.face())
+        })
+    }).await?;
 
     Ok(())
 }

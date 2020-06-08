@@ -35,6 +35,8 @@ walkdir = "2.3.1" # https://github.com/BurntSushi/walkdir
 failure = "0.1.8" # https://github.com/rust-lang-nursery/failure
 racer = "2.1.34" # https://github.com/racer-rust/racer/
 warp = "0.2.3" # https://github.com/seanmonstar/warp/
+chrono = "0.4.11" # https://github.com/chronotope/chrono
+humantime = "2.0.0" # https://github.com/tailhook/humantime
  
 # https://github.com/rust-random/rand
 [dependencies.rand]

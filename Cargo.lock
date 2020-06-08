@@ -59,11 +59,13 @@ name = "arc_bot"
 version = "0.1.18-alpha"
 dependencies = [
  "bitflags",
+ "chrono",
  "dotenv",
  "failure",
  "futures",
  "hex",
  "http",
+ "humantime 2.0.0",
  "image 0.23.4",
  "loc",
  "num-format",
