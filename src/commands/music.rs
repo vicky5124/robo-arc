@@ -311,12 +311,20 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         let lava_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
         let mut lava_client = lava_lock.write().await;
 
-        let query_information = lava_client.auto_search_tracks(&query).await?;
+        let mut iter = 0;
+        let query_information = loop {
+            iter += 1;
+            let res = lava_client.auto_search_tracks(&query).await?;
 
-        if query_information.tracks.is_empty() {
-            msg.channel_id.say(&ctx, "Could not find any video of the search query.").await?;
-            return Ok(());
-        }
+            if res.tracks.is_empty() {
+                if iter == 5 {
+                    msg.channel_id.say(&ctx, "Could not find any video of the search query.").await?;
+                    return Ok(());
+                }
+            } else {
+                break res;
+            }
+        };
 
         {
             let node = lava_client.nodes.get_mut(&guild_id).unwrap();
