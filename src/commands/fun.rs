@@ -754,7 +754,6 @@ async fn higher_or_lower(ctx: &Context, msg: &Message) -> CommandResult {
     }
 
     let _ = message.delete_reactions(ctx).await;
-    dbg!(&current_value);
 
     Ok(())
 }
