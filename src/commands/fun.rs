@@ -55,6 +55,8 @@ use rand::seq::SliceRandom;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 
+use fasteval::error::Error;
+
 static KEY: [u8; 32] =  [244, 129, 85, 125, 252, 92, 208, 68, 29, 125, 160, 4, 146, 245, 193, 135, 12, 68, 162, 84, 202, 123, 90, 165, 194, 126, 12, 117, 87, 195, 9, 202];
 static IV: [u8; 16] =  [41, 61, 154, 40, 255, 51, 217, 146, 228, 10, 58, 62, 217, 128, 96, 7];
 
@@ -789,5 +791,122 @@ async fn profile(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
         })
     }).await?;
 
+    Ok(())
+}
+
+/// Calculates an expression.
+/// The integer limit is 128 bit, or 170,141,183,460,469,231,731,687,303,715,884,105,727
+///
+/// Supported operators:
+/// ```
+/// ^               Exponentiation
+/// %               Modulo
+/// /               Division
+/// *               Multiplication
+/// -               Subtraction
+/// +               Addition
+/// && (and)        Logical AND with short-circuit
+/// || (or)         Logical OR with short-circuit
+/// == != < <= >= > Comparisons (all have equal precedence)
+///
+/// ---------------
+///
+/// Integers: 1, 2, 10, 100, 1001
+/// 
+/// Decimals: 1.0, 1.23456, 0.000001
+/// 
+/// Exponents: 1e3, 1E3, 1e-3, 1E-3, 1.2345e100
+/// 
+/// Suffix:
+///         1.23p        = 0.00000000000123
+///         1.23n        = 0.00000000123
+///         1.23µ, 1.23u = 0.00000123
+///         1.23m        = 0.00123
+///         1.23K, 1.23k = 1230
+///         1.23M        = 1230000
+///         1.23G        = 1230000000
+///         1.23T        = 1230000000000
+///
+/// ---------------
+///
+/// e()  -- Euler's number (2.718281828459045)
+/// pi() -- π (3.141592653589793)
+///
+/// log(base=10, val)
+/// ---
+/// Logarithm with optional 'base' as first argument.
+/// If not provided, 'base' defaults to '10'.
+/// Example: "log(100) + log(e(), 100)"
+///
+/// int(val)
+/// ceil(val)
+/// floor(val)
+/// round(modulus=1, val)
+/// ---
+/// Round with optional 'modulus' as first argument.
+/// Example: "round(1.23456) == 1  &&  round(0.001, 1.23456) == 1.235"
+///
+/// abs(val)
+/// sign(val)
+///
+/// min(val, ...) -- Example: "min(1, -2, 3, -4) == -4"
+/// max(val, ...) -- Example: "max(1, -2, 3, -4) == 3"
+///
+/// sin(radians)     asin(val)
+/// cos(radians)     acos(val)
+/// tan(radians)     atan(val)
+/// sinh(val)        asinh(val)
+/// cosh(val)        acosh(val)
+/// tanh(val)        atanh(val)
+/// ```
+#[command]
+#[aliases(calc, math, maths)]
+#[min_args(1)]
+async fn calculator(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let mut operation = args.message().to_string();
+    operation = operation.replace("**", "^");
+    operation = operation.replace("pi()", "pi");
+    operation = operation.replace("pi", "pi()");
+    operation = operation.replace("π", "pi()");
+    operation = operation.replace("euler", "e()");
+
+    let mut ns = fasteval::EmptyNamespace;
+    let val = fasteval::ez_eval(&operation, &mut ns);
+
+    match val {
+        Err(why) => {
+            let text = match &why {
+                Error::SlabOverflow => "Too many Expressions/Values/Instructions were stored in the Slab.".to_string(),
+                Error::EOF => "Reached an unexpected End Of Input during parsing.\nMake sure your operators are complete.".to_string(),
+                Error::EofWhileParsing(x) => format!("Reached an unexpected End Of Input during parsing:\n{}", x),
+                Error::Utf8ErrorWhileParsing(_) => "The operator could not be decoded with UTF-8".to_string(),
+                Error::TooLong => "The expression is too long.".to_string(),
+                Error::TooDeep => "The expression is too recursive.".to_string(),
+                Error::UnparsedTokensRemaining(x) => format!("An expression was parsed, but there is still input data remaining.\nUnparsed data: {}", x),
+                Error::InvalidValue => "A value was expected, but invalid input data was found.".to_string(),
+                Error::ParseF64(x) => format!("Could not parse a 64 bit floating point number:\n{}", x),
+                Error::Expected(x) => format!("The expected input data was not found:\n{}", x),
+                Error::WrongArgs(x) => format!("A function was called with the wrong arguments:\n{}", x),
+                Error::Undefined(x) => format!("The expression tried to use an undefined variable or function:\n{}", x),
+                Error::Unreachable => "This error should never happen, if it did, contact nitsuga5124#2207 immediately!".to_string(),
+                _ => format!("An unhandled error occurred:\n{:#?}", &why),
+            };
+
+            msg.channel_id.send_message(ctx, |m| m.embed(|e| {
+                e.title("ERROR");
+                e.description(text);
+                e.field("Operation", &operation, true);
+                e.footer(|f| f.text(format!("Subtmitted by: {}", msg.author.tag())))
+            })).await?;
+        },
+        Ok(res) => {
+            msg.channel_id.send_message(ctx, |m| m.embed(|e| {
+                e.title("Result");
+                e.description(res);
+                e.field("Operation", &operation, true);
+                e.footer(|f| f.text(format!("Subtmitted by: {}", msg.author.tag())))
+            })).await?;
+        }
+    }
     Ok(())
 }

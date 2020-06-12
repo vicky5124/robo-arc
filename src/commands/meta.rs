@@ -216,15 +216,11 @@ async fn todo(ctx: &Context, msg: &Message) -> CommandResult {
 TODO:
 
 #Random/Fun
-Calculator (maths)
 Reminder (reminds you of a message after X time)
 
 #Osu!
 Top (posts the top plays of the user)
 MapPP (calculates pp of a map, like ezpp or tillerino)
-
-#DDG
-Search (searches term on duckduckgo)
 
 #Twitch
 ConfigureMessage (to configure the live message)
@@ -234,9 +230,6 @@ RemoveNotification (to remove notifications)
 Subreddit (posts a random post from the subreddit specified)
 User (posts a random post from the user specified)
 Sub/User Bomb (posts 5 posts from the subreddit or user specified)
-
-#Image Manipulation
-Pride (prides the provided image, either bi, gay, lesbian, etc...)
 
 #Mod
 Clear (add specific requieriments like \"only webhooks\")
