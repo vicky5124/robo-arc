@@ -1,3 +1,23 @@
+# 0.1.19-alpha
+
+### Commands:
+- profile:
+  New command.
+  Sends the profile of a user. (not member)
+- higher_or_lower:
+  Forgot to push the playing cards.
+- calculator:
+  New command.
+  Just a calculator that takes a query.
+- play:
+  Now it retries in case of not finding a result.
+
+### Codebase:
+- removed accidental debug code.
+
+### Notifications:
+- twitch no longer fails when a streamer doesn't exist.
+
 # 0.1.18-alpha
 
 ### Commands:

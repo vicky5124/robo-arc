@@ -56,7 +56,7 @@ checksum = "4d25d88fd6b8041580a654f9d0c581a047baee2b3efee13275f2fc392fc75034"
 
 [[package]]
 name = "arc_bot"
-version = "0.1.18-alpha"
+version = "0.1.19-alpha"
 dependencies = [
  "bitflags",
  "chrono",
