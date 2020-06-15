@@ -212,12 +212,17 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
         headers.insert(AUTHORIZATION, format!("Bearer {}", token).parse().unwrap());
         headers.insert("Client-ID", format!("{}", client_id).parse().unwrap());
 
-        let resp = reqwest.get(url)
+        println!("{}", &i.streamer);
+        let resp = if let Ok(x) = reqwest.get(url)
             .headers(headers.clone())
             .send()
             .await?
             .json::<TwitchStreams>()
-            .await?;
+            .await { x } else {
+                continue
+            };
+
+        println!("1");
 
         let stream_data = resp.data;
         if !stream_data.is_empty() && i.is_live {
@@ -234,6 +239,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
                         .await?
                         .json::<TwitchGameData>()
                         .await?;
+                    println!("2");
 
                     let url = format!("https://api.twitch.tv/helix/users?id={}", stream_data[0].user_id);
                     let user_resp = reqwest.get(&url)
@@ -242,6 +248,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
                         .await?
                         .json::<TwitchUserData>()
                         .await?;
+                    println!("2");
 
                     let game_name = game_resp.data[0].name.clone().unwrap_or("No Game".to_string());
                     let streamer_name = notification_place.streamer.clone();
@@ -299,6 +306,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
                     .await?
                     .json::<TwitchGameData>()
                     .await?;
+                println!("4");
 
                 let url = format!("https://api.twitch.tv/helix/users?id={}", stream_data[0].user_id);
                 let user_resp = reqwest.get(&url)
@@ -307,6 +315,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
                     .await?
                     .json::<TwitchUserData>()
                     .await?;
+                println!("5");
 
                 let game_data = game_resp.data.get(0);
                 let game_name = if let Some(x) = game_data {
