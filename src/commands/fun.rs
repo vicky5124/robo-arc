@@ -799,12 +799,12 @@ async fn profile(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
 ///
 /// Supported operators:
 /// ```
-/// ^               Exponentiation
-/// %               Modulo
-/// /               Division
-/// *               Multiplication
-/// -               Subtraction
 /// +               Addition
+/// -               Subtraction
+/// *               Multiplication
+/// /               Division
+/// %               Modulo
+/// ^ **            Exponentiation
 /// && (and)        Logical AND with short-circuit
 /// || (or)         Logical OR with short-circuit
 /// == != < <= >= > Comparisons (all have equal precedence)
@@ -818,14 +818,14 @@ async fn profile(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
 /// Exponents: 1e3, 1E3, 1e-3, 1E-3, 1.2345e100
 /// 
 /// Suffix:
-///         1.23p        = 0.00000000000123
-///         1.23n        = 0.00000000123
-///         1.23µ, 1.23u = 0.00000123
-///         1.23m        = 0.00123
-///         1.23K, 1.23k = 1230
-///         1.23M        = 1230000
-///         1.23G        = 1230000000
-///         1.23T        = 1230000000000
+/// 1.23p       = 0.00000000000123
+/// 1.23n       = 0.00000000123
+/// 1.23µ 1.23u = 0.00000123
+/// 1.23m       = 0.00123
+/// 1.23K 1.23k = 1230
+/// 1.23M       = 1230000
+/// 1.23G       = 1230000000
+/// 1.23T       = 1230000000000
 ///
 /// ---------------
 ///
@@ -870,6 +870,13 @@ async fn calculator(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     operation = operation.replace("π", "pi()");
     operation = operation.replace("euler", "e()");
 
+    let mut operation_without_markdown = operation.replace(r"\\", r"\\\\");
+    // " my ide is bugged lol
+
+    for i in &["*", "`", "_", "~", "|"] {
+        operation_without_markdown = operation_without_markdown.replace(i, &format!(r"\{}", i));
+    }
+
     let mut ns = fasteval::EmptyNamespace;
     let val = fasteval::ez_eval(&operation, &mut ns);
 
@@ -895,16 +902,16 @@ async fn calculator(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             msg.channel_id.send_message(ctx, |m| m.embed(|e| {
                 e.title("ERROR");
                 e.description(text);
-                e.field("Operation", &operation, true);
-                e.footer(|f| f.text(format!("Subtmitted by: {}", msg.author.tag())))
+                e.field("Operation", &operation_without_markdown, true);
+                e.footer(|f| f.text(format!("Submitted by: {}", msg.author.tag())))
             })).await?;
         },
         Ok(res) => {
             msg.channel_id.send_message(ctx, |m| m.embed(|e| {
                 e.title("Result");
                 e.description(res);
-                e.field("Operation", &operation, true);
-                e.footer(|f| f.text(format!("Subtmitted by: {}", msg.author.tag())))
+                e.field("Operation", &operation_without_markdown, true);
+                e.footer(|f| f.text(format!("Submitted by: {}", msg.author.tag())))
             })).await?;
         }
     }
