@@ -795,7 +795,12 @@ async fn profile(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
 }
 
 /// Calculates an expression.
-/// The integer limit is 128 bit, or 170,141,183,460,469,231,731,687,303,715,884,105,727
+///
+/// Example: `calc 1+2*3/4^5%6 + log(100K) + log(e(),100) + [3*(3-3)/3] + (2<3) && 1.23`
+///
+/// The precise integer limit is the signed 32 bit integer (-2147483648 to 2147483647)
+/// The the unprecise integer limit is almost the signed 1024 bit integer.
+/// The floating point precision is 64 bit.
 ///
 /// Supported operators:
 /// ```
@@ -846,6 +851,7 @@ async fn profile(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
 /// Round with optional 'modulus' as first argument.
 /// Example: "round(1.23456) == 1  &&  round(0.001, 1.23456) == 1.235"
 ///
+/// sqrt(val)
 /// abs(val)
 /// sign(val)
 ///
@@ -877,8 +883,22 @@ async fn calculator(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         operation_without_markdown = operation_without_markdown.replace(i, &format!(r"\{}", i));
     }
 
-    let mut ns = fasteval::EmptyNamespace;
-    let val = fasteval::ez_eval(&operation, &mut ns);
+    let mut cb = |name:&str, args:Vec<f64>| -> Option<f64> {
+        match name {
+            "sqrt" => {
+                let a = args.get(0);
+                if let Some(x) = a {
+                    let l = x.log10();
+                    Some(10.0_f64.powf(l/2.0))
+                } else {
+                    None
+                }
+            },
+            _ => None,
+        }
+    };
+
+    let val = fasteval::ez_eval(&operation, &mut cb);
 
     match val {
         Err(why) => {
@@ -894,7 +914,7 @@ async fn calculator(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 Error::ParseF64(x) => format!("Could not parse a 64 bit floating point number:\n{}", x),
                 Error::Expected(x) => format!("The expected input data was not found:\n{}", x),
                 Error::WrongArgs(x) => format!("A function was called with the wrong arguments:\n{}", x),
-                Error::Undefined(x) => format!("The expression tried to use an undefined variable or function:\n{}", x),
+                Error::Undefined(x) => format!("The expression tried to use an undefined variable or function, or it didn't provide any required arguments.:\n{}", x),
                 Error::Unreachable => "This error should never happen, if it did, contact nitsuga5124#2207 immediately!".to_string(),
                 _ => format!("An unhandled error occurred:\n{:#?}", &why),
             };
