@@ -392,7 +392,6 @@ impl EventHandler for Handler {
         // for all the available activities.
 
         let ctx = Arc::new(ctx);
-        let ctx_clone = Arc::clone(&ctx);
 
         let (info, web_server_info) = {
             let read_data = ctx.data.read().await;
@@ -402,32 +401,6 @@ impl EventHandler for Handler {
                 config["web_server"].clone(),
             )
         };
-
-        tokio::spawn(async move {
-            let guilds = ctx_clone.clone().cache
-                .guilds()
-                .await
-                .iter()
-                .map(|i| i.0)
-                .collect::<Vec<_>>();
-
-            let routes = warp::path::param().map(move |guild_id: u64| -> Json {
-                let data = Allow {
-                    allowed: guilds.contains(&guild_id.clone())
-                };
-            
-                json(&data)
-            });
-
-            let ip = web_server_info["server_ip"].as_str().unwrap();
-            let port = web_server_info["server_port"].as_integer().unwrap();
-
-            warp::serve(routes)
-                .run(SocketAddr::from_str(
-                    format!("{}:{}", ip, port).as_str()
-                ).unwrap()
-            ).await;
-        });
 
         if info["play_or_listen"].as_str().unwrap() == "playing" {
             ctx.set_presence(
@@ -451,8 +424,36 @@ impl EventHandler for Handler {
 
         if !status {
             let ctx_clone = Arc::clone(&ctx);
+            let ctx_clone2 = Arc::clone(&ctx);
 
             let notification_loop = tokio::spawn(async move {notification_loop(ctx_clone).await});
+
+            tokio::spawn(async move {
+                let guilds = ctx_clone2.clone().cache
+                    .guilds()
+                    .await
+                    .iter()
+                    .map(|i| i.0)
+                    .collect::<Vec<_>>();
+
+                let routes = warp::path::param().map(move |guild_id: u64| -> Json {
+                    let data = Allow {
+                        allowed: guilds.contains(&guild_id.clone())
+                    };
+                
+                    json(&data)
+                });
+
+                let ip = web_server_info["server_ip"].as_str().unwrap();
+                let port = web_server_info["server_port"].as_integer().unwrap();
+
+                warp::serve(routes)
+                    .run(SocketAddr::from_str(
+                        format!("{}:{}", ip, port).as_str()
+                    ).unwrap()
+                ).await;
+            });
+
             {
                 let mut data = ctx.data.write().await;
                 data.insert::<NotificationStatus>(true);
