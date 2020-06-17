@@ -70,7 +70,9 @@ version = "1.0.106"
 features = ["derive"]
 
 [dependencies.sqlx]
-version = "0.3"
+#version = "0.3"
+git = "https://github.com/launchbadge/sqlx/"
+branch = "master"
 default-features = false
 features = ["runtime-tokio", "macros", "postgres", "uuid"]
 

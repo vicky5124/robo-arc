@@ -53,84 +53,25 @@ You'll need to have a psql server running. If you don't know how, I recommend us
     NOTE: if you are using windows, docker requires the hyper-V module to be enabled, which breaks other virualization software like VirtualBox or VMWare. If you use any of those softwares, consider setting the database on the system natively.
 
 With a created database and you connected with a user, you'll need to create different tables, required by the bot.
-```sql
-CREATE TABLE public.osu_user (
-    discord_id bigint NOT NULL,
-    osu_id integer NOT NULL,
-    osu_username character varying(50) COLLATE pg_catalog."default" NOT NULL,
-    pp boolean,
-    mode integer,
-    short_recent boolean,
-    CONSTRAINT osu_user_pkey PRIMARY KEY (discord_id)
-)
+\
+You can do this by using sqlx migrations. To install it, run this command:
+\
+`cargo install sqlx-cli --git https://github.com/launchbadge/sqlx.git`
+\
+Then you will need to set a database url to your env_vars. In linux you can run this:
+\
+```bash
+export DATABASE_URL="postgres://`postgres_username`:`postgres_user_password`@`postgres_ip`:`postgres_port`/`postgres_database`"
 ```
-```sql
-CREATE TABLE public.annoyed_channels (
-    channel_id bigint NOT NULL,
-    CONSTRAINT annoyed_channels_pkey PRIMARY KEY (channel_id)
-)
-```
-```sql
-CREATE TABLE public.best_bg (
-    user_id bigint NOT NULL,
-    best_boy text COLLATE pg_catalog."default",
-    best_girl text COLLATE pg_catalog."default",
-    booru text COLLATE pg_catalog."default",
-    CONSTRAINT best_bg_pkey PRIMARY KEY (user_id)
-)
-```
-```sql
-CREATE TABLE public.prefixes (
-    guild_id bigint NOT NULL,
-    prefix text COLLATE pg_catalog."default",
-    CONSTRAINT prefixes_pkey PRIMARY KEY (guild_id)
-)
-```
-```sql
-CREATE TABLE public.new_posts (
-    booru_url text COLLATE pg_catalog."default" NOT NULL,
-    tags text COLLATE pg_catalog."default" NOT NULL,
-    webhook text[] COLLATE pg_catalog."default",
-    channel_id bigint[],
-    sent_md5 text[] COLLATE pg_catalog."default"
-)
-```
-```sql
-CREATE TABLE public.streamers (
-    streamer text COLLATE pg_catalog."default" NOT NULL,
-    is_live boolean NOT NULL DEFAULT false,
-    use_default boolean NOT NULL DEFAULT false,
-    live_message text COLLATE pg_catalog."default" DEFAULT 'I''m live!'::text,
-    not_live_message text COLLATE pg_catalog."default" DEFAULT 'I''m no longer live.'::text,
-    CONSTRAINT streamers_pkey PRIMARY KEY (streamer)
-);
+\
+Followed with the creation of the database:
+```bash
+# Only run this the first time.
+sqlx database create
 
-CREATE TABLE public.streamer_notification_channel (
-    streamer text COLLATE pg_catalog."default" NOT NULL,
-    role_id bigint,
-    use_default boolean NOT NULL DEFAULT false,
-    live_message text COLLATE pg_catalog."default" DEFAULT 'I''m live!'::text,
-    not_live_message text COLLATE pg_catalog."default" DEFAULT 'I''m no longer live.'::text,
-    channel_id bigint,
-    message_id bigint,
-    CONSTRAINT streamer_notification_channel_streamer_fkey FOREIGN KEY (streamer)
-        REFERENCES public.streamers (streamer) MATCH SIMPLE
-        ON UPDATE NO ACTION
-        ON DELETE NO ACTION
-);
-
-CREATE TABLE public.streamer_notification_webhook (
-    streamer text COLLATE pg_catalog."default" NOT NULL,
-    webhook text COLLATE pg_catalog."default" NOT NULL,
-    role_id bigint,
-    live_message text COLLATE pg_catalog."default" DEFAULT 'I''m live!'::text,
-    not_live_message text COLLATE pg_catalog."default" DEFAULT 'I''m no longer live.'::text,
-    message_id bigint,
-    CONSTRAINT streamer_notification_webhook_streamer_fkey FOREIGN KEY (streamer)
-        REFERENCES public.streamers (streamer) MATCH SIMPLE
-        ON UPDATE NO ACTION
-        ON DELETE NO ACTION
-);
+# Apply the migrations
+# Run this every time you update the bot.
+cargo sqxl mirgate run
 ```
 
 ### __**Eval command**__:

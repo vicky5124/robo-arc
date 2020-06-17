@@ -17,13 +17,6 @@ webhook_notifications = false
 play_or_listen = "playing" # playing/listening
 status = "the game of life."
 
-[psql]
-username = "postgres"
-password = ""
-database_name = "arcbot"
-host = "localhost" # the server ip
-port = "5432"
-
 [sankaku]
 idol_login = ""
 idol_passhash = "" # https://forum.sankakucomplex.com/t/channel-api-for-discord-integration/2204/7
