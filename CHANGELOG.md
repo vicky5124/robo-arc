@@ -1,3 +1,24 @@
+# 0.2.0-alpha
+
+### Commands:
+- calculator:
+  Now has a sqrt() function.
+
+### Dependencies:
+- sqlx:
+  Switched to master branch.
+  NO MORE 4 HOUR COMPILE TIMES POGCHAMP!!!
+- the rest:
+  Updated.
+
+### Database:
+- Migrations:
+  Implemented migrations.
+
+### Fixes:
+- web server:
+  No longer runs every ready event.
+
 # 0.1.19-alpha
 
 ### Commands:
