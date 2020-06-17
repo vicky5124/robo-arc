@@ -76,6 +76,7 @@ dependencies = [
  "image 0.23.5",
  "loc",
  "num-format",
+ "openssl",
  "photon-rs",
  "qrcode",
  "quick-xml",
@@ -1724,6 +1725,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77af24da69f9d9341038eba93a073b1fdaaa1b788221b00a69bce9e762cb32de"
 
 [[package]]
+name = "openssl-src"
+version = "111.10.0+1.1.1g"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47cd4a96d49c3abf4cac8e8a80cba998a030c75608f158fb1c5f609772f265e6"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "openssl-sys"
 version = "0.9.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1732,6 +1742,7 @@ dependencies = [
  "autocfg 1.0.0",
  "cc",
  "libc",
+ "openssl-src",
  "pkg-config",
  "vcpkg",
 ]
@@ -2870,6 +2881,7 @@ version = "1.0.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec2c5d7e739bc07a3e73381a39d61fdb5f671c60c1df26a130690665803d8226"
 dependencies = [
+ "indexmap",
  "itoa",
  "ryu",
  "serde",
@@ -2963,6 +2975,18 @@ name = "sha1"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2579985fda508104f7587689507983eadd6a6e84dd35d6d115361f530916fa0d"
+
+[[package]]
+name = "sha2"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a256f46ea78a0c0d9ff00077504903ac881a1dafdc20da66545699e7776b3e69"
+dependencies = [
+ "block-buffer 0.7.3",
+ "digest 0.8.1",
+ "fake-simd",
+ "opaque-debug",
+]
 
 [[package]]
 name = "sha2"
@@ -3100,8 +3124,9 @@ dependencies = [
  "percent-encoding",
  "phf 0.8.0",
  "rand 0.7.3",
+ "serde",
  "sha-1 0.9.0",
- "sha2",
+ "sha2 0.9.0",
  "smallvec 1.4.0",
  "sqlformat",
  "sqlx-rt",
@@ -3120,9 +3145,13 @@ dependencies = [
  "dotenv",
  "futures",
  "heck",
+ "hex",
  "once_cell",
  "proc-macro2 1.0.18",
  "quote 1.0.7",
+ "serde",
+ "serde_json",
+ "sha2 0.8.2",
  "sqlx-core",
  "syn 1.0.31",
  "tokio",

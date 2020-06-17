@@ -62,6 +62,7 @@ Then you will need to set a database url to your env_vars. In linux you can run 
 \
 ```bash
 export DATABASE_URL="postgres://`postgres_username`:`postgres_user_password`@`postgres_ip`:`postgres_port`/`postgres_database`"
+export DATABASE_URL2="postgres://`postgres_username`:`postgres_user_password`@`postgres_ip`:`postgres_port`/`postgres_database`"
 ```
 \
 Followed with the creation of the database:

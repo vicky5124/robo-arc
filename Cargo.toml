@@ -42,6 +42,12 @@ chrono = "0.4.11" # https://github.com/chronotope/chrono
 humantime = "2.0.0" # https://github.com/tailhook/humantime
 fasteval = "0.2.4" # https://github.com/likebike/fasteval
  
+openssl = { version = "*", optional = true }
+
+[features]
+default = ["reqwest/default-tls"]
+vendored-openssl = ["openssl/vendored"]
+ 
 # https://github.com/rust-random/rand
 [dependencies.rand]
 version = "0.7.3"
@@ -74,7 +80,7 @@ features = ["derive"]
 git = "https://github.com/launchbadge/sqlx/"
 branch = "master"
 default-features = false
-features = ["runtime-tokio", "macros", "postgres", "uuid"]
+features = ["runtime-tokio", "macros", "postgres", "uuid", "offline"]
 
 # https://github.com/tafia/quick-xml
 [dependencies.quick-xml]
