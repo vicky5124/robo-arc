@@ -1,5 +1,6 @@
 [build.env]
 passthrough = [
     "DATABASE_URL",
+    "DATABASE_URL2",
 ]
 
