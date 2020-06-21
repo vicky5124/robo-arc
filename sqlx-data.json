@@ -50,6 +50,16 @@
       "columns": []
     }
   },
+  "266b2c56cb6e424b7b51759a4bbd155a72c2585a0de0d1efbae6644fd2bf8882": {
+    "query": "UPDATE new_posts SET channel_id = $2 WHERE booru_url = 'yande.re' AND tags = $1",
+    "describe": {
+      "params": [
+        "Text",
+        "Int8Array"
+      ],
+      "columns": []
+    }
+  },
   "2e9dbe2ef234e5476f97b8ac56f1d476e2e3a370f3ef9c68405aabfd08e3ddda": {
     "query": "SELECT disallowed_commands FROM prefixes WHERE guild_id = $1",
     "describe": {
@@ -129,6 +139,21 @@
         "Int8"
       ],
       "columns": []
+    }
+  },
+  "5b189e76a5709df769da0ba24b8079af3c261299c50b2553574fbbf85ee223c6": {
+    "query": "SELECT channel_id FROM new_posts WHERE booru_url = 'yande.re' AND tags = $1",
+    "describe": {
+      "params": [
+        "Text"
+      ],
+      "columns": [
+        {
+          "name": "channel_id",
+          "type_info": "Int8Array",
+          "not_null": false
+        }
+      ]
     }
   },
   "61929390e200d54b11e2ff31f6022cee5dd95aae52178ac097140ecbe769cfd3": {
@@ -439,6 +464,17 @@
       "columns": []
     }
   },
+  "9ad485eab342fbcae09179fc83118bd78adea3217115104d957b67c46a899f22": {
+    "query": "INSERT INTO new_posts (booru_url, tags, channel_id, sent_md5) VALUES ('yande.re', $1, $2, $3)",
+    "describe": {
+      "params": [
+        "Text",
+        "Int8Array",
+        "TextArray"
+      ],
+      "columns": []
+    }
+  },
   "a19ed0b69a447c979a6786eefba9226dec4c1b0bec118e2c99f675d01ad5ac4d": {
     "query": "UPDATE new_posts SET sent_md5 = $1 WHERE booru_url = $2 AND tags = $3",
     "describe": {
@@ -549,6 +585,18 @@
           "not_null": false
         }
       ]
+    }
+  },
+  "cb34b7a89f270b06b489737f6cb4abee3996711c04f3c4f480b8092dd81676e8": {
+    "query": "INSERT INTO streamer_notification_webhook (streamer, role_id, use_default, webhook) VALUES ($1, $2, $3, $4)",
+    "describe": {
+      "params": [
+        "Text",
+        "Int8",
+        "Bool",
+        "Text"
+      ],
+      "columns": []
     }
   },
   "db3450aa25d3b5534dd139d42f1a61aa3fe0f1344075e7d506fbe5259e7a75bb": {
