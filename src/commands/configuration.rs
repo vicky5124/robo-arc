@@ -540,18 +540,18 @@ async fn configure_twitch(ctx: &Context, msg: &mut Message, og_message: &Message
     let author = &og_message.author;
     let mut config = Twitch::default();
 
-    msg.edit(ctx, |m| {
-        m.content(format!("<@{}>", author.id));
-        m.embed(|e| {
-            e.title("Say the name of the streamer, whether or not you let the discord user bound to the twitch account to change the notification message and an optional notification role.");
-            e.description("Examples:
-                `bobross yes @jop_notifications`
-                `raysworks no @technical_minecraft`
-                `the8bitdrummer no`")
-        })
-    }).await?;
-
     if is_create {
+        msg.edit(ctx, |m| {
+            m.content(format!("<@{}>", author.id));
+            m.embed(|e| {
+                e.title("Say the name of the streamer, whether or not you let the discord user bound to the twitch account to change the notification message and an optional notification role.");
+                e.description("Examples:
+                    `bobross yes @jop_notifications`
+                    `raysworks no @technical_minecraft`
+                    `the8bitdrummer no`")
+            })
+        }).await?;
+
         if let Some(reply) = author.await_reply(ctx).timeout(Duration::from_secs(120)).await {
             let content = reply.content.split(' ').collect::<Vec<&str>>();
 
@@ -631,6 +631,140 @@ async fn configure_twitch(ctx: &Context, msg: &mut Message, og_message: &Message
                     })
                 }).await?;
             }
+        }
+    } else {
+        if is_hook {
+            msg.edit(ctx, |m| {
+                m.content(format!("<@{}>", author.id));
+                m.embed(|e| {
+                    e.title("Say the webhook url you would like to see the streamers to unnotify.");
+                    e.description("Tip: you can locate the url inside the channel configuration, on the webhooks tab, it will be part of the hook created by me.\n You will likely need to replace `discordapp.com` to `discord.com` so it's recognized correctly.")
+                })
+            }).await?;
+
+            let hook_url;
+            if let Some(reply) = author.await_reply(ctx).timeout(Duration::from_secs(120)).await {
+                let _ = reply.delete(ctx).await;
+
+                let mut m = reply.content.to_string();
+                if m.starts_with("http") && m.contains("discord") && m.contains("webhook") {
+                    m = m.replace("canary.", "");
+                    m = m.replace("pbt.", "");
+                    m = m.replace("discordapp", "discord");
+                    hook_url = m.to_string();
+                } else {
+                    og_message.reply(ctx, "An invalid url was provided.").await?;
+                    timeout(ctx, msg, og_message).await?;
+                    return Ok(());
+                }
+            } else {
+                timeout(ctx, msg, og_message).await?;
+                return Ok(());
+            }
+
+            let mut query = sqlx::query!("SELECT streamer FROM streamer_notification_webhook WHERE webhook = $1", &hook_url)
+                .fetch(pool);
+
+            let mut streamers = Vec::new();
+            while let Some(i) = query.try_next().await? {
+                streamers.push(i.streamer);
+            }
+
+            let mut x = 0_usize;
+            let streamers_choice = streamers.iter().map(|i| {
+                x += 1;
+                format!("{}: '{}'\n", x, i)
+            }).collect::<String>();
+
+            if streamers_choice.is_empty() {
+                og_message.reply(ctx, "No streamers are being notified with that webhook.").await?;
+                timeout(ctx, msg, og_message).await?;
+                return Ok(());
+            }
+            
+            msg.edit(ctx, |m| {
+                m.content(format!("<@{}>", author.id));
+                m.embed(|e| {
+                    e.title("Say the number of the streamer you would like to stop getting notified about.");
+                    e.description(&streamers_choice)
+                })
+            }).await?;
+
+            let index;
+            if let Some(reply) = author.await_reply(ctx).timeout(Duration::from_secs(120)).await {
+                if let Ok(x) = reply.content.parse::<usize>() {
+                    index = x;
+                } else {
+                    og_message.reply(ctx, "An invalid number was provided.").await?;
+                    timeout(ctx, msg, og_message).await?;
+                    return Ok(());
+                }
+            } else {
+                timeout(ctx, msg, og_message).await?;
+                return Ok(());
+            }
+
+            config.streamer = if let Some(x) = streamers.get(index - 1) { x.to_string() } else {
+                og_message.reply(ctx, "The number provided is too large.").await?;
+                timeout(ctx, msg, og_message).await?;
+                return Ok(());
+            };
+
+            sqlx::query!("DELETE FROM streamer_notification_webhook WHERE streamer = $1 AND webhook = $2", &config.streamer, &hook_url)
+                .execute(pool)
+                .await?;
+        } else {
+            let mut query = sqlx::query!("SELECT streamer FROM streamer_notification_channel WHERE channel_id = $1", msg.channel_id.0 as i64)
+                .fetch(pool);
+
+            let mut streamers = Vec::new();
+            while let Some(i) = query.try_next().await? {
+                streamers.push(i.streamer);
+            }
+
+            let mut x = 0_usize;
+            let streamers_choice = streamers.iter().map(|i| {
+                x += 1;
+                format!("{}: '{}'\n", x, i)
+            }).collect::<String>();
+
+            if streamers_choice.is_empty() {
+                og_message.reply(ctx, "No streamers are being notified in this channel.").await?;
+                timeout(ctx, msg, og_message).await?;
+                return Ok(());
+            }
+            
+            msg.edit(ctx, |m| {
+                m.content(format!("<@{}>", author.id));
+                m.embed(|e| {
+                    e.title("Say the number of the streamer you would like to stop getting notified about.");
+                    e.description(&streamers_choice)
+                })
+            }).await?;
+
+            let index;
+            if let Some(reply) = author.await_reply(ctx).timeout(Duration::from_secs(120)).await {
+                if let Ok(x) = reply.content.parse::<usize>() {
+                    index = x;
+                } else {
+                    og_message.reply(ctx, "An invalid number was provided.").await?;
+                    timeout(ctx, msg, og_message).await?;
+                    return Ok(());
+                }
+            } else {
+                timeout(ctx, msg, og_message).await?;
+                return Ok(());
+            }
+
+            config.streamer = if let Some(x) = streamers.get(index - 1) { x.to_string() } else {
+                og_message.reply(ctx, "The number provided is too large.").await?;
+                timeout(ctx, msg, og_message).await?;
+                return Ok(());
+            };
+
+            sqlx::query!("DELETE FROM streamer_notification_channel WHERE streamer = $1 AND channel_id = $2", &config.streamer, msg.channel_id.0 as i64)
+                .execute(pool)
+                .await?;
         }
     }
 

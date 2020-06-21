@@ -124,7 +124,7 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
     permissions.set(Permissions::MENTION_EVERYONE, true);
 
     // Creates the invite link for the bot with the permissions specified earlier.
-    // Error handling in rust is so nice.
+    // Error handling in rust i so nice.
     let url = match ctx.cache.current_user().await.invite_url(ctx, permissions).await {
         Ok(v) => v,
         Err(why) => {
@@ -224,7 +224,6 @@ MapPP (calculates pp of a map, like ezpp or tillerino)
 
 #Twitch
 ConfigureMessage (to configure the live message)
-RemoveNotification (to remove notifications)
 
 #Reddit
 Subreddit (posts a random post from the subreddit specified)
@@ -236,6 +235,7 @@ Clear (add specific requieriments like \"only webhooks\")
 PermaBan (permanently bans a user from the guild by not allowing the user to ever get back on (perma kick))
 TempMute (mutes the user on the specific channel or all channels)
 Logging (set a channel to log specific events)
+RuleManagement (https://5124.16-b.it/ss/22:50:34_21-06-2020.png)
 
 #Tags
 \"Basically the same as R. Danny, but with personal tags supported\"
