@@ -433,36 +433,86 @@ async fn _check_empty_vc(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
     Ok(())
 }
 
-pub async fn notification_loop(ctx: Arc<Context>) {
-    let ctx = Arc::new(ctx);
-    loop {
-        info!("Notification loop started.");
-        let ctx1 = Arc::clone(&ctx);
-        tokio::spawn(async move {
-            if let Err(why) = check_new_posts(Arc::clone(&ctx1)).await {
-                error!("check_new_posts :: {}", why);
-                eprintln!("An error occurred while running check_new_posts() >>> {}", why);
-            }
-        });
+async fn reminder_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
+    let rdata = ctx.data.read().await;
+    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let mut reminders = sqlx::query!("SELECT * FROM reminders")
+                        .fetch(pool);
 
-        let ctx2 = Arc::clone(&ctx);
-        tokio::spawn(async move {
-            if let Err(why) = check_twitch_livestreams(Arc::clone(&ctx2)).await {
-                error!("check_twitch_livestreams :: {}", why);
-                eprintln!("An error occurred while running check_twitch_livestreams() >>> {}", why);
-            }
-        });
-
-        //let ctx3 = Arc::clone(&ctx);
-        //tokio::spawn(async move {
-        //    if let Err(why) = check_empty_vc(Arc::clone(&ctx3)).await {
-        //        error!("check_empty_vc :: {}", why);
-        //        eprintln!("An error occurred while running check_empty_vc() >>> {}", why);
-        //    }
-        //});
-        info!("Notification loop finished.");
-
-        tokio::time::delay_for(Duration::from_secs(120)).await;
+    while let Some(row) = reminders.try_next().await? {
+        if row.date < chrono::offset::Utc::now() {
+            let _ = ChannelId(row.channel_id as u64).send_message(&ctx, |m| {
+                m.content(format!("<@!{}>: Reminder!", row.user_id));
+                m.embed(|e| {
+                    e.description(if let Some(x) = &row.message { x } else { "No Message." });
+                    e.field("Original Message", format!("[Jump](https://discord.com/channels/{}/{}/{})",
+                        if row.guild_id == 0 {
+                            "@me".to_string()
+                        } else {
+                            row.guild_id.to_string()
+                        },
+                        &row.channel_id,
+                        &row.message_id,
+                    ), true)
+                })
+            }).await;
+            sqlx::query!("DELETE FROM reminders WHERE id = $1", row.id)
+                .execute(pool)
+                .await?;
+        }
     }
+
+
+
+    Ok(())
+}
+
+pub async fn notification_loop(ctx: Arc<Context>) {
+    let ctx = Arc::clone(&ctx);
+    let ctx2 = Arc::clone(&ctx);
+    tokio::spawn(async move {
+        loop {
+            info!("Notification loop started.");
+            let ctx1 = Arc::clone(&ctx);
+            tokio::spawn(async move {
+                if let Err(why) = check_new_posts(Arc::clone(&ctx1)).await {
+                    error!("check_new_posts :: {}", why);
+                    eprintln!("An error occurred while running check_new_posts() >>> {}", why);
+                }
+            });
+
+            let ctx2 = Arc::clone(&ctx);
+            tokio::spawn(async move {
+                if let Err(why) = check_twitch_livestreams(Arc::clone(&ctx2)).await {
+                    error!("check_twitch_livestreams :: {}", why);
+                    eprintln!("An error occurred while running check_twitch_livestreams() >>> {}", why);
+                }
+            });
+
+            //let ctx3 = Arc::clone(&ctx);
+            //tokio::spawn(async move {
+            //    if let Err(why) = check_empty_vc(Arc::clone(&ctx3)).await {
+            //        error!("check_empty_vc :: {}", why);
+            //        eprintln!("An error occurred while running check_empty_vc() >>> {}", why);
+            //    }
+            //});
+            info!("Notification loop finished.");
+
+            tokio::time::delay_for(Duration::from_secs(120)).await;
+        }
+    });
+
+    tokio::spawn(async move {
+        loop {
+            let ctx1 = Arc::clone(&ctx2);
+            tokio::spawn(async move {
+                if let Err(why) = reminder_check(Arc::clone(&ctx1)).await {
+                    error!("remider_check :: {}", why);
+                    eprintln!("An error occurred while running reminder_check() >>> {}", why);
+                }
+            });
+            tokio::time::delay_for(Duration::from_secs(15)).await;
+        }
+    });
 }
 

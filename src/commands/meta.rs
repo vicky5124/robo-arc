@@ -215,9 +215,6 @@ async fn todo(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(ctx, "```prolog
 TODO:
 
-#Random/Fun
-Reminder (reminds you of a message after X time)
-
 #Osu!
 MapPP (calculates pp of a map, like ezpp or tillerino)
 

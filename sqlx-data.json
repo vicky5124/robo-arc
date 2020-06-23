@@ -1,5 +1,18 @@
 {
   "db": "PostgreSQL",
+  "008c72ec861053d431ff24ea239c9db4da3e7874c0f0a9908004543f3a500eb0": {
+    "query": "INSERT INTO reminders (date, message_id, channel_id, guild_id, user_id) VALUES ($1, $2, $3, $4, $5)",
+    "describe": {
+      "params": [
+        "Timestamptz",
+        "Int8",
+        "Int8",
+        "Int8",
+        "Int8"
+      ],
+      "columns": []
+    }
+  },
   "00d7e8f2dd866e4cc646046b7e04d80e512e0f28ee518e5dba31338e852be9af": {
     "query": "SELECT channel_id FROM annoyed_channels WHERE channel_id = $1",
     "describe": {
@@ -25,6 +38,15 @@
       "columns": []
     }
   },
+  "06d5062612c9cd9d4fe8126309e46d8f86c372f456221e320fc2937b0fc41faa": {
+    "query": "DELETE FROM reminders WHERE id = $1",
+    "describe": {
+      "params": [
+        "Int4"
+      ],
+      "columns": []
+    }
+  },
   "14b0f7aa5a4f2feab4f8ca1ba9df84d3c6bf573b76fdca25b2804747430778fa": {
     "query": "SELECT streamer FROM streamers WHERE streamer = $1",
     "describe": {
@@ -38,6 +60,20 @@
           "not_null": true
         }
       ]
+    }
+  },
+  "178453f0910415111310484c113d73517a60a65969a8a7dcf503d56631aaafdd": {
+    "query": "INSERT INTO reminders (date, message_id, channel_id, guild_id, user_id, message) VALUES ($1, $2, $3, $4, $5, $6)",
+    "describe": {
+      "params": [
+        "Timestamptz",
+        "Int8",
+        "Int8",
+        "Int8",
+        "Int8",
+        "Text"
+      ],
+      "columns": []
     }
   },
   "20800da4d818053cfce2365f7f083ccecc3774d3b4f7df46aacfdd66ecc521ea": {
@@ -255,6 +291,49 @@
       "columns": []
     }
   },
+  "6efd7e44efc7697aeefdfb4fcf6ac8d38043aa6eb4b444f0ca29cf5b7bbb6d96": {
+    "query": "SELECT * FROM reminders",
+    "describe": {
+      "params": [],
+      "columns": [
+        {
+          "name": "id",
+          "type_info": "Int4",
+          "not_null": true
+        },
+        {
+          "name": "date",
+          "type_info": "Timestamptz",
+          "not_null": true
+        },
+        {
+          "name": "message_id",
+          "type_info": "Int8",
+          "not_null": true
+        },
+        {
+          "name": "channel_id",
+          "type_info": "Int8",
+          "not_null": true
+        },
+        {
+          "name": "guild_id",
+          "type_info": "Int8",
+          "not_null": true
+        },
+        {
+          "name": "user_id",
+          "type_info": "Int8",
+          "not_null": true
+        },
+        {
+          "name": "message",
+          "type_info": "Text",
+          "not_null": false
+        }
+      ]
+    }
+  },
   "708bcd8c0cb226d73697a44199620463c729031e89b49dbf32ca6f5ee465caa3": {
     "query": "SELECT best_girl, booru FROM best_bg WHERE user_id = $1",
     "describe": {
@@ -351,6 +430,17 @@
           "not_null": false
         }
       ]
+    }
+  },
+  "7b683ea520e5631da3c1712b13ea4f8c0b6415e36fe1fe0dd99037198de81457": {
+    "query": "INSERT INTO reminders (date, channel_id, user_id) VALUES ($1, $2, $3)",
+    "describe": {
+      "params": [
+        "Timestamptz",
+        "Int8",
+        "Int8"
+      ],
+      "columns": []
     }
   },
   "7bf943041131f2c717cf09b9d7246904fe7fd5d775e9e439f550a509c973f3bb": {
