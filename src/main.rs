@@ -275,7 +275,7 @@ struct Sankaku;
 // This group contains all the osu! related commands.
 #[group("osu!")]
 #[description = "All the osu! related commands"]
-#[commands(configure_osu, recent, score, osu_profile)]
+#[commands(configure_osu, recent, score, osu_profile, osu_top)]
 struct Osu;
 
 // The Booru command group.

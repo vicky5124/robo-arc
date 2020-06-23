@@ -1,4 +1,4 @@
-/// This is the file containing all the osu! related commands.
+//! This is the file containing all the osu! related commands.
 
 use crate::{
     ConnectionPool,
@@ -12,6 +12,7 @@ use crate::{
 };
 
 use serenity::{
+    builder::CreateEmbed,
     http::Http,
     utils::Colour,
     prelude::Context,
@@ -129,9 +130,15 @@ mod bitwhise_mods {
     }
 }
 
+#[derive(Default, Debug)]
+struct OsuData {
+    id: i32,
+    username: String,
+    pp: bool,
+}
 
 // JSON Structure of the osu! user API request.
-#[derive(Deserialize, PartialEq, Debug)]
+#[derive(Deserialize, Debug)]
 struct OsuUserData {
     user_id: String,
     username: String,
@@ -157,7 +164,7 @@ struct OsuUserData {
 }
 
 // JSON Structure of the osu! scores API request.
-#[derive(Deserialize, PartialEq, Debug)]
+#[derive(Deserialize, Debug)]
 struct OsuScores {
     score_id: String,
     score: String,
@@ -179,7 +186,7 @@ struct OsuScores {
 }
 
 // JSON Structure of the osu! user recent plays API request.
-#[derive(Deserialize, PartialEq, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 struct OsuUserRecentData {
     beatmap_id: String,
     score: String,
@@ -198,7 +205,7 @@ struct OsuUserRecentData {
 }
 
 // JSON Structure of the osu! beatmap API request.
-#[derive(Deserialize, PartialEq, Debug)]
+#[derive(Deserialize, Debug)]
 struct OsuBeatmapData {
     approved: String,
     submit_date: String,
@@ -237,6 +244,27 @@ struct OsuBeatmapData {
     max_combo: String,
     download_unavailable: String,
     audio_unavailable: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OsuUserBest {
+    beatmap_id: String,
+    score_id: String,
+    score: String,
+    maxcombo: String,
+    count50: String,
+    count100: String,
+    count300: String,
+    countmiss: String,
+    countkatu: String,
+    countgeki: String,
+    perfect: String,
+    enabled_mods: String,
+    user_id: String,
+    date: String,
+    rank: String,
+    pp: String,
+    replay_available: String,
 }
 
 // Data Structure of the data obtained on the database.
@@ -335,6 +363,25 @@ async fn get_osu_user(name: &str, osu_key: &str) -> Result<Vec<OsuUserData>, Box
     Ok(resp)
 }
 
+// Requests to the api the user data
+async fn get_osu_username(id: &i32, osu_key: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let url = Url::parse_with_params("https://osu.ppy.sh/api/get_user", &[
+        ("k", osu_key),
+        ("u", &id.to_string()),
+        ("type", "id"),
+    ])?;
+    let resp = reqwest::get(url)
+        .await?
+        .json::<Vec<OsuUserData>>()
+        .await?;
+
+    if let Some(x) = resp.get(0) {
+        Ok(x.username.to_string())
+    } else {
+        Ok(String::new())
+    }
+}
+
 // Requests to the api the scores of a map 
 async fn get_osu_scores(user_id: i32, user_name: &str, map_id: u64, mode: i32, osu_key: &str) -> Result<Vec<OsuScores>, Box<dyn std::error::Error>> {
     let url = if user_id != 0 {
@@ -378,6 +425,16 @@ async fn get_osu_beatmap(beatmap_id: &str, osu_key: &str) -> Result<Vec<OsuBeatm
     let resp = reqwest::get(&url)
         .await?
         .json::<Vec<OsuBeatmapData>>()
+        .await?;
+    Ok(resp)
+}
+
+// Requests to the api the top plays or best plays of a user (by pp weight).
+async fn get_osu_user_best(user_id: &i32, osu_key: &str) -> Result<Vec<OsuUserBest>, Box<dyn std::error::Error>> {
+    let url = format!("https://osu.ppy.sh/api/get_user_best?k={}&u={}&type=id&limit=100&m=0", osu_key, user_id);
+    let resp = reqwest::get(&url)
+        .await?
+        .json::<Vec<OsuUserBest>>()
         .await?;
     Ok(resp)
 }
@@ -877,7 +934,7 @@ async fn score(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 /// - Due to api limits, this will only work on maps with leaderboard.
 /// - This command is able to show failed plays, and show the percentage of progress.
 ///
-/// To use this command, first configure your osu! profile with `.osuc`
+/// To use this command, first configure your osu! profile with `osuc`
 /// Affected parameters for configuration:
 /// - Mode: To specify the gamemode the play was on.
 /// - PP: To know if the bot should display the PP stadistics of the play.
@@ -1006,9 +1063,178 @@ async fn recent(ctx: &Context, msg: &Message, arguments: Args) -> CommandResult 
             if let Err(_) = short_recent_builder(ctx.http.clone(), &event_data, bot_msg.clone(), page).await {
                 break;
             }
-            reaction.as_inner_ref().delete(ctx).await?;
+            let _ = reaction.as_inner_ref().delete(ctx).await;
         } else {
             let _ = bot_msg.delete_reactions(ctx).await;
+            break;
+        };
+    }
+
+    Ok(())
+}
+
+async fn top_play_embed_builder(osu_key: &str, data: &OsuData, play: &OsuUserBest, user: &OsuUserData, index: usize) -> Result<CreateEmbed, Box<dyn std::error::Error>> {
+    let beatmap_raw = get_osu_beatmap(&play.beatmap_id, &osu_key).await?;
+    let beatmap = &beatmap_raw[0];
+
+    let mods: String = get_mods_short(play.enabled_mods.parse()?).await;
+    let accuracy = acc_math(play.count300.parse()?, play.count100.parse()?, play.count50.parse()?, play.countmiss.parse()?).await;
+    let rating_url = format!("https://s.ppy.sh/images/{}.png", play.rank.to_uppercase());
+
+    let mut e = CreateEmbed::default();
+
+    e.color(Colour::new(data.id as u32));
+
+    e.author( |a| {
+        a.name(format!("Play #{} from \"{}\"", index, user.username));
+        a.icon_url(format!("https://a.ppy.sh/{}", user.user_id));
+        a.url(format!("https://osu.ppy.sh/u/{}", user.user_id))
+    });
+
+    e.title(format!("{} - {} [**{}**]\nby {}", beatmap.artist, beatmap.title, beatmap.version, beatmap.creator));
+    e.url(format!("https://osu.ppy.sh/b/{}", beatmap.beatmap_id));
+
+    e.description(format!("**{}** ┇ **x{} / {}**\n**{:.2}%** ┇ {} - {} - {} - {}",
+        play.score.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en),
+        play.maxcombo, beatmap.max_combo, accuracy, play.count300, play.count100, play.count50, play.countmiss));
+    e.timestamp(play.date.clone());
+    e.thumbnail(format!("https://b.ppy.sh/thumb/{}l.jpg", beatmap.beatmapset_id));
+
+    e.footer(|f| {
+        f.text(format!("{}pp | {:.4}* | {}", &play.pp, beatmap.difficultyrating, mods));
+        f.icon_url(&rating_url)
+    });
+
+    Ok(e)
+}
+
+/// Command to show the top plays of a user.
+/// - Only osu!std supported.
+///
+/// To use this command, you may want to configure your osu! profile with `osuc`
+/// Affected parameters for configuration:
+/// - PP: If set to false, users will not be able to see your top plays.
+///
+/// You can also invoke the command specifying a username.
+/// Usage:
+/// `osu_top`
+/// `osu!top [ Frost ]`
+/// `otop nitsuga5124`
+#[command]
+#[aliases("osutop", "otop", "top_plays", "topplays", "toplays", "top", "osu!top")]
+async fn osu_top(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let mut args_user = args.message().to_string();
+    if args_user.is_empty() {
+        args_user = msg.author.name.to_string();
+    }
+
+    let rdata = ctx.data.read().await;
+    let pool = rdata.get::<ConnectionPool>().unwrap();
+
+    let osu_key = {
+        let tokens = rdata.get::<Tokens>().unwrap().clone();
+        tokens["osu"].as_str().unwrap().to_string()
+    };
+
+    let mut config = OsuData::default();
+
+    if let Ok(id) = args_user.parse::<i32>() {
+        let data = sqlx::query!("SELECT * FROM osu_user WHERE osu_id = $1", id)
+            .fetch_optional(pool)
+            .await?;
+        if let Some(info) = data {
+            config.username = info.osu_username;
+            config.id = info.osu_id;
+            config.pp = info.pp.unwrap_or(true);
+        } else {
+            let data = sqlx::query!("SELECT * FROM osu_user WHERE osu_username = $1", &args_user)
+                .fetch_optional(pool)
+                .await?;
+            if let Some(info) = data {
+                config.username = info.osu_username;
+                config.id = info.osu_id;
+                config.pp = info.pp.unwrap_or(true);
+            } else {
+                config.id = id;
+                config.username = {
+                config.pp = true;
+                    let username = get_osu_username(&id, &osu_key).await?;
+
+                    if username.is_empty() {
+                        config.id = get_osu_id(&args_user, &osu_key).await?;
+                        args_user
+                    } else {
+                        username    
+                    }
+                };
+            }
+        }
+    } else {
+        let data = sqlx::query!("SELECT * FROM osu_user WHERE osu_username = $1", &args_user)
+            .fetch_optional(pool)
+            .await?;
+        if let Some(info) = data {
+            config.username = info.osu_username;
+            config.id = info.osu_id;
+            config.pp = info.pp.unwrap_or(true);
+        } else {
+            config.id = get_osu_id(&args_user, &osu_key).await?;
+            config.username = args_user;
+            config.pp = true;
+        }
+    }
+
+    if !config.pp {
+        msg.reply(ctx, format!("The user `{}` does not want anything to do with pp.", config.username.replace("@", "@\u{200b}"))).await?;
+        return Ok(());
+    }
+
+    let data = get_osu_user_best(&config.id, &osu_key).await?;
+
+    if data.is_empty() {
+        msg.reply(ctx, format!("The user `{}` does not have any plays in osu!std.", config.username.replace("@", "@\u{200b}"))).await?;
+        return Ok(());
+    }
+
+    let mut index = 0;
+    let user = &get_osu_user(&config.username, &osu_key).await?[0];
+
+    let embed = top_play_embed_builder(&osu_key, &config, &data[index], &user, index + 1).await?;
+    let mut message = msg.channel_id.send_message(ctx, |m| m.embed(|mut e| {
+        e.0 = embed.0; e
+    })).await?;
+
+    let left = ReactionType::Unicode(String::from("⬅️"));
+    let right = ReactionType::Unicode(String::from("➡️"));
+
+    message.react(ctx, left).await?;
+    message.react(ctx, right).await?;
+
+    loop {
+        if let Some(reaction) = &message.await_reaction(ctx).author_id(msg.author.id.0).timeout(Duration::from_secs(120)).await {
+            let emoji = &reaction.as_inner_ref().emoji;
+
+            match emoji.as_data().as_str() {
+                "⬅️" => { 
+                    if index != 0 {
+                        index -= 1;
+                    }
+                },
+                "➡️" => { 
+                    if index != data.len() - 1 {
+                        index += 1;
+                    }
+                },
+                _ => (),
+            }
+
+            let embed = top_play_embed_builder(&osu_key, &config, &data[index], &user, index + 1).await?;
+            message.edit(ctx, |m| m.embed(|mut e| {
+                e.0 = embed.0; e
+            })).await?;
+            let _ = reaction.as_inner_ref().delete(ctx).await;
+        } else {
+            let _ = message.delete_reactions(ctx).await;
             break;
         };
     }
