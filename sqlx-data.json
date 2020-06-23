@@ -60,6 +60,21 @@
       "columns": []
     }
   },
+  "26d3eed3ab68b6829a80121bc79a1b0177839987c811ce916226d160669c9eb9": {
+    "query": "SELECT streamer FROM streamer_notification_channel WHERE channel_id = $1",
+    "describe": {
+      "params": [
+        "Int8"
+      ],
+      "columns": [
+        {
+          "name": "streamer",
+          "type_info": "Text",
+          "not_null": true
+        }
+      ]
+    }
+  },
   "2e9dbe2ef234e5476f97b8ac56f1d476e2e3a370f3ef9c68405aabfd08e3ddda": {
     "query": "SELECT disallowed_commands FROM prefixes WHERE guild_id = $1",
     "describe": {
@@ -84,6 +99,21 @@
         "Text"
       ],
       "columns": []
+    }
+  },
+  "3ed2ad0f8a8c7a506c12e5a2d4b876cc93d52cdd3f3a71b80e97164d1ed1cb08": {
+    "query": "SELECT streamer FROM streamer_notification_webhook WHERE webhook = $1",
+    "describe": {
+      "params": [
+        "Text"
+      ],
+      "columns": [
+        {
+          "name": "streamer",
+          "type_info": "Text",
+          "not_null": true
+        }
+      ]
     }
   },
   "3f538bef0ff3c73d361454de69c014d3c502d3d7696157c43cc2bdce79fedcfc": {
@@ -323,6 +353,46 @@
       ]
     }
   },
+  "7bf943041131f2c717cf09b9d7246904fe7fd5d775e9e439f550a509c973f3bb": {
+    "query": "SELECT * FROM osu_user WHERE osu_username = $1",
+    "describe": {
+      "params": [
+        "Text"
+      ],
+      "columns": [
+        {
+          "name": "discord_id",
+          "type_info": "Int8",
+          "not_null": true
+        },
+        {
+          "name": "osu_id",
+          "type_info": "Int4",
+          "not_null": true
+        },
+        {
+          "name": "osu_username",
+          "type_info": "Varchar",
+          "not_null": true
+        },
+        {
+          "name": "pp",
+          "type_info": "Bool",
+          "not_null": false
+        },
+        {
+          "name": "mode",
+          "type_info": "Int4",
+          "not_null": false
+        },
+        {
+          "name": "short_recent",
+          "type_info": "Bool",
+          "not_null": false
+        }
+      ]
+    }
+  },
   "7ceac39aefbe50bc31397a1c3dee01cb2737cbcb5e27c5104ab85a06ff34e5a9": {
     "query": "SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1",
     "describe": {
@@ -497,6 +567,46 @@
       "columns": []
     }
   },
+  "b44b1e93b44aaa440af3b4fd55ff887502679e7e450a16258a6b60773e3fe42c": {
+    "query": "SELECT * FROM osu_user WHERE osu_id = $1",
+    "describe": {
+      "params": [
+        "Int4"
+      ],
+      "columns": [
+        {
+          "name": "discord_id",
+          "type_info": "Int8",
+          "not_null": true
+        },
+        {
+          "name": "osu_id",
+          "type_info": "Int4",
+          "not_null": true
+        },
+        {
+          "name": "osu_username",
+          "type_info": "Varchar",
+          "not_null": true
+        },
+        {
+          "name": "pp",
+          "type_info": "Bool",
+          "not_null": false
+        },
+        {
+          "name": "mode",
+          "type_info": "Int4",
+          "not_null": false
+        },
+        {
+          "name": "short_recent",
+          "type_info": "Bool",
+          "not_null": false
+        }
+      ]
+    }
+  },
   "b59603fd3f592f0ea5aa0b99592b34226341f7a2cc3794d39916818f947e0972": {
     "query": "UPDATE best_bg SET best_boy = $1 WHERE user_id = $2",
     "describe": {
@@ -587,6 +697,16 @@
       ]
     }
   },
+  "c8f1a2d763b768dbaf4eb2e5ab11bb7134d898edcf31aac7fc6a3bd93c612a7b": {
+    "query": "DELETE FROM streamer_notification_channel WHERE streamer = $1 AND channel_id = $2",
+    "describe": {
+      "params": [
+        "Text",
+        "Int8"
+      ],
+      "columns": []
+    }
+  },
   "cb34b7a89f270b06b489737f6cb4abee3996711c04f3c4f480b8092dd81676e8": {
     "query": "INSERT INTO streamer_notification_webhook (streamer, role_id, use_default, webhook) VALUES ($1, $2, $3, $4)",
     "describe": {
@@ -594,6 +714,16 @@
         "Text",
         "Int8",
         "Bool",
+        "Text"
+      ],
+      "columns": []
+    }
+  },
+  "cd7f59b3443f766b90f2770bff3f39c9382c272df3cdf2c30dd2c946cf4635a6": {
+    "query": "DELETE FROM streamer_notification_webhook WHERE streamer = $1 AND webhook = $2",
+    "describe": {
+      "params": [
+        "Text",
         "Text"
       ],
       "columns": []
