@@ -181,7 +181,7 @@ struct OsuScores {
     user_id: String,
     date: String,
     rank: String,
-    pp: String,
+    pp: Option<String>,
     replay_available: String,
 }
 
@@ -827,7 +827,7 @@ async fn osu_profile(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
 ///
 /// Usage: `score 124217`
 #[command]
-#[aliases("compare")]
+#[aliases("compare", "scr")]
 async fn score(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let bmap_id = match args.parse::<u64>() {
         Err(_) => {
@@ -917,7 +917,7 @@ async fn score(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
             e.footer(|f| {
                 if pp {
-                    f.text(format!("{}pp | {:.4}* | {}", &s.pp, beatmap.difficultyrating, mods));
+                    f.text(format!("{}pp | {:.4}* | {}", s.pp.as_ref().unwrap_or(&"0".to_string()), beatmap.difficultyrating, mods));
                 } else {
                     f.text(format!("{:.4}* | {}", beatmap.difficultyrating, mods));
                 }
