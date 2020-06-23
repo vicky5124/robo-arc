@@ -219,7 +219,6 @@ TODO:
 Reminder (reminds you of a message after X time)
 
 #Osu!
-Top (posts the top plays of the user)
 MapPP (calculates pp of a map, like ezpp or tillerino)
 
 #Twitch
