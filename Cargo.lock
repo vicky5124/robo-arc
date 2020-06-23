@@ -2,9 +2,9 @@
 # It is not intended for manual editing.
 [[package]]
 name = "addr2line"
-version = "0.12.1"
+version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a49806b9dadc843c61e7c97e72490ad7f7220ae249012fbda9ad0609457c0543"
+checksum = "602d785912f476e480434627e8732e6766b760c045bbf897d9dfaa9f4fbd399c"
 dependencies = [
  "gimli",
 ]
@@ -23,9 +23,9 @@ checksum = "e8fd72866655d1904d6b0997d0b07ba561047d070fbe29de039031c641b61217"
 
 [[package]]
 name = "aho-corasick"
-version = "0.7.10"
+version = "0.7.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8716408b8bc624ed7f65d223ddb9ac2d044c0547b6fa4b0d554f3a9540496ada"
+checksum = "c259a748ac706ba73d609b73fc13469e128337f9a6b2fb3cc82d100f8dd8d511"
 dependencies = [
  "memchr",
 ]
@@ -62,7 +62,7 @@ checksum = "4d25d88fd6b8041580a654f9d0c581a047baee2b3efee13275f2fc392fc75034"
 
 [[package]]
 name = "arc_bot"
-version = "0.2.0-alpha"
+version = "0.2.1-alpha"
 dependencies = [
  "bitflags",
  "chrono",
@@ -117,7 +117,7 @@ checksum = "a265e3abeffdce30b2e26b7a11b222fe37c6067404001b434101457d0385eb92"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -378,7 +378,7 @@ dependencies = [
  "futures",
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -552,7 +552,7 @@ checksum = "bc655351f820d774679da6cdc23355a93de496867d8203496675162e17b1d671"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -652,7 +652,7 @@ checksum = "aa4da3c766cd7a0db8242e326e9e4e081edd567072893ed320008189715366a4"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
  "synstructure",
 ]
 
@@ -792,7 +792,7 @@ dependencies = [
  "proc-macro-hack",
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -938,9 +938,9 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.7.2"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96282e96bfcd3da0d3aa9938bedf1e50df3269b6db08b4876d2da0bb1a0841cf"
+checksum = "ab9b7860757ce258c89fd48d28b68c41713e597a7b09e793f6c6a6e2ea37c827"
 dependencies = [
  "ahash",
  "autocfg 1.0.0",
@@ -1819,7 +1819,7 @@ checksum = "0b4b5f600e60dd3a147fb57b4547033d382d1979eb087af310e91cb45a63b1f4"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -1949,7 +1949,7 @@ dependencies = [
  "proc-macro-hack",
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -2007,7 +2007,7 @@ checksum = "6a0ffd45cf79d88737d7cc85bfd5d2894bee1139b356e616fe85dc389c61aaf7"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -2644,7 +2644,7 @@ checksum = "4fc1add04e9d2301164118660ee0bc3266e9a7b1973fc2303fdbe002a12e5401"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
  "synstructure",
 ]
 
@@ -2896,9 +2896,9 @@ checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
 name = "serde"
-version = "1.0.113"
+version = "1.0.114"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6135c78461981c79497158ef777264c51d9d0f4f3fc3a4d22b915900e42dac6a"
+checksum = "5317f7588f0a5078ee60ef675ef96735a1442132dc645eb1d12c018620ed8cd3"
 dependencies = [
  "serde_derive",
 ]
@@ -2917,13 +2917,13 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.113"
+version = "1.0.114"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93c5eaa17d0954cb481cdcfffe9d84fcfa7a1a9f2349271e678677be4c26ae31"
+checksum = "2a0be94b04690fbaed37cddffc5c134bf537c8e3329d53e982fe04c374978f8e"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -3139,7 +3139,7 @@ dependencies = [
 [[package]]
 name = "sqlx"
 version = "0.4.0-pre"
-source = "git+https://github.com/launchbadge/sqlx/#37e59f1494e3953e94343d313b2b7028eed01ea1"
+source = "git+https://github.com/launchbadge/sqlx/#f85920acaf4b087dc3a7a39a32edf38430999a37"
 dependencies = [
  "sqlx-core",
  "sqlx-macros",
@@ -3148,7 +3148,7 @@ dependencies = [
 [[package]]
 name = "sqlx-core"
 version = "0.4.0-pre"
-source = "git+https://github.com/launchbadge/sqlx/#37e59f1494e3953e94343d313b2b7028eed01ea1"
+source = "git+https://github.com/launchbadge/sqlx/#f85920acaf4b087dc3a7a39a32edf38430999a37"
 dependencies = [
  "atoi",
  "base64 0.12.2",
@@ -3191,7 +3191,7 @@ dependencies = [
 [[package]]
 name = "sqlx-macros"
 version = "0.4.0-pre"
-source = "git+https://github.com/launchbadge/sqlx/#37e59f1494e3953e94343d313b2b7028eed01ea1"
+source = "git+https://github.com/launchbadge/sqlx/#f85920acaf4b087dc3a7a39a32edf38430999a37"
 dependencies = [
  "dotenv",
  "futures",
@@ -3204,7 +3204,7 @@ dependencies = [
  "serde_json",
  "sha2 0.8.2",
  "sqlx-core",
- "syn 1.0.32",
+ "syn 1.0.33",
  "tokio",
  "url",
 ]
@@ -3212,7 +3212,7 @@ dependencies = [
 [[package]]
 name = "sqlx-rt"
 version = "0.1.0-pre"
-source = "git+https://github.com/launchbadge/sqlx/#37e59f1494e3953e94343d313b2b7028eed01ea1"
+source = "git+https://github.com/launchbadge/sqlx/#f85920acaf4b087dc3a7a39a32edf38430999a37"
 dependencies = [
  "native-tls",
  "tokio",
@@ -3286,7 +3286,7 @@ dependencies = [
  "quote 1.0.7",
  "serde",
  "serde_derive",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -3302,7 +3302,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "sha1",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -3346,9 +3346,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.32"
+version = "1.0.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a994520748611c17d163e81b6c4a4b13d11b7f63884362ab2efac3aa9cf16d00"
+checksum = "e8d5d96e8cbb005d6959f119f773bfaebb5684296108fb32600c00cde305b2cd"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
@@ -3363,7 +3363,7 @@ checksum = "b834f2d66f734cb897113e34aaff2f1ab4719ca946f9a7358dba8f8064148701"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
  "unicode-xid 0.2.0",
 ]
 
@@ -3444,7 +3444,7 @@ checksum = "bd80fc12f73063ac132ac92aceea36734f04a1d93c1240c6944e23a3b8841793"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -3524,7 +3524,7 @@ dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
  "standback",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -3565,7 +3565,7 @@ checksum = "f0c3acc6aa564495a0f2e1d59fab677cd7f81a19994cfc7f3ad0e64301560389"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -3649,7 +3649,7 @@ checksum = "99bbad0de3fd923c9c3232ead88510b783e5a4d16a6154adffa3d53308de984c"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -3938,7 +3938,7 @@ dependencies = [
  "log 0.4.8",
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
  "wasm-bindgen-shared",
 ]
 
@@ -3972,7 +3972,7 @@ checksum = "3156052d8ec77142051a533cdd686cba889537b213f948cd1d20869926e68e92"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
  "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]

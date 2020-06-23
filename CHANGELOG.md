@@ -1,3 +1,19 @@
+# 0.2.1-alpha
+
+### Commands:
+- osu!top:
+  New command.
+  Shows the osu! top plays of a user.
+- play:
+  Fixed failed search.
+- help:
+  Now it works again in DMs.
+- configure channel notifications:
+  Twitch streams can now be removed.
+  YandeRe can now be configured with channel.
+  Twitch can now be configured with webhook.
+  Modified the design of the command.
+
 # 0.2.0-alpha
 
 ### Commands:
