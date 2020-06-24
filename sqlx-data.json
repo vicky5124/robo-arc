@@ -1,18 +1,5 @@
 {
   "db": "PostgreSQL",
-  "008c72ec861053d431ff24ea239c9db4da3e7874c0f0a9908004543f3a500eb0": {
-    "query": "INSERT INTO reminders (date, message_id, channel_id, guild_id, user_id) VALUES ($1, $2, $3, $4, $5)",
-    "describe": {
-      "params": [
-        "Timestamptz",
-        "Int8",
-        "Int8",
-        "Int8",
-        "Int8"
-      ],
-      "columns": []
-    }
-  },
   "00d7e8f2dd866e4cc646046b7e04d80e512e0f28ee518e5dba31338e852be9af": {
     "query": "SELECT channel_id FROM annoyed_channels WHERE channel_id = $1",
     "describe": {
@@ -45,6 +32,21 @@
         "Int4"
       ],
       "columns": []
+    }
+  },
+  "149c22b90cf957f4ee9cc0aa3d5e6d22bc1699bf0d384c131c7ced241673b881": {
+    "query": "SELECT role_id FROM muted_roles WHERE guild_id = $1",
+    "describe": {
+      "params": [
+        "Int8"
+      ],
+      "columns": [
+        {
+          "name": "role_id",
+          "type_info": "Int8",
+          "not_null": true
+        }
+      ]
     }
   },
   "14b0f7aa5a4f2feab4f8ca1ba9df84d3c6bf573b76fdca25b2804747430778fa": {
@@ -172,6 +174,16 @@
     "describe": {
       "params": [
         "Text",
+        "Int8"
+      ],
+      "columns": []
+    }
+  },
+  "44d873aae4189c9836d5c68039cf6915ac9045bd7c5f3a07f2a4d5ff145515f2": {
+    "query": "INSERT INTO muted_roles (guild_id, role_id) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET role_id = $2",
+    "describe": {
+      "params": [
+        "Int8",
         "Int8"
       ],
       "columns": []
@@ -430,17 +442,6 @@
           "not_null": false
         }
       ]
-    }
-  },
-  "7b683ea520e5631da3c1712b13ea4f8c0b6415e36fe1fe0dd99037198de81457": {
-    "query": "INSERT INTO reminders (date, channel_id, user_id) VALUES ($1, $2, $3)",
-    "describe": {
-      "params": [
-        "Timestamptz",
-        "Int8",
-        "Int8"
-      ],
-      "columns": []
     }
   },
   "7bf943041131f2c717cf09b9d7246904fe7fd5d775e9e439f550a509c973f3bb": {

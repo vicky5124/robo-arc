@@ -310,7 +310,7 @@ struct Fun;
 // The moderation command group.
 #[group("Moderation")]
 #[description = "All the moderation related commands."]
-#[commands(kick, ban, clear)]
+#[commands(kick, ban, clear, mute, selfmute)]
 struct Mod;
 
 // The music command group.

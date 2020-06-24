@@ -241,10 +241,12 @@ async fn booru(ctx: &Context, msg: &Message, raw_args: Args) -> CommandResult {
 ///
 /// Configurable aspects:
 /// `annoy`: Toggles the annoying features on or off.
+/// `notifications`: Configure the notifications for YandeRe posts or Twitch livestreams.
 #[command]
 #[required_permissions(MANAGE_CHANNELS)]
 #[only_in("guilds")]
 #[sub_commands(annoy, notifications)]
+#[aliases(chan)]
 async fn channel(_ctx: &Context, _message: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
@@ -827,14 +829,42 @@ async fn annoy(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 ///
 /// Configurable aspects:
 /// `prefix`: Changes the bot prefix.
+/// `mute_role`: Sets the mute role of the server.
 /// `disable_command`: Disables a command.
 /// `enable_command`: Enables a disabled command.
 #[command]
 #[required_permissions(MANAGE_GUILD)]
 #[only_in("guilds")]
 #[aliases(server)]
-#[sub_commands(prefix, disable_command, enable_command)]
+#[sub_commands(prefix, mute_role, disable_command, enable_command)]
 async fn guild(_ctx: &Context, _msg: &Message, _args: Args) -> CommandResult {
+    Ok(())
+}
+
+#[command]
+#[min_args(1)]
+#[aliases(muterole, mute, mrole, mutrole, mutrol, muted_role, muted)]
+#[checks("bot_has_manage_roles")]
+#[required_permissions(MANAGE_ROLES)]
+async fn mute_role(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let role = if let Ok(x) = args.single::<RoleId>() { x } else {
+        msg.reply(ctx, "An invalid role was provided, please mention the role or post it's id.").await?;
+        return Ok(());
+    };
+
+    let rdata = ctx.data.read().await;
+    let pool = rdata.get::<ConnectionPool>().unwrap();
+
+    dbg!(&role);
+
+    sqlx::query!("INSERT INTO muted_roles (guild_id, role_id) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET role_id = $2",
+                  msg.guild_id.unwrap().0 as i64,
+                  role.0 as i64)
+        .execute(pool)
+        .await?;
+
+    msg.react(ctx, '👍').await?;
+
     Ok(())
 }
 

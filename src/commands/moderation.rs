@@ -1,3 +1,4 @@
+use crate::ConnectionPool;
 use serenity::{
     prelude::Context,
     model::{
@@ -11,6 +12,7 @@ use serenity::{
     framework::standard::{
         Args,
         CommandResult,
+        Delimiter,
         macros::command,
     },
 };
@@ -105,9 +107,9 @@ pub async fn parse_member(ctx: &Context, msg: &Message, member_name: String) -> 
 #[required_permissions(KICK_MEMBERS)]
 #[min_args(1)]
 #[only_in("guilds")]
-async fn kick(mut ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn kick(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let member_arg = args.single_quoted::<String>()?;
-    let member = parse_member(&mut ctx, &msg, member_arg).await;
+    let member = parse_member(ctx, &msg, member_arg).await;
 
     let reason = args.remains();
 
@@ -137,9 +139,9 @@ async fn kick(mut ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
 #[required_permissions(BAN_MEMBERS)]
 #[min_args(1)]
 #[only_in("guilds")]
-async fn ban(mut ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let member_arg = args.single_quoted::<String>()?;
-    let member = parse_member(&mut ctx, &msg, member_arg).await;
+    let member = parse_member(ctx, &msg, member_arg).await;
 
     let reason = args.remains();
 
@@ -183,4 +185,56 @@ async fn clear(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         }
     }
     Ok(())
+}
+
+/// Mutes a member with the configured role.
+/// To configure a role, someone who has the "manage guild" permissions needs to run the next command:
+/// 
+/// `configure guild mute_role @role_mention`
+/// or
+/// `configure guild mute_role role_id`
+///
+/// Usage:
+/// `mute @member`
+/// `mute 135423120268984330`
+#[command]
+#[required_permissions(MANAGE_ROLES)]
+#[num_args(1)]
+#[only_in("guilds")]
+async fn mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let member_arg = args.single_quoted::<String>()?;
+    let mut member = parse_member(ctx, &msg, member_arg).await?;
+
+    let rdata = ctx.data.read().await;
+    let pool = rdata.get::<ConnectionPool>().unwrap();
+
+    let row = sqlx::query!("SELECT role_id FROM muted_roles WHERE guild_id = $1", msg.guild_id.unwrap().0 as i64)
+        .fetch_optional(pool)
+        .await?;
+
+    if let Some(row) = row {
+        member.add_role(ctx, row.role_id as u64).await?;
+        msg.reply(ctx, format!("Successfully muted member `{}#{}` with id `{}`",
+            member.user.name, member.user.discriminator, member.user.id.0)).await?;
+    } else {
+        msg.reply(ctx, "The server doesn't have a muted role configured, please tell someone with the \"manage guild\" permission to run the following command to configure one:\n`configure guild mute_role @role_mention`").await?;
+        return Ok(());
+    }
+
+    Ok(())
+}
+
+/// Mute yourself with the configured role.
+/// To configure a role, someone who has the "manage guild" permissions needs to run the next command:
+/// 
+/// `configure guild mute_role @role_mention`
+/// or
+/// `configure guild mute_role role_id`
+///
+/// Usage:
+/// `selfmute`
+#[command]
+#[only_in("guilds")]
+async fn selfmute(ctx: &Context, msg: &Message) -> CommandResult {
+    mute(ctx, msg, Args::new(&msg.author.id.0.to_string(), &[Delimiter::Single(' ')])).await
 }
