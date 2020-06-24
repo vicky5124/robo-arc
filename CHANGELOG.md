@@ -1,3 +1,21 @@
+# 0.2.2-alpha
+
+### Commands:
+- mute:
+  New command.
+  Gives the configured mute role to a member.
+- selfmute:
+  New command.
+  Gives the configured mute role to the invoker.
+- configure guild mute_role:
+  New command.
+  Configures the muted role on the guild.
+- score:
+  Now it works with loved maps.
+- reminder:
+  New command.
+  Reminds you of a message after some specified time.
+
 # 0.2.1-alpha
 
 ### Commands:
