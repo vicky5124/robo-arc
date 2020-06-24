@@ -1,5 +1,4 @@
 use crate::commands::moderation::parse_member;
-use crate::utils::checks::*;
 
 use std::fs;
 use std::fmt::Display;
@@ -17,7 +16,6 @@ use serenity::{
         Message,
         ReactionType,
     },
-    model::user::User,
     model::id::UserId,
     framework::standard::{
         Args,
@@ -132,7 +130,7 @@ async fn higher_or_lower(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum Pieces {
     Cross,
     Circle,
@@ -195,15 +193,39 @@ impl Display for Board {
 }
 
 impl Board {
-    fn place_piece(&mut self, piece: Piece) {
+    fn place_piece(&mut self, piece: Piece) -> Result<(), ()> {
         let x = piece.pos_x * 3;
         let y = piece.pos_y % 3;
-        self.table[x+y] = piece;
+        if self.table[x+y].typ.is_none() {
+            self.table[x+y] = piece;
+            Ok(())
+        } else {
+            Err(())
+        }
     }
     fn swap_current_piece(&mut self) {
         self.current_piece = match self.current_piece {
             Pieces::Cross => Pieces::Circle,
             Pieces::Circle => Pieces::Cross,
+        }
+    }
+
+    fn check_win_condition(&mut self) {
+        let win_conditions = [[0,1,2], [3,4,5], [6,7,8], [0,3,6], [1,4,7], [2,5,8], [0,4,8], [6,4,2]];
+
+        for i in &win_conditions {
+            if self.table[i[0]].typ == Some(Pieces::Cross) &&
+               self.table[i[1]].typ == Some(Pieces::Cross) &&
+               self.table[i[2]].typ == Some(Pieces::Cross)
+            {
+                self.win_condition = Some(Pieces::Cross);
+            }
+            if self.table[i[0]].typ == Some(Pieces::Circle) &&
+               self.table[i[1]].typ == Some(Pieces::Circle) &&
+               self.table[i[2]].typ == Some(Pieces::Circle)
+            {
+                self.win_condition = Some(Pieces::Circle);
+            }
         }
     }
 }
@@ -219,31 +241,128 @@ impl Board {
 /// `ttt @timmy`
 #[command]
 #[aliases(ttt, tictactoe)]
-#[checks("bot_has_manage_messages")]
-//#[min_args(1)]
-async fn tic_tac_toe(ctx: &Context, msg: &Message, mut _args: Args) -> CommandResult {
+#[min_args(1)]
+async fn tic_tac_toe(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let other_player = parse_member(ctx, &msg, args.single_quoted::<String>()?).await?;
+
+    let mut confirmation = msg.channel_id.say(ctx, format!("{}: Do you accept this TicTacToe match?", other_player.mention())).await?;
+    confirmation.react(ctx, '✅').await?;
+    confirmation.react(ctx, '❌').await?;
+
+    loop {
+        if let Some(reaction) = other_player.user.await_reaction(ctx).timeout(Duration::from_secs(120)).await {
+            let emoji = &reaction.as_inner_ref().emoji;
+
+            match emoji.as_data().as_str() {
+                "✅" => {
+                    confirmation.delete(ctx).await?;
+                    break;
+                },
+                "❌" => {
+                    confirmation.edit(ctx, |m| m.content(
+                        format!(
+                            "{}: {} didn't accept the match.",
+                            msg.author.mention(), other_player.mention()
+                        )
+                    )).await?;
+                    return Ok(());
+                },
+                _ => ()
+            }
+        } else {
+            confirmation.edit(ctx, |m| m.content(
+                format!(
+                    "{}: {} took to long to respond.",
+                    msg.author.mention(), other_player.mention()
+                )
+            )).await?;
+            return Ok(());
+        }
+    }
+
     let mut players = [
         Player(msg.author.id, Pieces::Cross),
-        Player(msg.author.id, Pieces::Circle),
+        Player(other_player.user.id, Pieces::Circle),
     ].repeat(5);
 
+    if msg.timestamp.timestamp() % 2 == 0 {
+        players.reverse();
+    }
     players.pop();
 
+
     let mut board = Board::default();
+    board.current_piece = players[0].1;
     let mut m = msg.channel_id.say(ctx, format!(">>> ```{}```", &board)).await?;
 
-    for i in players {
-        let piece = Piece {
-            pos_x: 1,
-            pos_y: 1,
-            typ: Some(Pieces::Cross),
-        };
-
-        board.place_piece(piece);
-        board.swap_current_piece();
-
-        m.edit(ctx, |m| m.content(format!("{}\n>>> ```{}```", i.0.mention(), &board))).await?;
+    for i in 1..4u8 {
+        let num = ReactionType::Unicode(String::from(format!("{}\u{fe0f}\u{20e3}", i)));
+        m.react(ctx, num).await?;
     }
+
+    let _a = ReactionType::Unicode(String::from("\u{01f1e6}"));
+    let _b = ReactionType::Unicode(String::from("\u{01f1e7}"));
+    let _c = ReactionType::Unicode(String::from("\u{01f1e8}"));
+
+    m.react(ctx, _a).await?;
+    m.react(ctx, _b).await?;
+    m.react(ctx, _c).await?;
+
+
+    for i in &players {
+        m.edit(ctx, |m| m.content(format!("{}\n>>> ```{}```", i.0.mention(), &board))).await?;
+
+        'outer: loop {
+            let mut x: Option<usize> = None;
+            let mut y: Option<usize> = None;
+            loop {
+                if x.is_none() || y.is_none() {
+                    if let Some(reaction) = i.0.to_user(ctx).await?.await_reaction(ctx).timeout(Duration::from_secs(120)).await {
+                        let _ = reaction.as_inner_ref().delete(ctx).await;
+                        let emoji = &reaction.as_inner_ref().emoji;
+
+                        match emoji.as_data().as_str() {
+                            "1\u{fe0f}\u{20e3}" => x = Some(0),
+                            "2\u{fe0f}\u{20e3}" => x = Some(1),
+                            "3\u{fe0f}\u{20e3}" => x = Some(2),
+                            "\u{01f1e6}" => y = Some(0),
+                            "\u{01f1e7}" => y = Some(1),
+                            "\u{01f1e8}" => y = Some(2),
+                            _ => ()
+                        }
+                    } else {
+                        m.edit(ctx, |m| m.content(format!("{}: Timeout", i.0.mention()))).await?;
+                        let _ = m.delete_reactions(ctx).await;
+                        return Ok(());
+                    }
+                } else {
+                    if !x.is_none() && !y.is_none() {
+                        let piece = Piece {
+                            pos_x: x.unwrap(),
+                            pos_y: y.unwrap(),
+                            typ: Some(i.1),
+                        };
+                        if let Err(_) = board.place_piece(piece) {
+                            x = None;
+                            y = None;
+                        } else {
+                            break 'outer
+                        }
+                    }
+                }
+            }
+        }
+        board.check_win_condition();
+
+        if let Some(_) = board.win_condition {
+            m.edit(ctx, |m| m.content(format!("{} WON!\n>>> ```{}```", i.0.mention(), &board))).await?;
+            let _ = m.delete_reactions(ctx).await;
+            return Ok(());
+        }
+        board.swap_current_piece();
+    }
+    m.edit(ctx, |m| m.content(format!("{} and {} tied.\n>>> ```{}```", players[0].0.mention(), players[1].0.mention(), &board))).await?;
+    let _ = m.delete_reactions(ctx).await;
 
     Ok(())
 }
