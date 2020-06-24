@@ -29,6 +29,7 @@ use commands::osu::*; // Import everything from the osu module.
 use commands::meta::*; // Import everything from the meta module.
 use commands::image_manipulation::*; // Import everything from the image manipulation module.
 use commands::fun::*; // Import everything from the fun module.
+use commands::games::*; // Import everything from the games module.
 use commands::moderation::*; // Import everything from the moderation module.
 use commands::configuration::*; // Import everything from the configuration module.
 use commands::music::*; // Import everything from the configuration module.
@@ -253,7 +254,7 @@ impl TypeMapKey for VoiceGuildUpdate {
 
 
 #[group("Master")]
-#[sub_groups(Meta, Sankaku, Osu, Fun, Music, AllBoorus, ImageManipulation, Mod, SerenityDocs)]
+#[sub_groups(Meta, Sankaku, Osu, Fun, Music, AllBoorus, ImageManipulation, Mod, SerenityDocs, Games)]
 struct Master;
 
 // The basic commands group is being defined here.
@@ -304,8 +305,15 @@ struct ImageManipulation;
 // Where all the random commands go into lol
 #[group("Fun")]
 #[description = "All the random and fun commands."]
-#[commands(profile, qr, urban, dictionary, translate, duck_duck_go, encrypt, decrypt, calculator, tic_tac_toe, higher_or_lower, remind_me)]
+#[commands(profile, qr, urban, dictionary, translate, duck_duck_go, encrypt, decrypt, calculator, remind_me)]
 struct Fun;
+
+// The FUN command group.
+// Where all the random commands go into lol
+#[group("Games")]
+#[description = "All the games the bot has. (Just for fun)"]
+#[commands(tic_tac_toe, higher_or_lower)]
+struct Games;
 
 // The moderation command group.
 #[group("Moderation")]
@@ -909,6 +917,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .group(&SANKAKU_GROUP) // Load `SankakuComplex` command group
         .group(&ALLBOORUS_GROUP) // Load `Boorus` command group
         .group(&IMAGEMANIPULATION_GROUP) // Load `image manipulaiton` command group
+        .group(&GAMES_GROUP) // Load `games` command group
         .group(&MOD_GROUP) // Load `moderation` command group
         .group(&CONFIGURATION_GROUP) // Load `Configuration` command group
         .group(&SERENITYDOCS_GROUP) // Load `serenity_docs` command group

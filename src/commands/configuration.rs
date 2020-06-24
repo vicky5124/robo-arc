@@ -1,5 +1,6 @@
 use crate::{
     utils::booru,
+    utils::checks::*,
     ConnectionPool,
     AnnoyedChannels,
     BooruCommands,
@@ -30,35 +31,13 @@ use serenity::{
         Args,
         Delimiter,
         CommandResult,
-        CheckResult,
-        macros::{
-            command,
-            check,
-        },
+        macros::command,
     },
     utils::{
         content_safe,
         ContentSafeOptions,
     },
 };
-
-#[check]
-#[name = "bot_has_manage_roles"]
-async fn bot_has_manage_roles_check(ctx: &Context, msg: &Message) -> CheckResult {
-    let bot_id = ctx.cache.current_user().await.id.0;
-    if !ctx.http.get_member(msg.guild_id.unwrap().0, bot_id)
-        .await
-        .expect("What even")
-        .permissions(ctx)
-        .await
-        .expect("What even 2")
-        .manage_roles()
-    {
-        CheckResult::new_user("I'm unable to run this command due to missing the `Manage Roles` permission.")
-    } else {
-        CheckResult::Success
-    }
-}
 
 async fn set_best_tags(sex: &str, ctx: &Context, msg: &Message, mut tags: String) -> Result<(), Box<dyn std::error::Error>> {
     let rdata = ctx.data.read().await;

@@ -4,6 +4,7 @@ pub mod meta;
 pub mod image_manipulation;
 pub mod sankaku;
 pub mod fun;
+pub mod games;
 pub mod moderation;
 pub mod configuration;
 pub mod music;
