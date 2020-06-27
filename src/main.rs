@@ -928,7 +928,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .framework(std_framework)
         .add_intent({
             let mut intents = GatewayIntents::all();
-            intents.remove(GatewayIntents::GUILD_PRESENCES);
+            //intents.remove(GatewayIntents::GUILD_PRESENCES);
             intents.remove(GatewayIntents::DIRECT_MESSAGE_TYPING);
             intents.remove(GatewayIntents::GUILD_MESSAGE_TYPING);
             intents
