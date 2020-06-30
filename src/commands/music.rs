@@ -322,6 +322,9 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     return Ok(());
                 }
             } else {
+                if query.starts_with("http") && res.tracks.len() > 1 {
+                    msg.channel_id.say(ctx, "If you'd like to play the entire playlist, use `play_playlist` instead.").await?;
+                }
                 break res;
             }
         };
