@@ -25,6 +25,7 @@ use crate::{
 use std::{
     collections::HashMap,
     time::Duration,
+    borrow::Cow,
 };
 
 use sqlx;
@@ -33,6 +34,7 @@ use futures::stream::StreamExt;
 
 use serenity::{
     prelude::Context,
+    http::AttachmentType,
     model::channel::{
         Message,
         ReactionType,
@@ -192,10 +194,6 @@ pub async fn get_booru(ctx: &Context, msg: &Message, booru: &Booru, args: Args) 
     tags.pop();
 
     let reqwest = ReqwestClient::new();
-    let mut headers = HeaderMap::new();
-
-    headers.insert(ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8".parse().unwrap());
-    headers.insert(USER_AGENT, "Mozilla/5.0 (X11; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0".parse().unwrap());
 
     let page: usize = 0;
 
@@ -210,6 +208,12 @@ pub async fn get_booru(ctx: &Context, msg: &Message, booru: &Booru, args: Args) 
     } else {
         "https://safebooru.org/index.php?page=dapi&s=post&q=index".to_string()
     };
+
+    let mut headers = HeaderMap::new();
+
+    headers.insert(ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8".parse().unwrap());
+    headers.insert(USER_AGENT, "Mozilla/5.0 (X11; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0".parse().unwrap());
+    headers.insert("Referer", url.parse().unwrap());
 
     // Send a request with the parsed url, and return the output text.
     let resp = reqwest.get(&url)
@@ -359,21 +363,51 @@ pub async fn get_booru(ctx: &Context, msg: &Message, booru: &Booru, args: Args) 
         }
     }
 
-    // https://github.com/serenity-rs/serenity/blob/current/examples/11_create_message_builder/src/main.rs
-    // builds a message with an embed containing any data used.
-    msg.channel_id.send_message(ctx, |m| { // say method doesn't work for the message builder.
-        m.embed( |e| {
-            e.title("Original Post");
-            e.url(format!("{}{}", &booru.post_url, &choice.id));
-            e.description(format!("[Sample]({}) | [Full Size]({})", &sample_size, &full_size));
-            e.image(sample_size);
-            e.fields(fields);
+    if booru.typ == 3 {
+        let fullsize_tagless = full_size.split('?').next().unwrap();
+        let fullsize_split = fullsize_tagless.split('/').collect::<Vec<&str>>();
+        let filename = fullsize_split.get(6).unwrap_or(&"no_name.jpg");
 
-            e
-        });
+        let resp = reqwest.get(&sample_size)
+            .headers(headers.clone())
+            .send()
+            .await?
+            .bytes()
+            .await?
+            .into_iter()
+            .collect::<Vec<u8>>();
 
-        m
-    }).await?;
+        let attachment = AttachmentType::Bytes {
+            data: Cow::from(&resp),
+            filename: (*filename).to_string(),
+        };
+
+        msg.channel_id.send_message(ctx, |m| {
+            m.add_file(attachment);
+            m.embed( |e| {
+                e.title("Original Post");
+                e.url(format!("{}{}", &booru.post_url, &choice.id));
+                e.image(format!("attachment://{}", filename));
+                e.fields(fields)
+            });
+
+            m
+        }).await?;
+    } else {
+        // https://github.com/serenity-rs/serenity/blob/current/examples/11_create_message_builder/src/main.rs
+        // builds a message with an embed containing any data used.
+        msg.channel_id.send_message(ctx, |m| { // say method doesn't work for the message builder.
+            m.embed( |e| {
+                e.title("Original Post");
+                e.url(format!("{}{}", &booru.post_url, &choice.id));
+                e.description(format!("[Sample]({}) | [Full Size]({})", &sample_size, &full_size));
+                e.image(sample_size);
+                e.fields(fields)
+            });
+
+            m
+        }).await?;
+    }
 
 
     Ok(())
@@ -390,7 +424,6 @@ pub async fn get_booru(ctx: &Context, msg: &Message, booru: &Booru, args: Args) 
 /// ```
 /// 
 /// The currently available boorus are:
-/// __Working:__
 /// `SafeBooru` - Safe only booru.
 /// `SankakuChan` - Largest, most popular booru, limited to 4 tags.
 /// `GelBooru` - One of the most popular boorus.
@@ -403,14 +436,11 @@ pub async fn get_booru(ctx: &Context, msg: &Message, booru: &Booru, args: Args) 
 /// `e621` - Largest Furry booru.
 /// `RealBooru` - Very large IRL booru.
 /// `IdolComplex` - Largest IRL booru, very asian based.
-/// 
-/// __Broken:__
 /// `Behoimi` - IRL, Mostly cosplays booru.
-/// Broken due to access restrictions.
 ///
 /// ----------
 ///
-/// Available parameters:
+/// Available parameters (Only available on NSFW channels):
 /// `-x` Explicit
 /// `-q` Questionable
 /// `-s` Safe. 
