@@ -235,9 +235,6 @@ RuleManagement (https://5124.16-b.it/ss/22:50:34_21-06-2020.png)
 
 #Tags
 \"Basically the same as R. Danny, but with personal tags supported\"
-
-# Boorus
-\"Fix behoimi\"
 ```").await?;
     Ok(())
 }
