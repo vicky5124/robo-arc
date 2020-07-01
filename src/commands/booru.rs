@@ -1130,7 +1130,6 @@ async fn sauce(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     }
 
     urls.dedup();
-    dbg!(&urls);
 
     if urls.is_empty() {
         msg.reply(ctx, "Could not find the source of the provided image.").await?;
