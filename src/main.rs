@@ -291,7 +291,7 @@ Available parameters:
 `-n` Non Safe (Random between E or Q)
 
 Inspired by -GN's WaifuBot ([source](https://github.com/isakvik/waifubot/))"]
-#[commands(booru_command, BB, BG, n_hentai)] // We imported BB_COMMAND and BG_COMMAND, but this macro automatically adds _COMMAND, so we don't put that.
+#[commands(booru_command, BB, BG, n_hentai, sauce)] // We imported BB_COMMAND and BG_COMMAND, but this macro automatically adds _COMMAND, so we don't put that.
 struct AllBoorus;
 
 // The Image Manipulation command group.

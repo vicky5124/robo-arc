@@ -238,7 +238,6 @@ RuleManagement (https://5124.16-b.it/ss/22:50:34_21-06-2020.png)
 
 # Boorus
 \"Fix behoimi\"
-Sauce (sends the source of an image, using iqdb and saucenao)
 Exclude (excludes tags automatically from your search)
 ```").await?;
     Ok(())

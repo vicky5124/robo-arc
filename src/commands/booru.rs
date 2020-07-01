@@ -987,3 +987,130 @@ pub async fn n_hentai(ctx: &Context, msg: &Message, args: Args) -> CommandResult
 
     Ok(())
 }
+
+#[derive(Debug, Deserialize)]
+struct SauceNaoSearch {
+    results: Vec<SauceNaoResult>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SauceNaoResult {
+    header: SauceNaoResultHeader,
+    data: SauceNaoData,
+}
+
+#[derive(Debug, Deserialize)]
+struct SauceNaoData {
+    ext_urls: Option<Vec<String>>,
+    title: Option<String>,
+    nijie_id: Option<i64>,
+    member_name: Option<String>,
+    member_id: Option<i64>,
+    gelbooru_id: Option<i64>,
+    sankaku_id: Option<i64>,
+    material: Option<String>,
+    characters: Option<String>,
+    source: Option<String>,
+    pixiv_id: Option<i64>,
+    seiga_id: Option<i64>,
+    drawr_id: Option<i64>,
+    danbooru_id: Option<i64>,
+    yandere_id: Option<i64>,
+    da_id: Option<i64>,
+    author_name: Option<String>,
+    author_url: Option<String>,
+    anidb_aid: Option<i64>,
+    part: Option<String>,
+    year: Option<String>,
+    est_time: Option<String>,
+    bcy_id: Option<i64>,
+    member_link_id: Option<i64>,
+    bcy_type: Option<String>,
+    e621_id: Option<i64>,
+    md_id: Option<i64>,
+    mu_id: Option<i64>,
+    artist: Option<String>,
+    author: Option<String>,
+    eng_name: Option<String>,
+    jp_name: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SauceNaoResultHeader {
+    similarity: String,
+    thumbnail: String,
+    index_id: i64,
+    index_name: String,
+}
+
+fn match_url(url: &str) -> String {
+    let url = ReqUrl::parse(url).unwrap();
+    let mut domain = url.domain().unwrap().to_string();
+
+    domain = domain.replace("www.", "");
+    domain = domain.replace("cdn.", "");
+    domain = domain.replace(".com", "");
+    domain = domain.replace(".net", "");
+    domain = domain.replace(".donmai.us", "");
+
+    domain
+}
+
+/// Attempts to fund the source of an image using SauceNao.
+/// It works with a URL or an attached image.
+///
+/// Usage:
+/// `sauce https://i.imgur.com/wz7XaeQ.jpg`
+#[command]
+async fn sauce(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let image_url = {
+        if let Ok(x) = args.single::<String>() { x } else {
+            if let Some(x) = &msg.attachments.get(0) { x.url.to_string() } else {
+                msg.reply(ctx, "Please, attach an image to the command.").await?;
+                return Ok(());
+            }
+        }
+    };
+
+    let api_url = ReqUrl::parse_with_params("https://saucenao.com/search.php", &[("output_type", "2"), ("url", &image_url)]).unwrap();
+
+    let data = reqwest::get(api_url)
+        .await?
+        .json::<SauceNaoSearch>()
+        .await?;
+
+    let mut urls = Vec::new();
+
+    for i in &data.results {
+        if i.header.similarity.parse::<f64>()? > 75.0 {
+            if let Some(ext_urls) = &i.data.ext_urls {
+                for url in ext_urls {
+                    if url.starts_with("https") {
+                        urls.push(format!("[{}]({})", match_url(&url), &url));
+                    }
+                }
+            }
+
+            if let Some(url) = &i.data.source {
+                if url.starts_with("https") {
+                    urls.push(format!("[{}]({})", match_url(&url), &url));
+                }
+            }
+        }
+    }
+
+    urls.dedup();
+    dbg!(&urls);
+
+    if urls.is_empty() {
+        msg.reply(ctx, "Could not find the source of the provided image.").await?;
+        return Ok(());
+    }
+
+    msg.channel_id.send_message(ctx, |m| m.embed(|e| {
+        e.thumbnail(&data.results[0].header.thumbnail);
+        e.description(urls.join("\n"))
+    })).await?;
+
+    Ok(())
+}
