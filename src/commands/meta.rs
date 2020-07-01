@@ -215,19 +215,19 @@ async fn todo(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(ctx, "```prolog
 TODO:
 
-#Osu!
-MapPP (calculates pp of a map, like ezpp or tillerino)
+#Osu! 
+MapPP (calculates pp of a map, like ezpp or tillerino) / don not use oppai.
 
 #Twitch
 ConfigureMessage (to configure the live message)
 
-#Reddit
+#Reddit / tsu_katana has to make this.
 Subreddit (posts a random post from the subreddit specified)
 User (posts a random post from the user specified)
 Sub/User Bomb (posts 5 posts from the subreddit or user specified)
 
 #Mod
-Clear (add specific requieriments like \"only webhooks\")
+Clear (add specific requieriments like \"only webhooks\") / waiting for the method to return a stream.
 PermaBan (permanently bans a user from the guild by not allowing the user to ever get back on (perma kick))
 TempMute (mutes the user on the specific channel or all channels)
 Logging (set a channel to log specific events)
