@@ -109,6 +109,7 @@ async fn skip(ctx: &Context, msg: &Message) -> CommandResult {
     let mut lava_client = lava_client_lock.write().await;
     if let Some(node) = lava_client.nodes.get_mut(&msg.guild_id.unwrap()) {
         node.skip();
+        msg.react(ctx, '✅').await?;
     };
 
     Ok(())
@@ -123,10 +124,19 @@ async fn queue(ctx: &Context, msg: &Message) -> CommandResult {
     let mut lava_client = lava_client_lock.write().await;
     if let Some(node) = lava_client.nodes.get_mut(&msg.guild_id.unwrap()) {
         if !node.queue.is_empty() {
-            let mut queue = String::new();
-            for (index, track) in node.queue.iter().enumerate() {
+            let mut queue = String::from("```st\n");
+            for (index, track) in node.queue.iter().take(10).enumerate() {
                 queue +=  &format!("{}: {}\n", index + 1, track.track.info.title);
             }
+            
+            if queue.len() > 10 {
+                queue += &format!("... {}", queue.len());
+            }
+
+            queue += "\n```";
+
+            queue = queue.replace("@", "@​");
+
             msg.channel_id.say(ctx, &queue).await?;
         } else {
             msg.channel_id.say(ctx, "The queue is empty.").await?;
@@ -203,6 +213,7 @@ async fn seek(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         let node = lava_client.nodes.get_mut(&msg.guild_id.unwrap()).unwrap();
 
         node.seek(&lava_client_read, &msg.guild_id.unwrap(), Duration::from_secs(num)).await?;
+        msg.react(ctx, '✅').await?;
     } else {
         msg.reply(&ctx.http, "Not in a voice channel").await?;
     }
@@ -218,6 +229,7 @@ async fn stop(ctx: &Context, msg: &Message) -> CommandResult {
     let mut lava_client = lava_client_lock.write().await;
     if let Some(node) = lava_client.nodes.get_mut(&msg.guild_id.unwrap()) {
         node.clone().stop(&mut lava_client, &msg.guild_id.unwrap()).await?;
+        msg.react(ctx, '✅').await?;
     } else {
         msg.channel_id.say(ctx, "Nothing to stop.").await?;
     };
@@ -236,6 +248,7 @@ async fn pause(ctx: &Context, msg: &Message) -> CommandResult {
     if let Some(node) = lava_client.nodes.get_mut(&msg.guild_id.unwrap()) {
         let p = !node.clone().is_paused;
         node.set_pause(&lava_client_clone, &msg.guild_id.unwrap(), p).await?;
+        msg.react(ctx, '✅').await?;
     } else {
         msg.channel_id.say(ctx, "Nothing to stop.").await?;
     };
