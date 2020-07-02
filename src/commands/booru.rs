@@ -417,10 +417,10 @@ pub async fn get_booru(ctx: &Context, msg: &Message, booru: &Booru, args: Args) 
 /// Usage: `.booru_name tag tag tag`
 /// 
 /// ```
-/// idol feet -x stockings
-/// e621 paws
+/// r34
 /// chan -x
-/// r32
+/// e621 paws
+/// idol feet -x stockings
 /// ```
 /// 
 /// The currently available boorus are:
