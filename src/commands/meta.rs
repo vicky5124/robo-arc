@@ -118,7 +118,6 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
     permissions.set(Permissions::USE_EXTERNAL_EMOJIS, true);
     permissions.set(Permissions::CONNECT, true);
     permissions.set(Permissions::SPEAK, true);
-    permissions.set(Permissions::MOVE_MEMBERS, true);
     permissions.set(Permissions::MANAGE_ROLES, true);
     permissions.set(Permissions::MANAGE_WEBHOOKS, true);
     permissions.set(Permissions::MENTION_EVERYONE, true);
@@ -140,7 +139,6 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
             e.url(url);
             e.description("Keep in mind, this bot is still in pure developement, so not all of this mentioned features are implemented.\n\n__**Reason for each permission**__");
             e.fields(vec![
-                     ("Move Members", "To automatically move members to the current music room (as long as there's people already listening there).", true),
                      ("Attach Files", "For some of the booru commands.\nFor an automatic text file to be sent when a message is too long.", true),
                      ("Read Messages", "So the bot can read the messages to know when a command was invoked and such.", true),
                      ("Manage Messages", "Be able to clear reactions of timed out paginations.\nClear moderation command.", true),
@@ -229,7 +227,6 @@ Sub/User Bomb (posts 5 posts from the subreddit or user specified)
 #Mod
 Clear (add specific requieriments like \"only webhooks\") / waiting for the method to return a stream.
 PermaBan (permanently bans a user from the guild by not allowing the user to ever get back on (perma kick))
-TempMute (mutes the user on the specific channel or all channels)
 Logging (set a channel to log specific events)
 RuleManagement (https://5124.16-b.it/ss/22:50:34_21-06-2020.png)
 
