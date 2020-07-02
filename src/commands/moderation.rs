@@ -262,6 +262,7 @@ async fn permanent_self_mute(ctx: &Context, msg: &Message) -> CommandResult {
 /// `tempmute @member "1W" posted porn on #general`
 #[command]
 #[only_in("guilds")]
+#[required_permissions(MANAGE_ROLES)]
 #[min_args(1)]
 #[aliases(tempmute, tmute, temporalmute, temp_mute)]
 #[checks(bot_has_manage_roles)]
