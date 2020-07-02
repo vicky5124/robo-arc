@@ -103,6 +103,7 @@ async fn shuffle(ctx: &Context, msg: &Message) -> CommandResult {
 
 /// Skips the current song being played.
 #[command]
+#[aliases(next)]
 async fn skip(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.read().await;
     let lava_client_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
@@ -288,6 +289,7 @@ async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
 /// or `play https://www.youtube.com/watch?v=dQw4w9WgXcQ`
 #[command]
 #[min_args(1)]
+#[aliases(p)]
 async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut embeded = false;
     let mut query = args.message().to_string();
