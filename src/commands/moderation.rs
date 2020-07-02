@@ -1,4 +1,7 @@
 use crate::ConnectionPool;
+use crate::utils::basic_functions::string_to_seconds;
+use crate::utils::checks::BOT_HAS_MANAGE_ROLES_CHECK;
+
 use serenity::{
     prelude::Context,
     model::{
@@ -199,11 +202,13 @@ async fn clear(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 /// `mute 135423120268984330`
 #[command]
 #[required_permissions(MANAGE_ROLES)]
-#[num_args(1)]
+#[min_args(1)]
 #[only_in("guilds")]
-async fn mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+#[aliases(mute, pmute, permamute, perma_mute, permanentmute)]
+#[checks(bot_has_manage_roles)]
+async fn permanent_mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let member_arg = args.single_quoted::<String>()?;
-    let mut member = parse_member(ctx, &msg, member_arg).await?;
+    let mut member = parse_member(ctx, msg, member_arg).await?;
 
     let rdata = ctx.data.read().await;
     let pool = rdata.get::<ConnectionPool>().unwrap();
@@ -231,10 +236,105 @@ async fn mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 /// or
 /// `configure guild mute_role role_id`
 ///
-/// Usage:
-/// `selfmute`
+/// Usage: `selfmute`
 #[command]
 #[only_in("guilds")]
-async fn selfmute(ctx: &Context, msg: &Message) -> CommandResult {
-    mute(ctx, msg, Args::new(&msg.author.id.0.to_string(), &[Delimiter::Single(' ')])).await
+#[aliases(self_mute_permanent, mute_self_permanent, permanentselfmute, selfmutepermanent, selfmutep, selfpmute, self_permanent_mute, self_perma_mute, perma_self_mute, mute_self_perma, pselfmute)]
+#[checks(bot_has_manage_roles)]
+async fn permanent_self_mute(ctx: &Context, msg: &Message) -> CommandResult {
+    permanent_mute(ctx, msg, Args::new(&msg.author.id.0.to_string(), &[Delimiter::Single(' ')])).await
+}
+
+/// Mute a Member for a temporal amount of time.
+///
+/// Default is 1 Hour.
+/// Supports the same time stamps as `reminder`.
+///
+/// To configure a role, someone who has the "manage guild" permissions needs to run the next command:
+/// 
+/// `configure guild mute_role @role_mention`
+/// or
+/// `configure guild mute_role role_id`
+///
+/// Usage:
+/// `tempmute @member`
+/// `tempmute @member "2D 12h"`
+/// `tempmute @member "1W" posted porn on #general`
+#[command]
+#[only_in("guilds")]
+#[min_args(1)]
+#[aliases(tempmute, tmute, temporalmute, temp_mute)]
+#[checks(bot_has_manage_roles)]
+async fn temporal_mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let rdata = ctx.data.read().await;
+    let pool = rdata.get::<ConnectionPool>().unwrap();
+
+    let raw_member = args.single_quoted::<String>()?;
+    let mut member = parse_member(ctx, msg, raw_member).await?;
+
+    let unformatted_time = args.single_quoted::<String>().unwrap_or("1h".to_string());
+    let seconds = string_to_seconds(unformatted_time);
+
+    if seconds < 30 {
+        msg.reply(ctx, "Duration is too short").await?;
+        return Ok(());
+    }
+
+    let text = args.rest();
+    let message = if text.is_empty() {
+        None
+    } else {
+        Some(text)
+    };
+
+    let row = sqlx::query!("SELECT role_id FROM muted_roles WHERE guild_id = $1", msg.guild_id.unwrap().0 as i64)
+        .fetch_optional(pool)
+        .await?;
+
+    if let Some(row) = row {
+        member.add_role(ctx, row.role_id as u64).await?;
+
+        sqlx::query!("INSERT INTO muted_members (date, message_id, channel_id, guild_id, user_id, message) VALUES ($1, $2, $3, $4, $5, $6)",
+            chrono::offset::Utc::now() + chrono::Duration::seconds(seconds as i64),
+            msg.id.0 as i64,
+            msg.channel_id.0 as i64,
+            msg.guild_id.unwrap().0 as i64,
+            member.user.id.0 as i64,
+            message,
+        )
+        .execute(pool)
+        .await?;
+
+        msg.reply(ctx, format!("Successfully muted member `{}#{}` with id `{}`\n until `{}`",
+            member.user.name, member.user.discriminator, member.user.id.0,
+            chrono::offset::Utc::now() + chrono::Duration::seconds(seconds as i64))).await?;
+    } else {
+        msg.reply(ctx, "The server doesn't have a muted role configured, please tell someone with the \"manage guild\" permission to run the following command to configure one:\n`configure guild mute_role @role_mention`").await?;
+        return Ok(());
+    }
+
+    Ok(())
+}
+
+/// Mute yourself for a temporal amount of time.
+///
+/// Default is 1 Hour.
+/// Supports the same time stamps as `reminder`.
+///
+/// To configure a role, someone who has the "manage guild" permissions needs to run the next command:
+/// 
+/// `configure guild mute_role @role_mention`
+/// or
+/// `configure guild mute_role role_id`
+///
+/// Usage:
+/// `selftempmute`
+/// `selftempmute "2D 12h"`
+/// `selftempmute "1W" im an idiot :D`
+#[command]
+#[only_in("guilds")]
+#[aliases(self_mute_temporal, mute_self_temporal, temporalselfmute, selfmutetemporal, selfmutet, selftmute, self_temporal_mute, self_temp_mute, temp_self_mute, mute_self_temp, tselfmute, selftempmute)]
+#[checks(bot_has_manage_roles)]
+async fn temporal_self_mute(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    temporal_mute(ctx, msg, Args::new(&format!("{} {}", msg.author.id.0.to_string(), args.message()), &[Delimiter::Single(' ')])).await
 }

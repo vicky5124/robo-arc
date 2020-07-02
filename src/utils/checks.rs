@@ -34,7 +34,7 @@ pub async fn bot_has_manage_messages_check(ctx: &Context, msg: &Message) -> Chec
 
 #[check]
 #[name = "bot_has_manage_roles"]
-async fn bot_has_manage_roles_check(ctx: &Context, msg: &Message) -> CheckResult {
+pub async fn bot_has_manage_roles_check(ctx: &Context, msg: &Message) -> CheckResult {
     let bot_id = ctx.cache.current_user().await.id.0;
     if !ctx.http.get_member(msg.guild_id.unwrap().0, bot_id)
         .await

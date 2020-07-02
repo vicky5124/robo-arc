@@ -318,7 +318,7 @@ struct Games;
 // The moderation command group.
 #[group("Moderation")]
 #[description = "All the moderation related commands."]
-#[commands(kick, ban, clear, mute, selfmute)]
+#[commands(kick, ban, clear, permanent_mute, temporal_mute, permanent_self_mute, temporal_self_mute)]
 struct Mod;
 
 // The music command group.

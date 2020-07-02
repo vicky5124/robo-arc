@@ -25,6 +25,49 @@
       "columns": []
     }
   },
+  "01766e993f879d974121df1b29cd9b3d821de2ee50f181aaea8e8b68a5234cf9": {
+    "query": "SELECT * FROM muted_members",
+    "describe": {
+      "params": [],
+      "columns": [
+        {
+          "name": "id",
+          "type_info": "Int4",
+          "not_null": true
+        },
+        {
+          "name": "date",
+          "type_info": "Timestamptz",
+          "not_null": true
+        },
+        {
+          "name": "message_id",
+          "type_info": "Int8",
+          "not_null": true
+        },
+        {
+          "name": "channel_id",
+          "type_info": "Int8",
+          "not_null": true
+        },
+        {
+          "name": "guild_id",
+          "type_info": "Int8",
+          "not_null": true
+        },
+        {
+          "name": "user_id",
+          "type_info": "Int8",
+          "not_null": true
+        },
+        {
+          "name": "message",
+          "type_info": "Text",
+          "not_null": false
+        }
+      ]
+    }
+  },
   "06d5062612c9cd9d4fe8126309e46d8f86c372f456221e320fc2937b0fc41faa": {
     "query": "DELETE FROM reminders WHERE id = $1",
     "describe": {
@@ -836,6 +879,29 @@
     "describe": {
       "params": [
         "Int8"
+      ],
+      "columns": []
+    }
+  },
+  "e0fac0c8645aaa161975c6925f527e1f8e85329683d87f973db3c7cf8e1f5568": {
+    "query": "INSERT INTO muted_members (date, message_id, channel_id, guild_id, user_id, message) VALUES ($1, $2, $3, $4, $5, $6)",
+    "describe": {
+      "params": [
+        "Timestamptz",
+        "Int8",
+        "Int8",
+        "Int8",
+        "Int8",
+        "Text"
+      ],
+      "columns": []
+    }
+  },
+  "e12d4119da071c2e5a3b47a8c43b65bacbb33fcaf08a8438c49a64ea4c17146b": {
+    "query": "DELETE FROM muted_members WHERE id = $1",
+    "describe": {
+      "params": [
+        "Int4"
       ],
       "columns": []
     }
