@@ -1,3 +1,33 @@
+# 0.2.3-alpha
+
+### Structure:
+- restructured checks.
+- added Games group.
+- re-enabled presence intent.
+- mute commands now check for manage_roles permission.
+
+### Commands:
+- TicTacToe:
+  Rewritten to be more stable.
+- Playlist:
+  Now accepts playlists without video.
+- queue:
+  Now only shows a maximum of 10 items.
+  And the total amount of items.
+- todo:
+  Updated items on the list.
+- sauce:
+  New command.
+  Attempts to find the source of images.
+- behoimi:
+  Now it displays images correctly, rather than the big NO sausage.
+- temporal_mute:
+  New command.
+  Temporarily mutes a member.
+- self_temporal_mute:
+  New command.
+  Calls temporal_mute on yourself.
+
 # 0.2.2-alpha
 
 ### Commands:
