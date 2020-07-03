@@ -214,7 +214,7 @@ async fn todo(ctx: &Context, msg: &Message) -> CommandResult {
 TODO:
 
 #Osu! 
-MapPP (calculates pp of a map, like ezpp or tillerino) / don not use oppai.
+MapPP (calculates pp of a map, like ezpp or tillerino) / do not use oppai.
 
 #Twitch
 ConfigureMessage (to configure the live message)
@@ -226,7 +226,6 @@ Sub/User Bomb (posts 5 posts from the subreddit or user specified)
 
 #Mod
 Clear (add specific requieriments like \"only webhooks\") / waiting for the method to return a stream.
-PermaBan (permanently bans a user from the guild by not allowing the user to ever get back on (perma kick))
 Logging (set a channel to log specific events)
 RuleManagement (https://5124.16-b.it/ss/22:50:34_21-06-2020.png)
 

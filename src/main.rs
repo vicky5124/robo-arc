@@ -132,6 +132,7 @@ use serenity::{
             GuildId,
         },
         event::VoiceServerUpdateEvent,
+        guild::Member,
     },
     prelude::{
         EventHandler,
@@ -318,7 +319,7 @@ struct Games;
 // The moderation command group.
 #[group("Moderation")]
 #[description = "All the moderation related commands."]
-#[commands(kick, ban, clear, permanent_mute, temporal_mute, permanent_self_mute, temporal_self_mute)]
+#[commands(kick, ban, permanent_ban, clear, permanent_mute, temporal_mute, permanent_self_mute, temporal_self_mute)]
 struct Mod;
 
 // The music command group.
@@ -632,6 +633,24 @@ impl EventHandler for Handler {
             voice_server.insert(guild_id);
         }
     }
+
+    async fn guild_member_addition(&self, ctx: Context, guild_id: GuildId, member: Member) {
+        let rdata = &ctx.data.read().await;
+        let pool = rdata.get::<ConnectionPool>().unwrap();
+
+        let data = sqlx::query!("SELECT banner_user_id FROM permanent_bans WHERE guild_id = $1 AND user_id = $2", guild_id.0 as i64, member.user.id.0 as i64)
+            .fetch_optional(pool)
+            .await
+            .unwrap();
+
+        if let Some(row) = data {
+            if let Err(_) = member.ban_with_reason(&ctx, 0, &format!("User ID {} has been banned PERMANENTLY by {}", member.user.id.0, row.banner_user_id)).await {
+                if let Some(channel) = guild_id.to_guild_cached(&ctx).await.unwrap().system_channel_id {
+                    let _ = channel.say(&ctx, format!("I was unable to reban the permanently banned user <@{}>, originally banned by <@{}>", member.user.id.0, row.banner_user_id)).await;
+                }
+            };
+        }
+    }
 }
 
 
@@ -662,6 +681,9 @@ async fn on_dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
                 let _ = msg.channel_id.say(ctx, r).await;
             }
         },
+        DispatchError::Ratelimited(x) => {
+            let _ = msg.reply(ctx, format!("You can't run this command for {} more seconds.", x)).await;
+        }
         // eprint prints to stderr rather than stdout.
         _ => {
             error!("Unhandled dispatch error: {:?}", error);
@@ -909,6 +931,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unrecognised_command(unrecognised_command)
         .before(before)
         .after(after)
+        .bucket("permanent_ban", |b| b.delay(30).time_span(30).limit(1)).await
 
         .group(&META_GROUP) // Load `Meta` command group
         .group(&FUN_GROUP) // Load `Fun` command group

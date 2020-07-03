@@ -68,6 +68,22 @@
       ]
     }
   },
+  "04f0f1bfae5d901d3cc1a2723220bc422fc72eef113951c3ae2f135341500d2c": {
+    "query": "SELECT banner_user_id FROM permanent_bans WHERE guild_id = $1 AND user_id = $2",
+    "describe": {
+      "params": [
+        "Int8",
+        "Int8"
+      ],
+      "columns": [
+        {
+          "name": "banner_user_id",
+          "type_info": "Int8",
+          "not_null": true
+        }
+      ]
+    }
+  },
   "06d5062612c9cd9d4fe8126309e46d8f86c372f456221e320fc2937b0fc41faa": {
     "query": "DELETE FROM reminders WHERE id = $1",
     "describe": {
@@ -154,6 +170,17 @@
           "not_null": true
         }
       ]
+    }
+  },
+  "28d142c984204386e5e8113bc46f94cf98d695feef6e1d085b1da2a67352c24f": {
+    "query": "INSERT INTO permanent_bans (guild_id, user_id, banner_user_id) VALUES ($1, $2, $3)",
+    "describe": {
+      "params": [
+        "Int8",
+        "Int8",
+        "Int8"
+      ],
+      "columns": []
     }
   },
   "2e9dbe2ef234e5476f97b8ac56f1d476e2e3a370f3ef9c68405aabfd08e3ddda": {
@@ -313,6 +340,22 @@
           "name": "pp",
           "type_info": "Bool",
           "not_null": false
+        }
+      ]
+    }
+  },
+  "65c2aa1149456fb0817175d4adb402688297824aae56768a0677400c8c5b8d49": {
+    "query": "SELECT EXISTS(SELECT 1 FROM permanent_bans WHERE guild_id = $1 AND user_id = $2)",
+    "describe": {
+      "params": [
+        "Int8",
+        "Int8"
+      ],
+      "columns": [
+        {
+          "name": "exists",
+          "type_info": "Bool",
+          "not_null": null
         }
       ]
     }
@@ -758,6 +801,16 @@
         "Text",
         "Int8",
         "Bool",
+        "Int8"
+      ],
+      "columns": []
+    }
+  },
+  "bd31c8a00f805c1439f95293fd914b98d069fce9ee32c1892c73f286a86d03fd": {
+    "query": "INSERT INTO permanent_bans (guild_id, user_id) VALUES ($1, $2)",
+    "describe": {
+      "params": [
+        "Int8",
         "Int8"
       ],
       "columns": []

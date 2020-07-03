@@ -2,6 +2,8 @@ use crate::ConnectionPool;
 use crate::utils::basic_functions::string_to_seconds;
 use crate::utils::checks::BOT_HAS_MANAGE_ROLES_CHECK;
 
+use std::time::Duration;
+
 use serenity::{
     prelude::Context,
     model::{
@@ -19,6 +21,11 @@ use serenity::{
         macros::command,
     },
 };
+
+use qrcode::QrCode;
+use qrcode::render::unicode;
+use rand::Rng;
+
 use regex::Regex;
 use futures::{
     //future::FutureExt,
@@ -338,4 +345,52 @@ async fn temporal_mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
 #[checks(bot_has_manage_roles)]
 async fn temporal_self_mute(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     temporal_mute(ctx, msg, Args::new(&format!("{} {}", msg.author.id.0.to_string(), args.message()), &[Delimiter::Single(' ')])).await
+}
+
+/// Permanently bans a member.
+///
+/// **WARNING**: THIS IS NOT REVERSEABLE!!!
+/// IF YOU BAN SOMEONE WITH THIS, THEY WILL ALWAYS BE RE-BANNED WHEN JOINING BACK!!!
+#[command]
+#[only_in("guilds")]
+#[required_permissions(ADMINISTRATOR)]
+#[min_args(1)]
+#[bucket(permanent_ban)]
+async fn permanent_ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let user = args.single::<UserId>()?;
+
+    msg.reply(ctx, format!("You are attempting to ban <@{}> with the id `{}` **PERMANENTLY**.\nThis is **NOT __reverseable__** and will make the user be banned again every time they try to join back.", user.0, user.0)).await?;
+
+    let r = rand::thread_rng().gen_range(0_u128, u128::MAX);
+
+    dbg!(&r);
+
+    let code = QrCode::new(r.to_string()).unwrap();
+    let image = code.render::<unicode::Dense1x2>()
+        .dark_color(unicode::Dense1x2::Light)
+        .light_color(unicode::Dense1x2::Dark)
+        .build();
+
+    msg.reply(ctx, format!("Say the number returned by this qr code to confirm: ```\n{}\n```\nYou have 2 minutes.", image)).await?;
+
+    if let Some(x) = msg.author.await_reply(ctx).channel_id(msg.channel_id).timeout(Duration::from_secs(120)).await {
+        if x.content == r.to_string() {
+            msg.guild_id.unwrap().ban_with_reason(ctx, user, 0, &format!("User ID {} has been banned PERMANENTLY by {}", user.0, msg.author.id.0)).await?;
+            msg.reply(ctx, format!("<@{}> has been **PERMANENTLY** banned.", user.0)).await?;
+
+            let rdata = ctx.data.read().await;
+            let pool = rdata.get::<ConnectionPool>().unwrap();
+
+            sqlx::query!("INSERT INTO permanent_bans (guild_id, user_id, banner_user_id) VALUES ($1, $2, $3)", msg.guild_id.unwrap().0 as i64, user.0 as i64, msg.author.id.0 as i64)
+                .execute(pool)
+                .await?;
+
+        } else {
+            msg.reply(ctx, "The number provided is not valid.").await?;
+        }
+    } else {
+        msg.reply(ctx, "Timeout!").await?;
+    }
+
+    Ok(())
 }
