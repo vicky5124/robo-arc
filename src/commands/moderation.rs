@@ -4,6 +4,8 @@ use crate::utils::checks::BOT_HAS_MANAGE_ROLES_CHECK;
 
 use std::time::Duration;
 
+use tracing::warn;
+
 use serenity::{
     prelude::Context,
     model::{
@@ -359,6 +361,8 @@ async fn temporal_self_mute(ctx: &Context, msg: &Message, args: Args) -> Command
 async fn permanent_ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let user = args.single::<UserId>()?;
 
+    warn!("PERMANENT BAN has been ran by {} on guild {} onto {}", msg.author.id.0, msg.guild_id.unwrap().0, user.0);
+
     msg.reply(ctx, format!("You are attempting to ban <@{}> with the id `{}` **PERMANENTLY**.\nThis is **NOT __reverseable__** and will make the user be banned again every time they try to join back.", user.0, user.0)).await?;
 
     let r = rand::thread_rng().gen_range(0_u128, u128::MAX);
@@ -385,12 +389,15 @@ async fn permanent_ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
                 .execute(pool)
                 .await?;
 
+            warn!("{} PERMANENTLY BANNED {} on guild {}", msg.author.id.0, user.0, msg.guild_id.unwrap().0);
+
         } else {
             msg.reply(ctx, "The number provided is not valid.").await?;
         }
     } else {
         msg.reply(ctx, "Timeout!").await?;
     }
+    warn!("{} fauled to ban {} on guild {}", msg.author.id.0, user.0, msg.guild_id.unwrap().0);
 
     Ok(())
 }
