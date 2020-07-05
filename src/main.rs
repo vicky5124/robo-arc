@@ -42,7 +42,7 @@ use utils::basic_functions::capitalize_first; // Obtain the capitalize_first fun
 use std::{
     collections::{
         HashSet, // Low cost indexable lists.
-        //HashMap,
+        HashMap,
     },
     // For saving / reading files
     fs::File,
@@ -132,6 +132,7 @@ use serenity::{
             UserId,
             ChannelId,
             GuildId,
+            MessageId,
         },
         event::VoiceServerUpdateEvent,
         guild::Member,
@@ -450,16 +451,24 @@ impl RawEventHandler for RawHandler {
                                     let messages = messages_channels.split(',');
 
                                     if messages.clone().count() > 5 {
+                                        let mut bad_messages: HashMap<u64, Vec<MessageId>> = HashMap::new();
+
                                         for msg_chan in messages {
-                                            let (msg_id, channel_id) = {
-                                                let mut split = msg_chan.split('|');
-                                                (
-                                                    split.nth(0).unwrap().parse::<u64>().unwrap(),
-                                                    split.nth(0).unwrap().parse::<u64>().unwrap(),
-                                                )
-                                          };
-                                          let _ = ChannelId(channel_id).delete_message(&ctx, msg_id).await;
+                                            let mut split = msg_chan.split('|');
+                                            let message_id = split.nth(0).unwrap().parse::<u64>().unwrap();
+                                            let channel_id = split.nth(0).unwrap().parse::<u64>().unwrap();
+
+                                            if let Some(x) = bad_messages.get_mut(&channel_id) {
+                                                x.push(MessageId(message_id));
+                                            } else {
+                                                bad_messages.insert(channel_id, vec![MessageId(message_id)]);
+                                            }
                                         }
+
+                                        for (channel, message_ids) in bad_messages.iter() {
+                                            let _ = ChannelId(*channel).delete_messages(&ctx, message_ids).await;
+                                        }
+
                                         let _ = message.reply(&ctx, "No spamming.").await;
                                         let _ = redis.del(message.author.id.0.to_string()).await;
                                     }
