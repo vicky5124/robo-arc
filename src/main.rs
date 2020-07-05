@@ -36,7 +36,7 @@ use commands::music::*; // Import everything from the configuration module.
 use commands::dictionary::*; // Import everything from the dictionary module.
 use commands::serenity_docs::*; // Import everything from the serenity_docs module.
 
-use utils::database::obtain_pool; // Obtain the get_database function from the utilities.
+use utils::database::*; // Obtain the get_database function from the utilities.
 use utils::basic_functions::capitalize_first; // Obtain the capitalize_first function from the utilities.
 
 use std::{
@@ -67,6 +67,7 @@ use tracing::{
     // Log macros.
     info,
     trace,
+    warn,
     error,
     // Others
     Level,
@@ -84,6 +85,7 @@ use tracing_log::LogTracer;
 use sqlx::PgPool; // PostgreSQL Pool Structure
 use futures::TryStreamExt;
 use futures::stream::StreamExt;
+use darkredis::ConnectionPool as RedisConnectionPool;
 
 use toml::Value; // To parse the data of .toml files
 use serde_json; // To parse the data of .json files (where's serde_toml smh)
@@ -133,9 +135,11 @@ use serenity::{
         },
         event::VoiceServerUpdateEvent,
         guild::Member,
+        event::Event,
     },
     prelude::{
         EventHandler,
+        RawEventHandler,
         Context,
         TypeMapKey,
         RwLock,
@@ -184,7 +188,8 @@ struct Allow {
 // Defining the structures to be used for "global" data
 // this data is not really global, it's just shared with Context.data
 struct ShardManagerContainer; // Shard manager to use for the latency.
-struct ConnectionPool; // The connection to the database, because having multiple connections is a bad idea.
+struct ConnectionPool; // A pool of connections to the database.
+struct RedisPool; // The connection to the redis cache database.
 struct Tokens; // For the configuration found on "config.toml"
 struct AnnoyedChannels; // This is a HashSet of all the channels the bot is allowed to be annoyed on.
 struct BooruList; // This is a HashSet of all the boorus found on "boorus.json"
@@ -251,6 +256,10 @@ impl TypeMapKey for Uptime {
 
 impl TypeMapKey for VoiceGuildUpdate {
     type Value = Arc<RwLock<HashSet<GuildId>>>;
+}
+
+impl TypeMapKey for RedisPool {
+    type Value = RedisConnectionPool;
 }
 
 
@@ -392,6 +401,63 @@ async fn my_help(
 }
 
 
+struct RawHandler; // Defines the raw handler to be used for logging.
+
+#[async_trait]
+impl RawEventHandler for RawHandler {
+    async fn raw_event(&self, ctx: Context, event: Event) {
+        let data_read = ctx.data.read().await;
+        let redis_pool = data_read.get::<RedisPool>().unwrap();
+        let mut redis = redis_pool.get().await;
+
+        match event {
+            Event::MessageCreate(data) => {
+                let message = data.message;
+
+                if message.author.bot {
+                    return;
+                }
+
+                if let Err(why) = redis.append(message.author.id.0.to_string(), format!("{}|{},", message.id.0, message.channel_id.0)).await {
+                    error!("Error sending data to redis: {}", why);
+                }
+
+                if let Err(why) = redis.expire_seconds(message.author.id.0.to_string(), 5).await {
+                    error!("Error setting expire date to redis: {}", why);
+                }
+
+                match redis.get(message.author.id.0.to_string()).await {
+                    Err(why) => error!("Error getting message data from redis: {}", why),
+                    Ok(x) => {
+                        if let Some(messages) = x {
+                            let mut messages_channels = String::from_utf8(messages).unwrap();
+                            messages_channels.pop();
+                            let messages = messages_channels.split(',');
+
+                            if messages.clone().count() > 7 {
+                                for msg_chan in messages {
+                                    let (msg_id, channel_id) = {
+                                        let mut split = msg_chan.split('|');
+                                        (
+                                            split.nth(0).unwrap().parse::<u64>().unwrap(),
+                                            split.nth(0).unwrap().parse::<u64>().unwrap(),
+                                        )
+                                  };
+                                  let _ = ChannelId(channel_id).delete_message(&ctx, msg_id).await;
+                                }
+                                let _ = message.reply(&ctx, "No spamming.").await;
+                                let _ = redis.del(message.author.id.0.to_string()).await;
+                            }
+                        } else {
+                            warn!("This should never happen! Redis didn't obtain the message data that just got sent.");
+                        }
+                    }
+                }
+            },
+            _ => (),
+        }
+    }
+}
 struct Handler; // Defines the handler to be used for events.
 
 #[async_trait]
@@ -948,6 +1014,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut client = Client::new(&bot_token)
         .event_handler(Handler)
+        .raw_event_handler(RawHandler)
         .framework(std_framework)
         .add_intent({
             let mut intents = GatewayIntents::all();
@@ -964,9 +1031,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Open the data lock in write mode.
         let mut data = client.data.write().await;
 
-        // Add the database connection to the data.
-        let pool = obtain_pool().await?;
-        data.insert::<ConnectionPool>(pool.clone());
+        // Add the databases connection pools to the data.
+        let pool = obtain_postgres_pool().await?;
+        data.insert::<ConnectionPool>(pool);
+        let pool = obtain_redis_pool().await?;
+        data.insert::<RedisPool>(pool);
+
         // Add the shard manager to the data.
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
         // Add the tokens to the data.
@@ -1023,16 +1093,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         {
-            // obtain all the channels where the bot is allowed to be annoyed on from the db.
-            let mut raw_annoyed_channels = sqlx::query!("SELECT channel_id from annoyed_channels")
-                .fetch(&pool)
-                .boxed();
+            let annoyed_channels = {
+                let pool = data.get::<ConnectionPool>().unwrap();
+                // obtain all the channels where the bot is allowed to be annoyed on from the db.
+                let mut raw_annoyed_channels = sqlx::query!("SELECT channel_id from annoyed_channels")
+                    .fetch(pool)
+                    .boxed();
 
-            // add every channel id from the db to a HashSet.
-            let mut annoyed_channels = HashSet::new();
-            while let Some(row) = raw_annoyed_channels.try_next().await? {
-                annoyed_channels.insert(row.channel_id as u64);
-            }
+                // add every channel id from the db to a HashSet.
+                let mut annoyed_channels = HashSet::new();
+                while let Some(row) = raw_annoyed_channels.try_next().await? {
+                    annoyed_channels.insert(row.channel_id as u64);
+                }
+
+                annoyed_channels
+            };
 
             // Insert the HashSet of annoyed channels to the data.
             data.insert::<AnnoyedChannels>(RwLock::new(annoyed_channels));

@@ -2,7 +2,7 @@ use crate::{
     ShardManagerContainer,
     ConnectionPool,
     utils::{
-        database::obtain_pool,
+        database::obtain_postgres_pool,
         basic_functions::seconds_to_days,
     },
     Uptime,
@@ -210,9 +210,7 @@ async fn source(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases(todo_list)]
 async fn todo(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(ctx, "```prolog
-TODO:
-
+    msg.channel_id.say(ctx, "Alpha: ```prolog
 #Osu! 
 MapPP (calculates pp of a map, like ezpp or tillerino) / do not use oppai.
 
@@ -231,6 +229,24 @@ RuleManagement (https://5124.16-b.it/ss/22:50:34_21-06-2020.png)
 
 #Tags
 \"Basically the same as R. Danny, but with personal tags supported\"
+```
+Beta: ```prolog
+#Osu!
+\"Rewrite almost everything lol\"
+OsuC (move to configure group and add compare boolean)
+Score (allow to get scores from other users)
+Compare (split from Score, make it see your scores on your latest recent invoke)
+
+#Optimizations
+PrefixCheck (cache this on a dashmap rather than checking the database every time)
+BooruImages (cache returned data on a dashmap rather than requesting every time)
+
+#Web Server
+\"Update the server list every time the bot joins a guild\"
+Dashboard (allow to configure the bot with a dashboard)
+
+#Readavility
+\"aAdd comments to everything\"
 ```").await?;
     Ok(())
 }
@@ -414,7 +430,7 @@ async fn changelog(ctx: &Context, msg: &Message) -> CommandResult {
 #[owners_only]
 async fn reload_db(ctx: &Context, msg: &Message) -> CommandResult {
     let mut data = ctx.data.write().await;
-    data.insert::<ConnectionPool>(obtain_pool().await?);
+    data.insert::<ConnectionPool>(obtain_postgres_pool().await?);
     msg.channel_id.say(ctx, "Ok.").await?;
     Ok(())
 }

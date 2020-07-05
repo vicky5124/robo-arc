@@ -61,8 +61,8 @@ You can do this by using sqlx migrations. To install it, run this command:
 Then you will need to set a database url to your env_vars. In linux you can run this:
 \
 ```bash
-export DATABASE_URL="postgres://`postgres_username`:`postgres_user_password`@`postgres_ip`:`postgres_port`/`postgres_database`"
-export DATABASE_URL2="postgres://`postgres_username`:`postgres_user_password`@`postgres_ip`:`postgres_port`/`postgres_database`"
+export DATABASE_URL="postgres://`postgres_username`:`postgres_user_password`@`postgres_host`:`postgres_port`/`postgres_database`"
+export DATABASE_URL2=$DATABASE_URL
 ```
 \
 Followed with the creation of the database:
@@ -73,6 +73,18 @@ sqlx database create
 # Apply the migrations
 # Run this every time you update the bot.
 cargo sqxl mirgate run
+```
+
+### __**Redis Database**__:
+So logging works, redis is also necessary. It is also recommended that you use docker for this.
+[Here's](https://hub.docker.com/_/redis) the docker hub link. The readme has the commands you need to run the container.
+
+    NOTE: This is currently only tested without a configuration, if any configuration options that you feel like you may need make stuff not work, feel free to open an issue.
+
+Then you will need to set a database url to your env_vars. In linux you can run this:
+\
+```bash
+export REDIS_URL="`redis_host`:`redis_port`"
 ```
 
 ### __**Eval command**__:

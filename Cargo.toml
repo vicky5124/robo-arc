@@ -41,6 +41,8 @@ warp = "0.2.3" # https://github.com/seanmonstar/warp/
 chrono = "0.4.11" # https://github.com/chronotope/chrono
 humantime = "2.0.0" # https://github.com/tailhook/humantime
 fasteval = "0.2.4" # https://github.com/likebike/fasteval
+darkredis = "0.7.0" # https://github.com/bunogi/darkredis
+num_cpus = "1.13.0" # https://github.com/seanmonstar/num_cpus 
  
 openssl = { version = "*", optional = true }
 

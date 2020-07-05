@@ -72,6 +72,7 @@ version = "0.2.3-alpha"
 dependencies = [
  "bitflags",
  "chrono",
+ "darkredis",
  "dotenv",
  "failure",
  "fasteval",
@@ -82,6 +83,7 @@ dependencies = [
  "image 0.23.6",
  "loc",
  "num-format",
+ "num_cpus",
  "openssl",
  "photon-rs",
  "qrcode",
@@ -535,6 +537,17 @@ name = "custom_derive"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef8ae57c4978a2acd8b869ce6b9ca1dfe817bff704c220209fdef2c0b75a01b9"
+
+[[package]]
+name = "darkredis"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aea2720057de6407bb311e02bfbf6584efac4b0baf42abb4be768f178adc934c"
+dependencies = [
+ "futures",
+ "quick-error",
+ "tokio",
+]
 
 [[package]]
 name = "deflate"
