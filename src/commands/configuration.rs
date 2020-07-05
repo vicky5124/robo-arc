@@ -219,12 +219,12 @@ async fn booru(ctx: &Context, msg: &Message, raw_args: Args) -> CommandResult {
 /// Configures the bot for the channel it was invoked on.
 ///
 /// Configurable aspects:
-/// `annoy`: Toggles the annoying features on or off.
+/// `toggle_annoy`: Toggles the annoying features on or off.
 /// `notifications`: Configure the notifications for YandeRe posts or Twitch livestreams.
 #[command]
 #[required_permissions(MANAGE_CHANNELS)]
 #[only_in("guilds")]
-#[sub_commands(annoy, notifications)]
+#[sub_commands(toggle_annoy, notifications)]
 #[aliases(chan)]
 async fn channel(_ctx: &Context, _message: &Message, _args: Args) -> CommandResult {
     Ok(())
@@ -763,7 +763,8 @@ async fn timeout(ctx: &Context, msg: &mut Message, og_message: &Message) -> Comm
 
 /// Toggles the annoying features on or off.
 #[command]
-async fn annoy(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+#[aliases(annoy)]
+async fn toggle_annoy(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let rdata = ctx.data.read().await;
     let pool = rdata.get::<ConnectionPool>().unwrap();
 
@@ -811,11 +812,12 @@ async fn annoy(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 /// `mute_role`: Sets the mute role of the server.
 /// `disable_command`: Disables a command.
 /// `enable_command`: Enables a disabled command.
+/// `toggle_anti_spam`: Enables or Disables antispam.
 #[command]
 #[required_permissions(MANAGE_GUILD)]
 #[only_in("guilds")]
 #[aliases(server)]
-#[sub_commands(prefix, mute_role, disable_command, enable_command)]
+#[sub_commands(prefix, mute_role, disable_command, enable_command, toggle_anti_spam)]
 async fn guild(_ctx: &Context, _msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
@@ -987,6 +989,38 @@ async fn enable_command(ctx: &Context, msg: &Message, mut args: Args) -> Command
         }
     }
     msg.reply(ctx, "Command not disabled.").await?;
+
+    Ok(())
+}
+
+/// Toggles the Anti-Spam system on or off.
+///
+/// Currently it's a very simple "if more than 5 messages where sent in less than 5 second
+/// intervals between them, they get deleted"
+///
+/// In the future, this will be able to be configured in multiple ways.
+#[command]
+#[aliases(toggleantispam, antispam, anti_spam, "toggle-anti-spam", "anti-spam")]
+async fn toggle_anti_spam(ctx: &Context, msg: &Message) -> CommandResult {
+    let rdata = ctx.data.read().await;
+    let pool = rdata.get::<ConnectionPool>().unwrap();
+
+    let data = sqlx::query!("SELECT enabled FROM anti_spam WHERE guild_id = $1", msg.guild_id.unwrap().0 as i64)
+        .fetch_optional(pool)
+        .await?;
+
+    if let Some(row) = data {
+        sqlx::query!("UPDATE anti_spam SET enabled = $2 WHERE guild_id = $1", msg.guild_id.unwrap().0 as i64, !row.enabled)
+            .execute(pool)
+            .await?;
+
+    } else {
+        sqlx::query!("INSERT INTO anti_spam (guild_id, enabled) VALUES ($1, true)", msg.guild_id.unwrap().0 as i64)
+            .execute(pool)
+            .await?;
+    }
+
+    msg.react(ctx, '✅').await?;
 
     Ok(())
 }

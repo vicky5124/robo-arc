@@ -231,6 +231,9 @@ RuleManagement (https://5124.16-b.it/ss/22:50:34_21-06-2020.png)
 \"Basically the same as R. Danny, but with personal tags supported\"
 ```
 Beta: ```prolog
+#Configure
+YandeRe (make it possible to remove notifications)
+
 #Osu!
 \"Rewrite almost everything lol\"
 OsuC (move to configure group and add compare boolean)
@@ -246,7 +249,16 @@ BooruImages (cache returned data on a dashmap rather than requesting every time)
 Dashboard (allow to configure the bot with a dashboard)
 
 #Readavility
-\"aAdd comments to everything\"
+\"Add comments to everything\"
+
+#AntiSpam
+\"Allow per guild configuration of the action taken when someone spams (mute, ban, kick, nothing)\"
+\"Allow per guild configuration of the number of messages and seconds\"
+\"Allow per guild configuration of the different types of spam to prevent\"
+\"Implement antispam for repeated messages\"
+\"Implement antispam for similar messages\"
+\"Implement antispam for single letter messages\"
+\"Implement antispam for (configurable) lines long messages\"
 ```").await?;
     Ok(())
 }
