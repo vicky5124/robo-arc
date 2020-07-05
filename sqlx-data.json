@@ -344,22 +344,6 @@
       ]
     }
   },
-  "65c2aa1149456fb0817175d4adb402688297824aae56768a0677400c8c5b8d49": {
-    "query": "SELECT EXISTS(SELECT 1 FROM permanent_bans WHERE guild_id = $1 AND user_id = $2)",
-    "describe": {
-      "params": [
-        "Int8",
-        "Int8"
-      ],
-      "columns": [
-        {
-          "name": "exists",
-          "type_info": "Bool",
-          "not_null": null
-        }
-      ]
-    }
-  },
   "6610ecb2603b4b94fe13894d64593e75ac0c0fa78a939817c1b52fe8ba7aca66": {
     "query": "INSERT INTO best_bg (best_boy, user_id) VALUES ($1, $2)",
     "describe": {
@@ -483,6 +467,16 @@
           "not_null": false
         }
       ]
+    }
+  },
+  "736ea3011b79a2c26aa8d5290a45ae9abd15a16850a0e393e9cc8f662d8e72c5": {
+    "query": "UPDATE anti_spam SET enabled = $2 WHERE guild_id = $1",
+    "describe": {
+      "params": [
+        "Int8",
+        "Bool"
+      ],
+      "columns": []
     }
   },
   "73af57d4a5e75262443b028b2df2807dcbd277c5ac87c8bf4ad7996131a38f9a": {
@@ -640,6 +634,15 @@
       ]
     }
   },
+  "8168111107df5c86dece91cb7c1a78ad159a53cf45114b5376c2dfaeefac05cf": {
+    "query": "INSERT INTO anti_spam (guild_id, enabled) VALUES ($1, true)",
+    "describe": {
+      "params": [
+        "Int8"
+      ],
+      "columns": []
+    }
+  },
   "8722ef3d8ac96609fe2bda9ae29fecd0a5d00c27a9d128bacda722da857a9116": {
     "query": "SELECT * FROM streamers",
     "describe": {
@@ -709,6 +712,21 @@
         "Int8"
       ],
       "columns": []
+    }
+  },
+  "9a355c937d868238fbfe74a67ceedf0e1fe11279a7aafa55dec1b615c9d38994": {
+    "query": "SELECT enabled FROM anti_spam WHERE guild_id = $1",
+    "describe": {
+      "params": [
+        "Int8"
+      ],
+      "columns": [
+        {
+          "name": "enabled",
+          "type_info": "Bool",
+          "not_null": true
+        }
+      ]
     }
   },
   "9ad485eab342fbcae09179fc83118bd78adea3217115104d957b67c46a899f22": {
@@ -801,16 +819,6 @@
         "Text",
         "Int8",
         "Bool",
-        "Int8"
-      ],
-      "columns": []
-    }
-  },
-  "bd31c8a00f805c1439f95293fd914b98d069fce9ee32c1892c73f286a86d03fd": {
-    "query": "INSERT INTO permanent_bans (guild_id, user_id) VALUES ($1, $2)",
-    "describe": {
-      "params": [
-        "Int8",
         "Int8"
       ],
       "columns": []
