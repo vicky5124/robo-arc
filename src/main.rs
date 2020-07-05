@@ -1,4 +1,4 @@
-#![feature(vec_remove_item)]
+#![forbid(unsafe_code)]
 /// This is a discord bot made with `serenity.rs` as a Rust learning project.
 /// If you see a lot of different ways to do the same thing, specially with error handling,
 /// this is indentional, as it helps me remember the concepts that rust provides, so they can be

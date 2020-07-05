@@ -317,9 +317,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.56"
+version = "1.0.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77c1f1d60091c1b73e2b1f4560ab419204b178e625fa945ded7b660becd2bd46"
+checksum = "0fde55d2a2bfaa4c9668bbc63f531fbdeee3ffe188f4662511ce2c22b3eedebe"
 
 [[package]]
 name = "cfg-if"
@@ -335,9 +335,9 @@ checksum = "17cc5e6b5ab06331c33589842070416baa137e8b0eb912b008cfd4a78ada7919"
 
 [[package]]
 name = "chrono"
-version = "0.4.11"
+version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "80094f509cf8b5ae86a4966a39b3ff66cd7e2a3e594accec3743ff3fabeab5b2"
+checksum = "f0fee792e164f78f5fe0c296cc2eb3688a2ca2b70cdff33040922d298203f0c4"
 dependencies = [
  "num-integer",
  "num-traits",
@@ -561,9 +561,9 @@ dependencies = [
 
 [[package]]
 name = "deflate"
-version = "0.8.4"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7e5d2a2273fed52a7f947ee55b092c4057025d7a3e04e5ecdbd25d6c3fb1bd7"
+checksum = "5636dc1e1a96d178b7dd728a07c1e1dd97ad92361e54303c3be3d18b0f3a87e8"
 dependencies = [
  "adler32",
  "byteorder",
@@ -633,6 +633,9 @@ name = "either"
 version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb1f6b1ce1c140482ea30ddd3335fc0024ac7ee112895426e0a629a6c20adfe3"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "ena"
@@ -1263,9 +1266,9 @@ dependencies = [
 
 [[package]]
 name = "jpeg-decoder"
-version = "0.1.19"
+version = "0.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b47b4c4e017b01abdc5bcc126d2d1002e5a75bbe3ce73f9f4f311a916363704"
+checksum = "cc797adac5f083b8ff0ca6f6294a999393d76e197c36488e2ef732c4715f6fa3"
 dependencies = [
  "byteorder",
  "rayon",
@@ -1497,9 +1500,9 @@ dependencies = [
 
 [[package]]
 name = "memoffset"
-version = "0.5.4"
+version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4fc2c02a7e374099d4ee95a193111f72d2110197fe200272371758f6c3643d8"
+checksum = "c198b026e1bbf08a937e94c6c60f9ec4a2267f5b0d2eec9c1b21b061ce2be55f"
 dependencies = [
  "autocfg 1.0.0",
 ]
@@ -1580,9 +1583,9 @@ dependencies = [
 
 [[package]]
 name = "mio-named-pipes"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5e374eff525ce1c5b7687c4cef63943e7686524a387933ad27ca7ec43779cb3"
+checksum = "0840c1c50fd55e521b247f949c241c9997709f23bd7f023b9762cd561e935656"
 dependencies = [
  "log 0.4.8",
  "mio",
@@ -1867,9 +1870,9 @@ dependencies = [
 
 [[package]]
 name = "ordered-float"
-version = "1.0.2"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18869315e81473c951eb56ad5558bbc56978562d3ecfb87abb7a1e944cea4518"
+checksum = "3741934be594d77de1c8461ebcbbe866f585ea616a9753aa78f2bdc69f0e4579"
 dependencies = [
  "num-traits",
 ]
@@ -2150,7 +2153,7 @@ checksum = "c150bf7479fafe3dd8740dbe48cc33b2a3efb7b0fe3483aced8bbc39f6d0238d"
 dependencies = [
  "bitflags",
  "crc32fast",
- "deflate 0.8.4",
+ "deflate 0.8.5",
  "miniz_oxide 0.3.7",
 ]
 
@@ -3084,7 +3087,7 @@ dependencies = [
 [[package]]
 name = "serenity-lavalink"
 version = "0.0.3-alpha"
-source = "git+https://gitlab.com/nitsuga5124/serenity-lavalink/#20b2f9e69f67a36d171680a84aef54171c291de9"
+source = "git+https://gitlab.com/nitsuga5124/serenity-lavalink/?branch=master#20b2f9e69f67a36d171680a84aef54171c291de9"
 dependencies = [
  "async-tungstenite",
  "futures",
@@ -3129,18 +3132,6 @@ name = "sha1"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2579985fda508104f7587689507983eadd6a6e84dd35d6d115361f530916fa0d"
-
-[[package]]
-name = "sha2"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a256f46ea78a0c0d9ff00077504903ac881a1dafdc20da66545699e7776b3e69"
-dependencies = [
- "block-buffer 0.7.3",
- "digest 0.8.1",
- "fake-simd",
- "opaque-debug 0.2.3",
-]
 
 [[package]]
 name = "sha2"
@@ -3243,7 +3234,7 @@ dependencies = [
 [[package]]
 name = "sqlx"
 version = "0.4.0-pre"
-source = "git+https://github.com/launchbadge/sqlx/#eda0b7dea4399e6761cb578eaafa200925891ec9"
+source = "git+https://github.com/launchbadge/sqlx/?branch=master#41df13ba5a6506b3175146e0b122b2b78fce1c2e"
 dependencies = [
  "sqlx-core",
  "sqlx-macros",
@@ -3252,7 +3243,7 @@ dependencies = [
 [[package]]
 name = "sqlx-core"
 version = "0.4.0-pre"
-source = "git+https://github.com/launchbadge/sqlx/#eda0b7dea4399e6761cb578eaafa200925891ec9"
+source = "git+https://github.com/launchbadge/sqlx/?branch=master#41df13ba5a6506b3175146e0b122b2b78fce1c2e"
 dependencies = [
  "atoi",
  "base64 0.12.3",
@@ -3283,7 +3274,7 @@ dependencies = [
  "rand 0.7.3",
  "serde",
  "sha-1 0.9.1",
- "sha2 0.9.1",
+ "sha2",
  "smallvec 1.4.0",
  "sqlformat",
  "sqlx-rt",
@@ -3297,30 +3288,31 @@ dependencies = [
 [[package]]
 name = "sqlx-macros"
 version = "0.4.0-pre"
-source = "git+https://github.com/launchbadge/sqlx/#eda0b7dea4399e6761cb578eaafa200925891ec9"
+source = "git+https://github.com/launchbadge/sqlx/?branch=master#41df13ba5a6506b3175146e0b122b2b78fce1c2e"
 dependencies = [
  "dotenv",
+ "either",
  "futures",
  "heck",
  "hex",
- "once_cell",
  "proc-macro2 1.0.18",
  "quote 1.0.7",
  "serde",
  "serde_json",
- "sha2 0.8.2",
+ "sha2",
  "sqlx-core",
+ "sqlx-rt",
  "syn 1.0.33",
- "tokio",
  "url",
 ]
 
 [[package]]
 name = "sqlx-rt"
 version = "0.1.0-pre"
-source = "git+https://github.com/launchbadge/sqlx/#eda0b7dea4399e6761cb578eaafa200925891ec9"
+source = "git+https://github.com/launchbadge/sqlx/?branch=master#41df13ba5a6506b3175146e0b122b2b78fce1c2e"
 dependencies = [
  "native-tls",
+ "once_cell",
  "tokio",
  "tokio-native-tls",
 ]
@@ -3790,9 +3782,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-subscriber"
-version = "0.2.6"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04a11b459109e38ff6e1b580bafef4142a11d44889f5d07424cbce2fd2a2a119"
+checksum = "c72c8cf3ec4ed69fef614d011a5ae4274537a8a8c59133558029bd731eb71659"
 dependencies = [
  "ansi_term",
  "chrono",

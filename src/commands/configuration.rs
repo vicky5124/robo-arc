@@ -974,7 +974,10 @@ async fn enable_command(ctx: &Context, msg: &Message, mut args: Args) -> Command
                 if let Some(x) = disallowed_commands {
                     if let Some(mut disallowed_commands) = x.disallowed_commands {
                         if disallowed_commands.contains(&command_name.to_string()) {
-                            disallowed_commands.remove_item(&command_name);
+                            if let Some(pos) = disallowed_commands.iter().position(|x| &x == &command_name) {
+                                disallowed_commands.remove(pos);
+                            };
+
                             sqlx::query!("UPDATE prefixes SET disallowed_commands = $1 WHERE guild_id = $2",
                                 &disallowed_commands,
                                 msg.guild_id.unwrap().0 as i64,
