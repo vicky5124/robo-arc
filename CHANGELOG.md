@@ -1,3 +1,33 @@
+# 0.2.4-alpha
+
+### Commands:
+- recent:
+  Now shows pp.
+- permanent_ban:
+  New command.
+  Permanently bans a user froma guild.
+- picture:
+  Fixed help.
+- invite:
+  Updated the required permissions.
+- play/skip:
+  Added some aliases.
+- configure guild:
+  Can now toggle anti-spam
+
+### Logging:
+- New system
+- Added a simple anti-spam
+
+### Dependencies:
+- Updated dependencies.
+- Updated rust nightly to remove depricated code.
+
+### Structure:
+- new utils: osu.rs
+- new source file: logging.rs
+- moved osu! mods module to crate::utils::osu
+
 # 0.2.3-alpha
 
 ### Structure:
