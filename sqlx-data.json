@@ -3,15 +3,22 @@
   "00d7e8f2dd866e4cc646046b7e04d80e512e0f28ee518e5dba31338e852be9af": {
     "query": "SELECT channel_id FROM annoyed_channels WHERE channel_id = $1",
     "describe": {
-      "params": [
-        "Int8"
-      ],
       "columns": [
         {
+          "ordinal": 0,
           "name": "channel_id",
           "type_info": "Int8",
-          "not_null": true
+          "relation_id": 16529,
+          "relation_attribute_no": 1
         }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      },
+      "nullable": [
+        false
       ]
     }
   },
@@ -99,26 +106,36 @@
   "04f0f1bfae5d901d3cc1a2723220bc422fc72eef113951c3ae2f135341500d2c": {
     "query": "SELECT banner_user_id FROM permanent_bans WHERE guild_id = $1 AND user_id = $2",
     "describe": {
-      "params": [
-        "Int8",
-        "Int8"
-      ],
       "columns": [
         {
+          "ordinal": 0,
           "name": "banner_user_id",
           "type_info": "Int8",
-          "not_null": true
+          "relation_id": 16558,
+          "relation_attribute_no": 3
         }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8"
+        ]
+      },
+      "nullable": [
+        false
       ]
     }
   },
   "06d5062612c9cd9d4fe8126309e46d8f86c372f456221e320fc2937b0fc41faa": {
     "query": "DELETE FROM reminders WHERE id = $1",
     "describe": {
-      "params": [
-        "Int4"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": []
     }
   },
   "149c22b90cf957f4ee9cc0aa3d5e6d22bc1699bf0d384c131c7ced241673b881": {
@@ -146,30 +163,40 @@
   "14b0f7aa5a4f2feab4f8ca1ba9df84d3c6bf573b76fdca25b2804747430778fa": {
     "query": "SELECT streamer FROM streamers WHERE streamer = $1",
     "describe": {
-      "params": [
-        "Text"
-      ],
       "columns": [
         {
+          "ordinal": 0,
           "name": "streamer",
           "type_info": "Text",
-          "not_null": true
+          "relation_id": 16594,
+          "relation_attribute_no": 1
         }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
       ]
     }
   },
   "178453f0910415111310484c113d73517a60a65969a8a7dcf503d56631aaafdd": {
     "query": "INSERT INTO reminders (date, message_id, channel_id, guild_id, user_id, message) VALUES ($1, $2, $3, $4, $5, $6)",
     "describe": {
-      "params": [
-        "Timestamptz",
-        "Int8",
-        "Int8",
-        "Int8",
-        "Int8",
-        "Text"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Timestamptz",
+          "Int8",
+          "Int8",
+          "Int8",
+          "Int8",
+          "Text"
+        ]
+      },
+      "nullable": []
     }
   },
   "20800da4d818053cfce2365f7f083ccecc3774d3b4f7df46aacfdd66ecc521ea": {
@@ -188,11 +215,14 @@
   "266b2c56cb6e424b7b51759a4bbd155a72c2585a0de0d1efbae6644fd2bf8882": {
     "query": "UPDATE new_posts SET channel_id = $2 WHERE booru_url = 'yande.re' AND tags = $1",
     "describe": {
-      "params": [
-        "Text",
-        "Int8Array"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Int8Array"
+        ]
+      },
+      "nullable": []
     }
   },
   "26d3eed3ab68b6829a80121bc79a1b0177839987c811ce916226d160669c9eb9": {
@@ -220,26 +250,36 @@
   "28d142c984204386e5e8113bc46f94cf98d695feef6e1d085b1da2a67352c24f": {
     "query": "INSERT INTO permanent_bans (guild_id, user_id, banner_user_id) VALUES ($1, $2, $3)",
     "describe": {
-      "params": [
-        "Int8",
-        "Int8",
-        "Int8"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Int8"
+        ]
+      },
+      "nullable": []
     }
   },
   "2e9dbe2ef234e5476f97b8ac56f1d476e2e3a370f3ef9c68405aabfd08e3ddda": {
     "query": "SELECT disallowed_commands FROM prefixes WHERE guild_id = $1",
     "describe": {
-      "params": [
-        "Int8"
-      ],
       "columns": [
         {
+          "ordinal": 0,
           "name": "disallowed_commands",
           "type_info": "TextArray",
-          "not_null": false
+          "relation_id": 16563,
+          "relation_attribute_no": 3
         }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      },
+      "nullable": [
+        true
       ]
     }
   },
@@ -282,15 +322,22 @@
   "3f538bef0ff3c73d361454de69c014d3c502d3d7696157c43cc2bdce79fedcfc": {
     "query": "SELECT booru FROM best_bg WHERE user_id = $1",
     "describe": {
-      "params": [
-        "Int8"
-      ],
       "columns": [
         {
+          "ordinal": 0,
           "name": "booru",
           "type_info": "Text",
-          "not_null": false
+          "relation_id": 16532,
+          "relation_attribute_no": 4
         }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      },
+      "nullable": [
+        true
       ]
     }
   },
@@ -323,45 +370,65 @@
   "4643d95dabb6f99db269f0f3620312cc6aed729454215e43a62ce09d9916a235": {
     "query": "SELECT osu_username, pp FROM osu_user WHERE discord_id = $1",
     "describe": {
-      "params": [
-        "Int8"
-      ],
       "columns": [
         {
+          "ordinal": 0,
           "name": "osu_username",
           "type_info": "Varchar",
-          "not_null": true
+          "relation_id": 16555,
+          "relation_attribute_no": 3
         },
         {
+          "ordinal": 1,
           "name": "pp",
           "type_info": "Bool",
-          "not_null": false
+          "relation_id": 16555,
+          "relation_attribute_no": 4
         }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      },
+      "nullable": [
+        false,
+        true
       ]
     }
   },
   "5a322104c8abb19cffb69e5c94005cba99246fa76dc2a08512565e2a6025b07e": {
     "query": "UPDATE best_bg SET booru = $1 WHERE user_id = $2",
     "describe": {
-      "params": [
-        "Text",
-        "Int8"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Int8"
+        ]
+      },
+      "nullable": []
     }
   },
   "5b189e76a5709df769da0ba24b8079af3c261299c50b2553574fbbf85ee223c6": {
     "query": "SELECT channel_id FROM new_posts WHERE booru_url = 'yande.re' AND tags = $1",
     "describe": {
-      "params": [
-        "Text"
-      ],
       "columns": [
         {
+          "ordinal": 0,
           "name": "channel_id",
           "type_info": "Int8Array",
-          "not_null": false
+          "relation_id": 16549,
+          "relation_attribute_no": 4
         }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        true
       ]
     }
   },
@@ -428,30 +495,39 @@
   "6610ecb2603b4b94fe13894d64593e75ac0c0fa78a939817c1b52fe8ba7aca66": {
     "query": "INSERT INTO best_bg (best_boy, user_id) VALUES ($1, $2)",
     "describe": {
-      "params": [
-        "Text",
-        "Int8"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Int8"
+        ]
+      },
+      "nullable": []
     }
   },
   "6d917b866e2937386d00be8610f36498d821720413b57b364d3bee30928c8b64": {
     "query": "INSERT INTO prefixes (guild_id, prefix) VALUES ($1, $2)",
     "describe": {
-      "params": [
-        "Int8",
-        "Text"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Text"
+        ]
+      },
+      "nullable": []
     }
   },
   "6eb85a1a3329670735be6b12063df723cb162fa95f4e3525b72e87c9b28c56ff": {
     "query": "UPDATE streamers SET is_live = false WHERE streamer = $1",
     "describe": {
-      "params": [
-        "Text"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": []
     }
   },
   "6efd7e44efc7697aeefdfb4fcf6ac8d38043aa6eb4b444f0ca29cf5b7bbb6d96": {
@@ -555,128 +631,197 @@
   "736c6df13b3a2329d58bf2c63c48c6a7ad1e993b65a0d03259c84fdb36e07002": {
     "query": "SELECT * FROM new_posts",
     "describe": {
-      "params": [],
       "columns": [
         {
+          "ordinal": 0,
           "name": "booru_url",
           "type_info": "Text",
-          "not_null": true
+          "relation_id": 16549,
+          "relation_attribute_no": 1
         },
         {
+          "ordinal": 1,
           "name": "tags",
           "type_info": "Text",
-          "not_null": true
+          "relation_id": 16549,
+          "relation_attribute_no": 2
         },
         {
+          "ordinal": 2,
           "name": "webhook",
           "type_info": "TextArray",
-          "not_null": false
+          "relation_id": 16549,
+          "relation_attribute_no": 3
         },
         {
+          "ordinal": 3,
           "name": "channel_id",
           "type_info": "Int8Array",
-          "not_null": false
+          "relation_id": 16549,
+          "relation_attribute_no": 4
         },
         {
+          "ordinal": 4,
           "name": "sent_md5",
           "type_info": "TextArray",
-          "not_null": false
+          "relation_id": 16549,
+          "relation_attribute_no": 5
         }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        true,
+        true,
+        true
       ]
     }
   },
   "736ea3011b79a2c26aa8d5290a45ae9abd15a16850a0e393e9cc8f662d8e72c5": {
     "query": "UPDATE anti_spam SET enabled = $2 WHERE guild_id = $1",
     "describe": {
-      "params": [
-        "Int8",
-        "Bool"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Bool"
+        ]
+      },
+      "nullable": []
     }
   },
   "73af57d4a5e75262443b028b2df2807dcbd277c5ac87c8bf4ad7996131a38f9a": {
     "query": "SELECT * FROM streamer_notification_channel WHERE streamer = $1",
     "describe": {
-      "params": [
-        "Text"
-      ],
       "columns": [
         {
+          "ordinal": 0,
           "name": "streamer",
           "type_info": "Text",
-          "not_null": true
+          "relation_id": 16577,
+          "relation_attribute_no": 1
         },
         {
+          "ordinal": 1,
           "name": "role_id",
           "type_info": "Int8",
-          "not_null": false
+          "relation_id": 16577,
+          "relation_attribute_no": 2
         },
         {
+          "ordinal": 2,
           "name": "use_default",
           "type_info": "Bool",
-          "not_null": true
+          "relation_id": 16577,
+          "relation_attribute_no": 3
         },
         {
+          "ordinal": 3,
           "name": "live_message",
           "type_info": "Text",
-          "not_null": false
+          "relation_id": 16577,
+          "relation_attribute_no": 4
         },
         {
+          "ordinal": 4,
           "name": "not_live_message",
           "type_info": "Text",
-          "not_null": false
+          "relation_id": 16577,
+          "relation_attribute_no": 5
         },
         {
+          "ordinal": 5,
           "name": "channel_id",
           "type_info": "Int8",
-          "not_null": false
+          "relation_id": 16577,
+          "relation_attribute_no": 6
         },
         {
+          "ordinal": 6,
           "name": "message_id",
           "type_info": "Int8",
-          "not_null": false
+          "relation_id": 16577,
+          "relation_attribute_no": 7
         }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true
       ]
     }
   },
   "7bf943041131f2c717cf09b9d7246904fe7fd5d775e9e439f550a509c973f3bb": {
     "query": "SELECT * FROM osu_user WHERE osu_username = $1",
     "describe": {
-      "params": [
-        "Text"
-      ],
       "columns": [
         {
+          "ordinal": 0,
           "name": "discord_id",
           "type_info": "Int8",
-          "not_null": true
+          "relation_id": 16555,
+          "relation_attribute_no": 1
         },
         {
+          "ordinal": 1,
           "name": "osu_id",
           "type_info": "Int4",
-          "not_null": true
+          "relation_id": 16555,
+          "relation_attribute_no": 2
         },
         {
+          "ordinal": 2,
           "name": "osu_username",
           "type_info": "Varchar",
-          "not_null": true
+          "relation_id": 16555,
+          "relation_attribute_no": 3
         },
         {
+          "ordinal": 3,
           "name": "pp",
           "type_info": "Bool",
-          "not_null": false
+          "relation_id": 16555,
+          "relation_attribute_no": 4
         },
         {
+          "ordinal": 4,
           "name": "mode",
           "type_info": "Int4",
-          "not_null": false
+          "relation_id": 16555,
+          "relation_attribute_no": 5
         },
         {
+          "ordinal": 5,
           "name": "short_recent",
           "type_info": "Bool",
-          "not_null": false
+          "relation_id": 16555,
+          "relation_attribute_no": 6
         }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true
       ]
     }
   },
@@ -737,45 +882,67 @@
   "7f5f940d94a85af2fb9dec687bee72eac509294135f1d2693ff0687a8f53a0f1": {
     "query": "SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE osu_username = $1",
     "describe": {
-      "params": [
-        "Text"
-      ],
       "columns": [
         {
+          "ordinal": 0,
           "name": "osu_id",
           "type_info": "Int4",
-          "not_null": true
+          "relation_id": 16555,
+          "relation_attribute_no": 2
         },
         {
+          "ordinal": 1,
           "name": "osu_username",
           "type_info": "Varchar",
-          "not_null": true
+          "relation_id": 16555,
+          "relation_attribute_no": 3
         },
         {
+          "ordinal": 2,
           "name": "pp",
           "type_info": "Bool",
-          "not_null": false
+          "relation_id": 16555,
+          "relation_attribute_no": 4
         },
         {
+          "ordinal": 3,
           "name": "mode",
           "type_info": "Int4",
-          "not_null": false
+          "relation_id": 16555,
+          "relation_attribute_no": 5
         },
         {
+          "ordinal": 4,
           "name": "short_recent",
           "type_info": "Bool",
-          "not_null": false
+          "relation_id": 16555,
+          "relation_attribute_no": 6
         }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        true,
+        true,
+        true
       ]
     }
   },
   "8168111107df5c86dece91cb7c1a78ad159a53cf45114b5376c2dfaeefac05cf": {
     "query": "INSERT INTO anti_spam (guild_id, enabled) VALUES ($1, true)",
     "describe": {
-      "params": [
-        "Int8"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      },
+      "nullable": []
     }
   },
   "8722ef3d8ac96609fe2bda9ae29fecd0a5d00c27a9d128bacda722da857a9116": {
@@ -833,20 +1000,26 @@
   "8873dc401848c21eb826d1f5c4abee04ef20298b4c2e390b36bf9c22f2eabd14": {
     "query": "UPDATE streamers SET is_live = true WHERE streamer = $1",
     "describe": {
-      "params": [
-        "Text"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": []
     }
   },
   "8f1494578cbf38fe3ef47766f3a2350042dac1d7469c9426f697b395cbda3c9f": {
     "query": "UPDATE best_bg SET best_girl = $1 WHERE user_id = $2",
     "describe": {
-      "params": [
-        "Text",
-        "Int8"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Int8"
+        ]
+      },
+      "nullable": []
     }
   },
   "95ce2eb03a7fab8c17d8f4b6e126f9c40a94f0b86b01f148ec9c93f7972072a3": {
@@ -877,15 +1050,22 @@
   "9a355c937d868238fbfe74a67ceedf0e1fe11279a7aafa55dec1b615c9d38994": {
     "query": "SELECT enabled FROM anti_spam WHERE guild_id = $1",
     "describe": {
-      "params": [
-        "Int8"
-      ],
       "columns": [
         {
+          "ordinal": 0,
           "name": "enabled",
           "type_info": "Bool",
-          "not_null": true
+          "relation_id": 16641,
+          "relation_attribute_no": 2
         }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      },
+      "nullable": [
+        false
       ]
     }
   },
@@ -906,12 +1086,15 @@
   "a19ed0b69a447c979a6786eefba9226dec4c1b0bec118e2c99f675d01ad5ac4d": {
     "query": "UPDATE new_posts SET sent_md5 = $1 WHERE booru_url = $2 AND tags = $3",
     "describe": {
-      "params": [
-        "TextArray",
-        "Text",
-        "Text"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "Text",
+          "Text"
+        ]
+      },
+      "nullable": []
     }
   },
   "a639faca14d3b00f12734e08ef5fecbb9b3d768239cd2d03504d217485fdfbdd": {
@@ -993,11 +1176,14 @@
   "b59603fd3f592f0ea5aa0b99592b34226341f7a2cc3794d39916818f947e0972": {
     "query": "UPDATE best_bg SET best_boy = $1 WHERE user_id = $2",
     "describe": {
-      "params": [
-        "Text",
-        "Int8"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Int8"
+        ]
+      },
+      "nullable": []
     }
   },
   "bc9ec96b16af0d461b6840ac856ed430f3a300ae7a19d235a4b622aacad11662": {
@@ -1061,10 +1247,13 @@
   "c690e8726160a32d390b3af2097013bbbf349a6ad0b95c7d1af383b9f6aacfe2": {
     "query": "INSERT INTO streamers (streamer) VALUES ($1)",
     "describe": {
-      "params": [
-        "Text"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": []
     }
   },
   "c704e638d8e2057720bc35399c8816e5f8b0a8d90e2539a8c977a9c8b7951560": {
@@ -1113,23 +1302,29 @@
   "c8f1a2d763b768dbaf4eb2e5ab11bb7134d898edcf31aac7fc6a3bd93c612a7b": {
     "query": "DELETE FROM streamer_notification_channel WHERE streamer = $1 AND channel_id = $2",
     "describe": {
-      "params": [
-        "Text",
-        "Int8"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Int8"
+        ]
+      },
+      "nullable": []
     }
   },
   "cb34b7a89f270b06b489737f6cb4abee3996711c04f3c4f480b8092dd81676e8": {
     "query": "INSERT INTO streamer_notification_webhook (streamer, role_id, use_default, webhook) VALUES ($1, $2, $3, $4)",
     "describe": {
-      "params": [
-        "Text",
-        "Int8",
-        "Bool",
-        "Text"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Int8",
+          "Bool",
+          "Text"
+        ]
+      },
+      "nullable": []
     }
   },
   "cd7f59b3443f766b90f2770bff3f39c9382c272df3cdf2c30dd2c946cf4635a6": {
@@ -1148,21 +1343,27 @@
   "db3450aa25d3b5534dd139d42f1a61aa3fe0f1344075e7d506fbe5259e7a75bb": {
     "query": "INSERT INTO prefixes (disallowed_commands, guild_id, prefix) VALUES ($1, $2, $3)",
     "describe": {
-      "params": [
-        "TextArray",
-        "Int8",
-        "Text"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "Int8",
+          "Text"
+        ]
+      },
+      "nullable": []
     }
   },
   "df2393c5862636efe714aafbddb77fec417905de6f9e39c3fe77c605c52ba149": {
     "query": "DELETE FROM annoyed_channels WHERE channel_id IN ($1)",
     "describe": {
-      "params": [
-        "Int8"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      },
+      "nullable": []
     }
   },
   "e0fac0c8645aaa161975c6925f527e1f8e85329683d87f973db3c7cf8e1f5568": {
@@ -1197,15 +1398,22 @@
   "e25fb5de5ecef2b00b011a4952c7645cafb42a6583423b884098b8344e74e444": {
     "query": "SELECT prefix FROM prefixes WHERE guild_id = $1",
     "describe": {
-      "params": [
-        "Int8"
-      ],
       "columns": [
         {
+          "ordinal": 0,
           "name": "prefix",
           "type_info": "Text",
-          "not_null": false
+          "relation_id": 16563,
+          "relation_attribute_no": 2
         }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      },
+      "nullable": [
+        true
       ]
     }
   },
