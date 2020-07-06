@@ -5,6 +5,7 @@ use crate::{
     Tokens,
     MY_HELP,
     OSU_GROUP,
+    utils::osu::*,
     utils::basic_functions::{
         pacman,
         seconds_to_days,
@@ -46,89 +47,6 @@ use num_format::{
 
 use reqwest::Url;
 use serde::Deserialize;
-
-// This is a map to convert the bitwhise number obtained from the api
-// To the mods it represents.
-// With the short and long versions of the mod names.
-//
-// This is a module so it can make the compiler not complain about the naming of the constants.
-mod bitwhise_mods {
-    #![allow(non_upper_case_globals)]
-    use bitflags::bitflags;
-    
-    bitflags! {
-        pub struct LongMods: u32 {
-            const None           = 0;
-            const NoFail         = 1;
-            const Easy           = 2;
-            const TouchDevice    = 4;
-            const Hidden         = 8;
-            const HardRock       = 16;
-            const SuddenDeath    = 32;
-            const DoubleTime     = 64;
-            const Relax          = 128;
-            const HalfTime       = 256;
-            const Nightcore      = 512;
-            const Flashlight     = 1024;
-            const Autoplay       = 2048;
-            const SpunOut        = 4096;
-            const Relax2         = 8192;    // Autopilot
-            const Perfect        = 16384;
-            const Key4           = 32768;
-            const Key5           = 65536;
-            const Key6           = 131_072;
-            const Key7           = 262_144;
-            const Key8           = 524_288;
-            const FadeIn         = 1_048_576;
-            const Random         = 2_097_152;
-            const Cinema         = 4_194_304;
-            const Target         = 8_388_608;
-            const Key9           = 16_777_216;
-            const KeyCoop        = 33_554_432;
-            const Key1           = 67_108_864;
-            const Key3           = 134_217_728;
-            const Key2           = 268_435_456;
-            const ScoreV2        = 536_870_912;
-            const Mirror         = 1_073_741_824;
-        }
-    }
-    bitflags! {
-        pub struct ShortMods: u32 {
-            const NM = 0;
-            const NF = 1;
-            const EZ = 2;
-            const TD = 4;
-            const HD = 8;
-            const HR = 16;
-            const SD = 32;
-            const DT = 64;
-            const RX = 128;
-            const HT = 256;
-            const NC = 512;
-            const FL = 1024;
-            const AT = 2048;
-            const SO = 4096;
-            const AP = 8192;
-            const PF = 16384;
-            const K4 = 32768;
-            const K5 = 65536;
-            const K6 = 131_072;
-            const K7 = 262_144;
-            const K8 = 524_288;
-            const FI = 1_048_576;
-            const RD = 2_097_152;
-            const CN = 4_194_304;
-            const TP = 8_388_608;
-            const K9 = 16_777_216;
-            const CO = 33_554_432;
-            const K1 = 67_108_864;
-            const K3 = 134_217_728;
-            const K2 = 268_435_456;
-            const V2 = 536_870_912;
-            const MR = 1_073_741_824;
-        }
-    }
-}
 
 #[derive(Default, Debug)]
 struct OsuData {
@@ -485,7 +403,42 @@ async fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: 
             });
             if user_data.pp == Some(true) {
                 e.footer(|f| {
-                    f.text(format!("PP | NEW_PP | {:.4}* | {}", beatmap.difficultyrating, mods));
+                    let mut pp = PpCalculation::default();
+
+                    pp.score_mods = {
+                        let split = mods.split(" | ");
+                        split.map(|i| {
+                            if i != "NM" || i != "V2" {
+                                i.to_string()
+                            } else {
+                                String::new()
+                            }
+                        }).collect::<Vec<String>>()
+                    };
+                    pp.score_max_combo = user_recent.maxcombo.parse::<f64>().unwrap();
+                    pp.score_great = user_recent.count300.parse::<f64>().unwrap();
+                    pp.score_good = user_recent.count100.parse::<f64>().unwrap();
+                    pp.score_meh = user_recent.count50.parse::<f64>().unwrap();
+                    pp.score_miss = user_recent.countmiss.parse::<f64>().unwrap();
+
+                    pp.map_aim_strain = beatmap.diff_aim.parse::<f64>().unwrap();
+                    pp.map_speed_strain = beatmap.diff_speed.parse::<f64>().unwrap();
+
+                    pp.map_max_combo = beatmap.max_combo.parse::<f64>().unwrap();
+                    pp.map_ar = beatmap.diff_approach.parse::<f64>().unwrap();
+                    pp.map_od = beatmap.diff_overall.parse::<f64>().unwrap();
+
+                    pp.map_circles = beatmap.count_normal.parse::<f64>().unwrap();
+                    pp.map_sliders = beatmap.count_slider.parse::<f64>().unwrap();
+                    pp.map_spinners = beatmap.count_spinner.parse::<f64>().unwrap();
+
+                    pp.progress = progress as f64;
+
+                    let v1_pp = pp.calculate();
+                    pp.score_mods.push("V2".to_string());
+                    let v2_pp = pp.calculate();
+
+                    f.text(format!("{:.2}pp | {:.2} sv2 pp | {:.4}* | {}", v1_pp, v2_pp, beatmap.difficultyrating, mods));
                     f.icon_url(&rating_url);
 
                     f
