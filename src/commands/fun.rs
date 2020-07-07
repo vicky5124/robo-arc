@@ -96,14 +96,7 @@ async fn qr(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[aliases(udic, udefine, define_urban, defineurban, udict, udictonary, urban_dictionary, u_dictionary, u_define, urban_define, define_urban)]
 async fn urban(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let term = args.message();
-    let url = match Url::parse_with_params("http://api.urbandictionary.com/v0/define", &[("term", term)]) {
-        Ok(x) => x,
-        Err(why) => {
-            msg.channel_id.say(ctx, why).await?;
-            return Ok(());
-        }
-    };
-
+    let url = Url::parse_with_params("http://api.urbandictionary.com/v0/define", &[("term", term)])?;
 
     let reqwest = ReqwestClient::new();
     let resp = reqwest.get(url)
