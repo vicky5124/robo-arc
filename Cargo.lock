@@ -396,7 +396,7 @@ checksum = "0dbbb57365263e881e805dc77d94697c9118fd94d8da011240555aa7b23445bd"
 [[package]]
 name = "command_attr"
 version = "0.2.0"
-source = "git+https://github.com/acdenisSK/serenity?branch=await_next#a9e60dd2af5e359b30647ed1aea8efe2f16c95a8"
+source = "git+https://github.com/acdenisSK/serenity?branch=await_next#3d0ef4f845bf149835cb73e9d3cf1aed2c8f898b"
 dependencies = [
  "futures",
  "proc-macro2 1.0.18",
@@ -3042,7 +3042,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.8.6"
-source = "git+https://github.com/acdenisSK/serenity?branch=await_next#a9e60dd2af5e359b30647ed1aea8efe2f16c95a8"
+source = "git+https://github.com/acdenisSK/serenity?branch=await_next#3d0ef4f845bf149835cb73e9d3cf1aed2c8f898b"
 dependencies = [
  "async-trait",
  "async-tungstenite",
@@ -3071,7 +3071,7 @@ dependencies = [
 [[package]]
 name = "serenity-lavalink"
 version = "0.0.3-alpha"
-source = "git+https://gitlab.com/nitsuga5124/serenity-lavalink/?branch=master#846d310b8e074a825e9298ba4e8bada56c097029"
+source = "git+https://gitlab.com/nitsuga5124/serenity-lavalink/?branch=master#56fdeee7c3a58a770f635d87e295743ed750cfd1"
 dependencies = [
  "async-tungstenite",
  "futures",

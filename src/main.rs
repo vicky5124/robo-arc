@@ -950,8 +950,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .group(&ALLBOORUS_GROUP) // Load `Boorus` command group
         .group(&IMAGEMANIPULATION_GROUP) // Load `image manipulaiton` command group
         .group(&GAMES_GROUP) // Load `games` command group
-        .group(&CONFIGURATION_GROUP) // Load `Configuration` command group
         .group(&SERENITYDOCS_GROUP) // Load `serenity_docs` command group
+        .group(&CONFIGURATION_GROUP) // Load `Configuration` command group
         .help(&MY_HELP); // Load the custom help command.
 
     let mut client = Client::new(&bot_token)
