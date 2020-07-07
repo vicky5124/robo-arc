@@ -255,7 +255,7 @@ async fn get_mods_short(value: u32) -> String {
 
 
 // This function simply calls the osu! api to get the id of the user from a username.
-async fn get_osu_id(name: &str, osu_key: &str) -> Result<i32, Box<dyn std::error::Error>> {
+async fn get_osu_id(name: &str, osu_key: &str) -> Result<i32, Box<dyn std::error::Error + Send + Sync>> {
     let resp = get_osu_user(&name, osu_key).await?;
 
     if !resp.is_empty() {
@@ -268,7 +268,7 @@ async fn get_osu_id(name: &str, osu_key: &str) -> Result<i32, Box<dyn std::error
 
 
 // Requests to the api the user data
-async fn get_osu_user(name: &str, osu_key: &str) -> Result<Vec<OsuUserData>, Box<dyn std::error::Error>> {
+async fn get_osu_user(name: &str, osu_key: &str) -> Result<Vec<OsuUserData>, Box<dyn std::error::Error + Send + Sync>> {
     let url = Url::parse_with_params("https://osu.ppy.sh/api/get_user", &[
         ("k", osu_key),
         ("u", name),
@@ -282,7 +282,7 @@ async fn get_osu_user(name: &str, osu_key: &str) -> Result<Vec<OsuUserData>, Box
 }
 
 // Requests to the api the user data
-async fn get_osu_username(id: &i32, osu_key: &str) -> Result<String, Box<dyn std::error::Error>> {
+async fn get_osu_username(id: &i32, osu_key: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     let url = Url::parse_with_params("https://osu.ppy.sh/api/get_user", &[
         ("k", osu_key),
         ("u", &id.to_string()),
@@ -301,7 +301,7 @@ async fn get_osu_username(id: &i32, osu_key: &str) -> Result<String, Box<dyn std
 }
 
 // Requests to the api the scores of a map 
-async fn get_osu_scores(user_id: i32, user_name: &str, map_id: u64, mode: i32, osu_key: &str) -> Result<Vec<OsuScores>, Box<dyn std::error::Error>> {
+async fn get_osu_scores(user_id: i32, user_name: &str, map_id: u64, mode: i32, osu_key: &str) -> Result<Vec<OsuScores>, Box<dyn std::error::Error + Send + Sync>> {
     let url = if user_id != 0 {
         Url::parse_with_params("https://osu.ppy.sh/api/get_scores", &[
             ("k", osu_key),
@@ -328,7 +328,7 @@ async fn get_osu_scores(user_id: i32, user_name: &str, map_id: u64, mode: i32, o
 }
 
 // Requests to the api the recent plays of a user
-async fn get_osu_user_recent(user_id: i32, osu_key: &str) -> Result<Vec<OsuUserRecentData>, Box<dyn std::error::Error>> {
+async fn get_osu_user_recent(user_id: i32, osu_key: &str) -> Result<Vec<OsuUserRecentData>, Box<dyn std::error::Error + Send + Sync>> {
     let url = format!("https://osu.ppy.sh/api/get_user_recent?k={}&u={}&type=id", osu_key, user_id);
     let resp = reqwest::get(&url)
         .await?
@@ -338,7 +338,7 @@ async fn get_osu_user_recent(user_id: i32, osu_key: &str) -> Result<Vec<OsuUserR
 }
 
 // Requests to the api the data of a beatmap
-async fn get_osu_beatmap(beatmap_id: &str, osu_key: &str) -> Result<Vec<OsuBeatmapData>, Box<dyn std::error::Error>> {
+async fn get_osu_beatmap(beatmap_id: &str, osu_key: &str) -> Result<Vec<OsuBeatmapData>, Box<dyn std::error::Error + Send + Sync>> {
     let url = format!("https://osu.ppy.sh/api/get_beatmaps?k={}&b={}", osu_key, beatmap_id);
     let resp = reqwest::get(&url)
         .await?
@@ -348,7 +348,7 @@ async fn get_osu_beatmap(beatmap_id: &str, osu_key: &str) -> Result<Vec<OsuBeatm
 }
 
 // Requests to the api the top plays or best plays of a user (by pp weight).
-async fn get_osu_user_best(user_id: &i32, osu_key: &str) -> Result<Vec<OsuUserBest>, Box<dyn std::error::Error>> {
+async fn get_osu_user_best(user_id: &i32, osu_key: &str) -> Result<Vec<OsuUserBest>, Box<dyn std::error::Error + Send + Sync>> {
     let url = format!("https://osu.ppy.sh/api/get_user_best?k={}&u={}&type=id&limit=100&m=0", osu_key, user_id);
     let resp = reqwest::get(&url)
         .await?
@@ -358,7 +358,7 @@ async fn get_osu_user_best(user_id: &i32, osu_key: &str) -> Result<Vec<OsuUserBe
 }
 
 // Builds the short version of the recent embed and edits the specified message with it.
-async fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: Message, index: usize) -> Result<(), Box<dyn std::error::Error>> {
+async fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: Message, index: usize) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let user_data = event_data.user_db_data.as_ref().unwrap();
     let user_recent_raw = event_data.user_recent_raw.as_ref().unwrap();
     let osu_key = event_data.osu_key.as_ref().unwrap();
@@ -1026,7 +1026,7 @@ async fn recent(ctx: &Context, msg: &Message, arguments: Args) -> CommandResult 
     Ok(())
 }
 
-async fn top_play_embed_builder(osu_key: &str, data: &OsuData, play: &OsuUserBest, user: &OsuUserData, index: usize) -> Result<CreateEmbed, Box<dyn std::error::Error>> {
+async fn top_play_embed_builder(osu_key: &str, data: &OsuData, play: &OsuUserBest, user: &OsuUserData, index: usize) -> Result<CreateEmbed, Box<dyn std::error::Error + Send + Sync>> {
     let beatmap_raw = get_osu_beatmap(&play.beatmap_id, &osu_key).await?;
     let beatmap = &beatmap_raw[0];
 

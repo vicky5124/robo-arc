@@ -3,7 +3,7 @@ use sqlx::postgres::PgPool;
 use darkredis::ConnectionPool;
 
 // This function obtains a database connection to the postgresql database used for the bot.
-pub async fn obtain_postgres_pool() -> Result<PgPool, Box<dyn std::error::Error>> {
+pub async fn obtain_postgres_pool() -> Result<PgPool, Box<dyn std::error::Error + Send + Sync>> {
     // Obtain the postgresql url.
     let pg_url = env::var("DATABASE_URL2")?;
 
@@ -18,7 +18,7 @@ pub async fn obtain_postgres_pool() -> Result<PgPool, Box<dyn std::error::Error>
     Ok(pool)
 }
 
-pub async fn obtain_redis_pool() -> Result<ConnectionPool, Box<dyn std::error::Error>> {
+pub async fn obtain_redis_pool() -> Result<ConnectionPool, Box<dyn std::error::Error + Send + Sync>> {
     let redis_url = env::var("REDIS_URL")?;
     let pool = ConnectionPool::create(
         redis_url.into(),

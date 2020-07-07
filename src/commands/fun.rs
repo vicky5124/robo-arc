@@ -14,7 +14,6 @@ use serenity::{
     framework::standard::{
         Args,
         CommandResult,
-        CommandError,
         macros::command,
     },
 };
@@ -97,8 +96,14 @@ async fn qr(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[aliases(udic, udefine, define_urban, defineurban, udict, udictonary, urban_dictionary, u_dictionary, u_define, urban_define, define_urban)]
 async fn urban(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let term = args.message();
-    let url = Url::parse_with_params("http://api.urbandictionary.com/v0/define",
-                                     &[("term", term)])?;
+    let url = match Url::parse_with_params("http://api.urbandictionary.com/v0/define", &[("term", term)]) {
+        Ok(x) => x,
+        Err(why) => {
+            msg.channel_id.say(ctx, why).await?;
+            return Ok(());
+        }
+    };
+
 
     let reqwest = ReqwestClient::new();
     let resp = reqwest.get(url)
@@ -134,7 +139,8 @@ async fn urban(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             if "Embed too large." == why.to_string() {
                 msg.channel_id.say(ctx, &choice.permalink).await?;
             } else {
-                return Err(CommandError(why.to_string()));
+                msg.channel_id.say(ctx, why).await?;
+                return Ok(());
             }
         };
     }

@@ -110,7 +110,7 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
             for post in resp {
                 if !md5s.contains(&post.md5) {
                     for channel in &channels {
-                        let real_channel = ChannelId(*channel as u64).to_channel(&ctx).await?;
+                        let real_channel = ChannelId(*channel as u64).to_channel(&*ctx).await?;
                         let mut is_unsafe = false;
 
                         if real_channel.is_nsfw() || real_channel.guild().is_none() {
@@ -251,7 +251,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
 
                     if let Ok(mut message) = ctx.http.get_message(notification_place.channel_id.unwrap() as u64, notification_place.message_id.unwrap() as u64).await
                     {
-                        let _ = message.edit(&ctx, |m| {
+                        let _ = message.edit(&*ctx, |m| {
                             if let Some(role_id) = notification_place.role_id.to_owned() {
                                 m.content(format!("<@&{}>", role_id));
                             }
@@ -374,7 +374,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
             while let Some(notification_place) = data.try_next().await? {
                 if let Ok(mut message) = ctx.http.get_message(notification_place.channel_id.unwrap_or(0) as u64, notification_place.message_id.unwrap_or(0) as u64).await
                 {
-                    let _ = message.edit(&ctx, |m| {
+                    let _ = message.edit(&*ctx, |m| {
                         if let Some(role_id) = notification_place.role_id.to_owned() {
                             m.content(format!("<@&{}>", role_id));
                         }

@@ -39,7 +39,7 @@ use serenity::{
     },
 };
 
-async fn set_best_tags(sex: &str, ctx: &Context, msg: &Message, mut tags: String) -> Result<(), Box<dyn std::error::Error>> {
+async fn set_best_tags(sex: &str, ctx: &Context, msg: &Message, mut tags: String) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let rdata = ctx.data.read().await;
     let pool = rdata.get::<ConnectionPool>().unwrap();
 

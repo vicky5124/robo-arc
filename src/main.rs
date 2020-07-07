@@ -327,7 +327,7 @@ struct Games;
 // The moderation command group.
 #[group("Moderation")]
 #[description = "All the moderation related commands."]
-#[commands(kick, ban, permanent_ban, clear, permanent_mute, temporal_mute, permanent_self_mute, temporal_self_mute)]
+#[commands(kick, clear, ban, permanent_ban, permanent_mute, temporal_mute, permanent_self_mute, temporal_self_mute)]
 struct Mod;
 
 // The music command group.
@@ -392,11 +392,12 @@ async fn my_help(
     owners: HashSet<UserId>
 ) -> CommandResult {
     let mut ho = help_options.clone();
-    // Changeing the color of the embed sidebar, because the default one is ugly :P
+    // Changing the color of the embed sidebar, because the default one is ugly :P
     ho.embed_error_colour = Colour::from_rgb(255, 30, 30);
     ho.embed_success_colour= Colour::from_rgb(141, 91, 255);
 
-    help_commands::with_embeds(ctx, msg, args, &ho, groups, owners).await
+    let _ = help_commands::with_embeds(ctx, msg, args, &ho, groups, owners).await;
+    Ok(())
 }
 
 struct Handler; // Defines the handler to be used for events.
@@ -568,7 +569,7 @@ impl EventHandler for Handler {
     /// This function triggers every time a reaction gets added to a message.
     async fn reaction_add(&self, ctx: Context, add_reaction: Reaction) {
         // Ignores all reactions that come from the bot itself.
-        if &add_reaction.user_id.0 == ctx.cache.current_user().await.id.as_u64() {
+        if &add_reaction.user_id.unwrap().0 == ctx.cache.current_user().await.id.as_u64() {
             return;
         }
 
@@ -597,7 +598,7 @@ impl EventHandler for Handler {
                         eprintln!("There was an error adding a reaction: {}", why)
                     }
                     if annoy {
-                        let _ = msg.channel_id.say(&ctx, format!("<@{}>: qt", add_reaction.user_id.0)).await;
+                        let _ = msg.channel_id.say(&ctx, format!("<@{}>: qt", add_reaction.user_id.unwrap().0)).await;
                     }
                 }
             },
@@ -607,7 +608,7 @@ impl EventHandler for Handler {
                     // This will not be kept here for long, as i see it being very annoying eventually.
                     if s == "🤔" {
                         let _ = msg.channel_id.say(&ctx, format!("<@{}>: What ya thinking so much about",
-                                                                 add_reaction.user_id.0)).await;
+                                                                 add_reaction.user_id.unwrap().0)).await;
                     }
                 } else {
                     // This makes every message sent by the bot get deleted if 🚫 is on the reactions.
@@ -763,8 +764,8 @@ async fn after(ctx: &Context, msg: &Message, cmd_name: &str, error: CommandResul
         error!("Error while running command {}", &cmd_name);
         error!("{:?}", &error);
 
-        let err = why.0.to_string();
-        if let Err(_) = msg.channel_id.say(ctx, &err).await {
+        //let err = why.0.to_string();
+        if let Err(_) = msg.channel_id.say(ctx, &why).await {
             error!("Unable to send messages on channel id {}", &msg.channel_id.0);
         };
     }
@@ -861,7 +862,7 @@ async fn dynamic_prefix(ctx: &Context, msg: &Message) -> Option<String> { // Cus
 // which allows ? to be used for error handling.
 #[tokio::main(core_threads=8)]
 #[instrument]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Opens the config.toml file and reads it's content
     let mut file = File::open("config.toml")?;
     let mut contents = String::new();
@@ -943,12 +944,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .group(&META_GROUP) // Load `Meta` command group
         .group(&FUN_GROUP) // Load `Fun` command group
         .group(&MUSIC_GROUP) // Load `music` command group
+        .group(&MOD_GROUP) // Load `moderation` command group
         .group(&OSU_GROUP) // Load `osu!` command group
         .group(&SANKAKU_GROUP) // Load `SankakuComplex` command group
         .group(&ALLBOORUS_GROUP) // Load `Boorus` command group
         .group(&IMAGEMANIPULATION_GROUP) // Load `image manipulaiton` command group
         .group(&GAMES_GROUP) // Load `games` command group
-        .group(&MOD_GROUP) // Load `moderation` command group
         .group(&CONFIGURATION_GROUP) // Load `Configuration` command group
         .group(&SERENITYDOCS_GROUP) // Load `serenity_docs` command group
         .help(&MY_HELP); // Load the custom help command.

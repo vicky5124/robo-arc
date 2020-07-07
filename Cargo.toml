@@ -61,8 +61,10 @@ features = ["full"]
 
 # https://github.com/serenity-rs/serenity
 [dependencies.serenity]
-git = "https://github.com/Lakelezz/serenity/"
-branch = "await"
+#git = "https://github.com/Lakelezz/serenity/"
+#branch = "await"
+git = "https://github.com/acdenisSK/serenity"
+branch = "await_next"
 default-features = false
 features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "native_tls_backend", "absolute_ratelimits", "collector", "voice"]
 

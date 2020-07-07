@@ -30,7 +30,7 @@ use serenity::{
 };
 use tokio::task::block_in_place;
 
-async fn pride_image(image_vec: &[u8], name: String) -> Result<Vec<u8>, Box<dyn std::error::Error>>{
+async fn pride_image(image_vec: &[u8], name: String) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>>{
     let mut og_image = PhotonImage::new_from_byteslice(image_vec.to_vec());
     let pride_path = format!("pride/{}.png", name);
     let mut pride_image = open_image(Box::leak(pride_path.into_boxed_str()));
@@ -67,7 +67,7 @@ async fn pride_image(image_vec: &[u8], name: String) -> Result<Vec<u8>, Box<dyn 
     Ok(result)
 }
 
-async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error>>{
+async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>>{
     // Load the image as a buffer.
     let mut imgbuf = image::load_from_memory(&image_vec)?
         .into_rgba();
