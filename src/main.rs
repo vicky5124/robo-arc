@@ -314,7 +314,7 @@ struct ImageManipulation;
 // Where all the random commands go into lol
 #[group("Fun")]
 #[description = "All the random and fun commands."]
-#[commands(profile, qr, urban, dictionary, translate, duck_duck_go, encrypt, decrypt, calculator, remind_me)]
+#[commands(profile, qr, urban, dictionary, translate, duck_duck_go, encrypt, decrypt, calculator, remind_me, uwufy)]
 struct Fun;
 
 // The FUN command group.

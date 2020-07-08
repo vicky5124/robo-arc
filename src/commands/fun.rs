@@ -561,3 +561,125 @@ async fn remind_me(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
 
     Ok(())
 }
+
+/// Twanswates youw mwessage two thwe uwu lwanguagew uwu.
+///
+/// usage: `uwufy Translates your message to the uwu language`
+#[command]
+#[aliases(owofy, weebify, furryfy)]
+#[min_args(1)]
+async fn uwufy(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let message = args.message();
+
+    let raw_words = message.split(' ');
+    let mut words = Vec::new();
+
+    for word in raw_words {
+        match word {
+            "you" => words.push(word.to_string()),
+            "uwu" => words.push(word.to_string()),
+            "owo" => words.push(word.to_string()),
+            "one" => words.push("wone".to_string()),
+            "two" => words.push("two".to_string()),
+            "three" => words.push("thwee".to_string()),
+            "lewd" => words.push("lewd".to_string()),
+            "cute" => words.push("cwute".to_string()),
+            _ => {
+                if word.len() > 2 {
+                    let mut w = word.to_string(); 
+                    w = w.replace("our", "\u{200b}w");
+
+                    w = w.replace("r", "w");
+                    w = w.replace("R", "W");
+
+                    w = w.replace("l", "w");
+                    w = w.replace("L", "W");
+
+
+
+                    w = w.replace("ar", " ");
+                    w = w.replace("ai", "+");
+                    w = w.replace("a", "wa");
+                    w = w.replace("wawa", "waa");
+                    w = w.replace(" ", "aw");
+
+                    w = w.replace("ie", " ");
+                    w = w.replace("i", "wi");
+                    w = w.replace("wiwi", "wii");
+                    w = w.replace(" ", "ie");
+                    w = w.replace("+", "ai");
+
+                    w = w.replace("ge", " ");
+                    w = w.replace("ke", "+");
+                    w = w.replace("e", "we");
+                    w = w.replace("wewe", "wee");
+                    w = w.replace(" ", "ge");
+                    w = w.replace("+", "ke");
+
+                    w = w.replace("ou", "=");
+                    w = w.replace("cho", " ");
+                    w = w.replace("o", "wo");
+                    w = w.replace("wowo", "woo");
+                    w = w.replace(" ", "cho");
+
+                    w = w.replace("gu", " ");
+                    w = w.replace("qu", "+");
+                    w = w.replace("u", "wu");
+                    w = w.replace("wuwu", "wuu");
+                    w = w.replace(" ", "gu");
+                    w = w.replace("+", "qu");
+                    w = w.replace("=", "ouw");
+                    
+                    if !word.starts_with("A") {
+                        w = w.replace("A", "WA");
+                    } else {
+                        w = w.replace("A", "Wa");
+                    }
+
+                    if !word.starts_with("E") {
+                        w = w.replace("E", "WE");
+                    } else {
+                        w = w.replace("E", "We");
+                    }
+
+                    if !word.starts_with("I") {
+                        w = w.replace("I", "WI");
+                    } else {
+                        w = w.replace("I", "Wi");
+                    }
+
+                    if !word.starts_with("O") {
+                        w = w.replace("O", "WO");
+                    } else {
+                        w = w.replace("O", "Wo");
+                    }
+
+                    if !word.starts_with("U") {
+                        w = w.replace("U", "WU");
+                    } else {
+                        w = w.replace("U", "Wu");
+                    }
+
+                    w = w.replace("\u{200b}", "ouw");
+                    w = w.replace("@", "@\u{200b}");
+
+                    words.push(w);
+                } else {
+                    words.push(word.to_string());
+                }
+
+            }
+        }
+    }
+
+    words.push("uwu".to_string());
+    let mut m = words.join(" ");
+
+    m = m.replace("ww", "w");
+    m = m.replace("Ww", "W");
+    m = m.replace("WW", "W");
+
+    msg.reply(ctx, &m).await?;
+
+    Ok(())
+}
