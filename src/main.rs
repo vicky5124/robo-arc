@@ -404,43 +404,21 @@ struct Handler; // Defines the handler to be used for events.
 
 #[async_trait]
 impl EventHandler for Handler {
-    // on_ready event on d.py
-    // This function triggers when the client is ready.
-    async fn ready(&self, ctx: Context, ready: Ready) {
-        // Changes the presence of the bot to "Listening to ..."
-        // https://docs.rs/serenity/0.8.0/serenity/model/gateway/struct.Activity.html#methods
-        // for all the available activities.
+    async fn cache_ready(&self, ctx: Context, _guilds: Vec<GuildId>) {
+        info!("Cache is READY");
 
         let ctx = Arc::new(ctx);
 
-        let (info, web_server_info) = {
+        let web_server_info = {
             let read_data = ctx.data.read().await;
             let config = read_data.get::<Tokens>().unwrap();
-            (
-                config["presence"].clone(),
-                config["web_server"].clone(),
-            )
+            config["web_server"].clone()
         };
-
-        if info["play_or_listen"].as_str().unwrap() == "playing" {
-            ctx.set_presence(
-                Some(Activity::playing(info["status"].as_str().unwrap())),
-                OnlineStatus::Online
-            ).await;
-        } else if info["play_or_listen"].as_str().unwrap() == "listening" {
-            ctx.set_presence(
-                Some(Activity::listening(info["status"].as_str().unwrap())),
-                OnlineStatus::Online
-            ).await;
-        }
-
 
         let status = {
             let read_data = ctx.data.read().await;
             read_data.get::<NotificationStatus>().unwrap().clone()
         };
-
-        println!("{} is ready to rock!", ready.user.name);
 
         if !status {
             let ctx_clone = Arc::clone(&ctx);
@@ -484,7 +462,30 @@ impl EventHandler for Handler {
                 data.insert::<NotificationStatus>(false);
             }
         }
+    }
 
+    // on_ready event on d.py
+    // This function triggers when the client is ready.
+    async fn ready(&self, ctx: Context, ready: Ready) {
+        let info = {
+            let read_data = ctx.data.read().await;
+            let config = read_data.get::<Tokens>().unwrap();
+            config["presence"].clone()
+        };
+
+        if info["play_or_listen"].as_str().unwrap() == "playing" {
+            ctx.set_presence(
+                Some(Activity::playing(info["status"].as_str().unwrap())),
+                OnlineStatus::Online
+            ).await;
+        } else if info["play_or_listen"].as_str().unwrap() == "listening" {
+            ctx.set_presence(
+                Some(Activity::listening(info["status"].as_str().unwrap())),
+                OnlineStatus::Online
+            ).await;
+        }
+        info!("Bot is READY");
+        println!("{} is ready to rock!", ready.user.name);
     }
 
     // on_message event on d.py
