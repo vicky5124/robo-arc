@@ -48,6 +48,11 @@ use num_format::{
 use reqwest::Url;
 use serde::Deserialize;
 
+use clap::{
+    App,
+    Arg,
+};
+
 #[derive(Default, Debug)]
 struct OsuData {
     id: i32,
@@ -1191,6 +1196,39 @@ async fn osu_top(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             break;
         };
     }
+
+    Ok(())
+}
+
+#[command]
+#[aliases(mappp, mapp, map_pp, beatmappp, beatmapp)]
+async fn beatmap_pp(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    println!("{}", args.message());
+    let matches_result = App::new("Beatmap PP")
+        .arg(Arg::with_name("mods")
+            .long("mod")
+            .short("m")
+            .multiple(true)
+            .takes_value(true)
+            .required(false)
+        )
+        .get_matches_from_safe(args.message().split(" "));
+
+    let matches = match matches_result {
+        Ok(x) => x,
+        Err(why) => {
+            println!("{}", why);
+            return Ok(());
+        }
+    };
+
+    let mods = if let Some(mods) = matches.values_of("mods") {
+        mods.collect::<Vec<&str>>()
+    } else {
+        vec!["NM"]
+    };
+
+    msg.reply(ctx, format!("{:?}", mods)).await?;
 
     Ok(())
 }

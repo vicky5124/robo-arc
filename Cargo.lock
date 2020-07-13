@@ -81,6 +81,7 @@ version = "0.2.4-alpha"
 dependencies = [
  "bitflags",
  "chrono",
+ "clap",
  "darkredis",
  "dotenv",
  "failure",

@@ -22,7 +22,10 @@ use std::{
 
 use sqlx;
 use futures::TryStreamExt;
-use futures::stream::StreamExt;
+use futures::stream::{
+    //self,
+    StreamExt,
+};
 
 use serenity::{
     prelude::Context,
@@ -46,7 +49,6 @@ use toml::Value;
 use tokio::process::Command;
 use serde_json::json;
 use walkdir::WalkDir;
-
 
 #[command] // Sets up a command
 #[aliases("pong", "latency")] // Sets up aliases to that command.
@@ -170,31 +172,27 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
 #[owners_only] // to only allow the owner of the bot to use this command
 //#[min_args(3)] // Sets the minimum ammount of arguments the command requires to be ran. This is used to trigger the `NotEnoughArguments` error.
 // Testing command, please ignore.
-async fn test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let mut embed_json = args.message().to_string();
-    dbg!(&embed_json);
+async fn test(_ctx: &Context, _msg: &Message, _args: Args) -> CommandResult {
+    //if let Ok(channels) = _msg.guild_id.unwrap().channels(_ctx).await {
+    //    let channels_stream = stream::iter(channels.iter());
 
-    if embed_json.starts_with("```json") {
-        embed_json = embed_json[7..].to_string()
-    }
-    if embed_json.starts_with("```") {
-        embed_json = embed_json[3..].to_string()
-    }
-    if embed_json.ends_with("```") {
-        embed_json = embed_json[0 .. embed_json.len() - 3].to_string()
-    }
+    //    let log_channels_future = channels_stream.filter_map(|(&c, _)| async move {
+    //        if let Some(name) = c.name(_ctx).await {
+    //            if name == "log" {
+    //                Some(c.clone())
+    //            } else {
+    //                None
+    //            }
+    //        } else {
+    //            None
+    //        }
+    //    }).collect::<Vec<_>>().await;
 
-    if !embed_json.ends_with("}") {
-        embed_json += "}";
-    }
-    if !embed_json.starts_with("{") {
-        embed_json = "{".to_string() + &embed_json;
-    }
+    //    dbg!(&log_channels_future);
+    //}
 
-    let embed = serde_json::from_str::<Value>(&embed_json)?;
-    let message = json!({ "embed" : embed });
-
-    ctx.http.send_message(msg.channel_id.0, &message).await?;
+    //_msg.channel_id.say(_ctx, "test").await?;
+    crate::utils::osu::PpCalculation::test();
 
     Ok(())
 }
@@ -212,6 +210,7 @@ async fn source(ctx: &Context, msg: &Message) -> CommandResult {
 async fn todo(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(ctx, "Alpha: ```prolog
 #Osu! 
+\"Fix PP calculation with mods\"
 MapPP (calculates pp of a map, like ezpp or tillerino) / do not use oppai.
 
 #Twitch
