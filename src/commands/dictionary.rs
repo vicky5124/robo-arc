@@ -1,7 +1,12 @@
 use crate::utils::basic_functions::capitalize_first;
+
+use std::time::Duration;
+
 use serenity::{
+    builder::CreateEmbed,
     prelude::Context,
     model::channel::Message,
+    model::prelude::ReactionType,
     framework::standard::{
         Args,
         CommandResult,
@@ -50,48 +55,93 @@ async fn define(ctx: &Context, msg: &Message, lang: &str, word: String) -> Comma
         return Ok(());
     };
 
+    let mut embeds = Vec::new();
+
     for definition in &definitions {
-        msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
-            embed.title(capitalize_first(&definition.word));
+        let mut embed = CreateEmbed::default();
+        embed.title(capitalize_first(&definition.word));
 
-            if let Some(origin) = &definition.origin {
-                if origin != &"".to_string() {
-                    embed.field("Origin:", &origin, true);
-                }
+        if let Some(origin) = &definition.origin {
+            if origin != &"".to_string() {
+                embed.field("Origin:", &origin, true);
             }
+        }
 
-            if let Some(phonetic) = &definition.phonetic {
-                if phonetic != &"".to_string() {
-                    embed.field("Phonetic pronounciation:", &phonetic, true);
-                }
+        if let Some(phonetic) = &definition.phonetic {
+            if phonetic != &"".to_string() {
+                embed.field("Phonetic pronounciation:", &phonetic, true);
             }
+        }
 
-            let mut text_definitions = String::new();
-            for meaning in &definition.meanings {
-                if let Some(pos) = &meaning.part_of_speech {
-                    if pos != &"".to_string() {
-                        text_definitions += &format!("\n\n**{}**:\n", capitalize_first(&pos));
-                    } else {
-                        text_definitions += "\n\n**Unknown**:\n"
-                    }
+        let mut text_definitions = String::new();
+        for meaning in &definition.meanings {
+            if let Some(pos) = &meaning.part_of_speech {
+                if pos != &"".to_string() {
+                    text_definitions += &format!("\n\n**{}**:\n", capitalize_first(&pos));
                 } else {
                     text_definitions += "\n\n**Unknown**:\n"
                 }
+            } else {
+                text_definitions += "\n\n**Unknown**:\n"
+            }
 
-                for definition in &meaning.definitions  {
-                    text_definitions += "\n**---**\n";
-                    text_definitions += "- Definition:\n";
-                    text_definitions += &definition.definition;
-                    if let Some(example) = &definition.example {
-                        if example != &"".to_string() {
-                            text_definitions += "\n- Example:\n";
-                            text_definitions += &example;
-                        }
+            for definition in &meaning.definitions  {
+                text_definitions += "\n**---**\n";
+                text_definitions += "- Definition:\n";
+                text_definitions += &definition.definition;
+                if let Some(example) = &definition.example {
+                    if example != &"".to_string() {
+                        text_definitions += "\n- Example:\n";
+                        text_definitions += &example;
                     }
                 }
             }
-            embed.description(&text_definitions)
-        })).await?;
+        }
+        embed.description(&text_definitions);
+
+        embeds.push(embed);
+    }
+
+    let mut page = 0;
+
+    let mut bot_msg = msg.channel_id.send_message(ctx, |m| m.embed(|mut e| {
+        e.0 = embeds[page].0.clone(); e
+    })).await?;
+
+    if embeds.len() > 1 {
+        let left = ReactionType::Unicode(String::from("⬅️"));
+        let right = ReactionType::Unicode(String::from("➡️"));
+
+        let _ = bot_msg.react(ctx, left).await;
+        let _ = bot_msg.react(ctx, right).await;
+
+        loop {
+            if let Some(reaction) = &bot_msg.await_reaction(ctx).author_id(msg.author.id.0).timeout(Duration::from_secs(120)).await {
+                let emoji = &reaction.as_inner_ref().emoji;
+
+                match emoji.as_data().as_str() {
+                    "⬅️" => { 
+                        if page != 0 {
+                            page -= 1;
+                        }
+                    },
+                    "➡️" => { 
+                        if page != embeds.len() - 1 {
+                            page += 1;
+                        }
+                    },
+                    _ => (),
+                }
+
+                bot_msg.edit(ctx, |m| m.embed(|mut e| {
+                    e.0 = embeds[page].0.clone(); e
+                })).await?;
+                let _ = reaction.as_inner_ref().delete(ctx).await;
+            } else {
+                let _ = bot_msg.delete_reactions(ctx).await;
+                break;
+            };
+        }
     }
 
     Ok(())
