@@ -390,14 +390,14 @@ async fn permanent_ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
                 .await?;
 
             warn!("{} PERMANENTLY BANNED {} on guild {}", msg.author.id.0, user.0, msg.guild_id.unwrap().0);
-
+            return Ok(());
         } else {
             msg.reply(ctx, "The number provided is not valid.").await?;
         }
     } else {
         msg.reply(ctx, "Timeout!").await?;
     }
-    warn!("{} fauled to ban {} on guild {}", msg.author.id.0, user.0, msg.guild_id.unwrap().0);
+    warn!("{} failed to ban {} on guild {}", msg.author.id.0, user.0, msg.guild_id.unwrap().0);
 
     Ok(())
 }
