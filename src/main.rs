@@ -195,7 +195,6 @@ struct Tokens; // For the configuration found on "config.toml"
 struct AnnoyedChannels; // This is a HashSet of all the channels the bot is allowed to be annoyed on.
 struct BooruList; // This is a HashSet of all the boorus found on "boorus.json"
 struct BooruCommands; // This is a HashSet of all the commands/aliases found on "boorus.json"
-struct NotificationStatus; // This is the status of the thread checking for notifications.
 struct VoiceManager; //  This is the struct for the voice manager.
 struct Lavalink; //  This is the struct for the lavalink client.
 struct SentTwitchStreams; //  This is the struct for the stream data that has already been sent.
@@ -233,10 +232,6 @@ impl TypeMapKey for BooruList {
 
 impl TypeMapKey for BooruCommands {
     type Value = HashSet<String>; 
-}
-
-impl TypeMapKey for NotificationStatus {
-    type Value = bool;
 }
 
 impl TypeMapKey for VoiceManager {
@@ -402,27 +397,28 @@ async fn my_help(
     Ok(())
 }
 
-struct Handler; // Defines the handler to be used for events.
+// Defines the handler to be used for events.
+#[derive(Debug, Default)]
+struct Handler {
+    run_loops: Mutex<bool>,
+}
 
 #[async_trait]
 impl EventHandler for Handler {
     async fn cache_ready(&self, ctx: Context, _guilds: Vec<GuildId>) {
         info!("Cache is READY");
 
-        let ctx = Arc::new(ctx);
+        if self.run_loops.lock().await.clone() {
+            *self.run_loops.lock().await = false;
 
-        let web_server_info = {
-            let read_data = ctx.data.read().await;
-            let config = read_data.get::<Tokens>().unwrap();
-            config["web_server"].clone()
-        };
+            let ctx = Arc::new(ctx);
 
-        let status = {
-            let read_data = ctx.data.read().await;
-            read_data.get::<NotificationStatus>().unwrap().clone()
-        };
+            let web_server_info = {
+                let read_data = ctx.data.read().await;
+                let config = read_data.get::<Tokens>().unwrap();
+                config["web_server"].clone()
+            };
 
-        if !status {
             let ctx_clone = Arc::clone(&ctx);
             let ctx_clone2 = Arc::clone(&ctx);
 
@@ -454,15 +450,8 @@ impl EventHandler for Handler {
                 ).await;
             });
 
-            {
-                let mut data = ctx.data.write().await;
-                data.insert::<NotificationStatus>(true);
-            }
             let _ = notification_loop.await;
-            {
-                let mut data = ctx.data.write().await;
-                data.insert::<NotificationStatus>(false);
-            }
+            *self.run_loops.lock().await = false;
         }
     }
 
@@ -965,7 +954,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .help(&MY_HELP); // Load the custom help command.
 
     let mut client = Client::new(&bot_token)
-        .event_handler(Handler)
+        .event_handler(Handler { run_loops: Mutex::new(true) })
         .raw_event_handler(logging::RawHandler)
         .framework(std_framework)
         .add_intent({
@@ -993,8 +982,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
         // Add the tokens to the data.
         data.insert::<Tokens>(configuration.clone());
-        // Add the current status of the notifications.
-        data.insert::<NotificationStatus>(false);
         // Add the Voice Manager.
         data.insert::<VoiceManager>(Arc::clone(&client.voice_manager));
         // Add the sent streams.
