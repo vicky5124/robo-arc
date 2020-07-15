@@ -102,6 +102,9 @@ async fn shuffle(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 /// Skips the current song being played.
+///
+/// NOTE: will not skip if there's no more songs in the queue.
+/// Use `stop` or `pause` instad.
 #[command]
 #[aliases(next)]
 async fn skip(ctx: &Context, msg: &Message) -> CommandResult {
