@@ -786,11 +786,22 @@ pub async fn n_hentai(ctx: &Context, msg: &Message, args: Args) -> CommandResult
                 let url = ReqUrl::parse_with_params("https://nhentai.net/api/galleries/search",
                     &[("query", search)])?;
 
-                let resp = reqwest.get(url)
+                let resp = if let Ok(x) = reqwest.get(url)
                     .send()
                     .await?
                     .json::<NHentaiSearch>()
-                    .await?;
+                    .await { x } else {
+                        let url = ReqUrl::parse_with_params("https://nhentai.net/api/galleries/search",
+                            &[("query", search), ("page", "2")])?;
+                        if let Ok(x) = reqwest.get(url)
+                            .send()
+                            .await?
+                            .json::<NHentaiSearch>()
+                            .await { x } else {
+                                bot_msg.edit(ctx, |m| m.content("There was an error searching.")).await?;
+                                return Ok(());
+                            }
+                };
 
                 if resp.result.is_empty() {
                     bot_msg.edit(ctx, |m| m.content("There are no search results.")).await?;
