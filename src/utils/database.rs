@@ -1,5 +1,8 @@
 use std::env;
-use sqlx::postgres::PgPool;
+use sqlx::postgres::{
+    PgPool,
+    PgPoolOptions,
+};
 use darkredis::ConnectionPool;
 
 // This function obtains a database connection to the postgresql database used for the bot.
@@ -9,9 +12,9 @@ pub async fn obtain_postgres_pool() -> Result<PgPool, Box<dyn std::error::Error 
 
     // Connect to the database with the information provided on the configuration.
     // and return a pool of connections
-    let pool = PgPool::builder()
-        .max_size(20)
-        .build(&pg_url)
+    let pool = PgPoolOptions::new()
+        .max_connections(20)
+        .connect(&pg_url)
         .await?;
 
     // return the pool
