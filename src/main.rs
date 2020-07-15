@@ -68,8 +68,10 @@ use tracing::{
     // Log macros.
     info,
     trace,
+    debug,
     //warn,
     error,
+
     // Others
     Level,
     instrument
@@ -751,7 +753,8 @@ async fn before(ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
     }
 
     info!("Running command: {}", &cmd_name);
-    trace!("Message: {}", &msg.content);
+    debug!("Message: {}", &msg.content);
+
     true
 }
 
@@ -807,15 +810,21 @@ async fn unrecognised_command(ctx: &Context, msg: &Message, command_name: &str) 
             }
             x
         };
-        let parameters = msg.content.split(command_name).nth(1).unwrap();
+
+        info!("Running command: {}", &booru.names[0]);
+        debug!("Message: {}", &msg.content);
+
+        let lower_content = msg.content.to_lowercase();
+        let parameters = lower_content.split(&command_name).nth(1).unwrap();
         let params = Args::new(&parameters, &[Delimiter::Single(' ')]);
 
-        let booru = get_booru(ctx, &msg, &booru, params).await;
-        if let Err(why) = booru {
+        let booru_result = get_booru(ctx, &msg, &booru, params).await;
+        if let Err(why) = booru_result {
             // Handle any error that may occur.
             let why = why.to_string();
-            let reason = format!("There was an error executing the command: {}", capitalize_first(&why));
-            let _ = msg.channel_id.say(ctx, reason).await;
+            let reason = format!("There was an error executing the command {}: {}", &booru.names[0], capitalize_first(&why));
+            error!("{}", reason);
+            let _ = msg.channel_id.say(ctx, format!("There was an error running {}", command_name)).await;
         }
     }
 }
