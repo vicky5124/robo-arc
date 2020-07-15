@@ -25,45 +25,45 @@ use serenity::{
 async fn example(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     match args.message().to_lowercase().as_str() {
         "1" | "01" | "basic" =>
-            msg.channel_id.say(ctx, "<https://github.com/Lakelezz/serenity/tree/await/examples/01_basic_ping_bot>").await?,
+            msg.channel_id.say(ctx, "<https://github.com/acdenisSK/serenity/tree/await_next/examples/e01_basic_ping_bot>").await?,
 
         "2" | "02" | "sharding" | "shards" | "shard" =>
-            msg.channel_id.say(ctx, "<https://github.com/Lakelezz/serenity/tree/await/examples/02_transparent_guild_sharding>").await?,
+            msg.channel_id.say(ctx, "<https://github.com/acdenisSK/serenity/tree/await_next/examples/e02_transparent_guild_sharding>").await?,
 
         "3" | "03" | "utils" =>
-            msg.channel_id.say(ctx, "<https://github.com/Lakelezz/serenity/tree/await/examples/03_struct_utilities>").await?,
+            msg.channel_id.say(ctx, "<https://github.com/acdenisSK/serenity/tree/await_next/examples/e03_struct_utilities>").await?,
 
         "4" | "04" | "builder" | "message builder" =>
-            msg.channel_id.say(ctx, "<https://github.com/Lakelezz/serenity/tree/await/examples/04_message_builder>").await?,
+            msg.channel_id.say(ctx, "<https://github.com/acdenisSK/serenity/tree/await_next/examples/e04_message_builder>").await?,
 
         "5" | "05" | "commands" | "framework" | "command" =>
-            msg.channel_id.say(ctx, "<https://github.com/Lakelezz/serenity/tree/await/examples/05_command_framework>").await?,
+            msg.channel_id.say(ctx, "<https://github.com/acdenisSK/serenity/tree/await_next/examples/e05_command_framework>").await?,
 
         "6" | "06" | "voice" | "music" =>
-            msg.channel_id.say(ctx, "<https://github.com/Lakelezz/serenity/tree/await/examples/06_voice>").await?,
+            msg.channel_id.say(ctx, "<https://github.com/acdenisSK/serenity/tree/await_next/examples/e06_voice>").await?,
 
         "7" | "07" | "basic bot" | "bot structure" | "structure" =>
-            msg.channel_id.say(ctx, "<https://github.com/Lakelezz/serenity/tree/await/examples/07_sample_bot_structure>").await?,
+            msg.channel_id.say(ctx, "<https://github.com/acdenisSK/serenity/tree/await_next/examples/e07_sample_bot_structure>").await?,
 
         "8" | "08" | "logging" | "logs" | "log" =>
-            msg.channel_id.say(ctx, "<https://github.com/Lakelezz/serenity/tree/await/examples/08_env_logging>").await?,
+            msg.channel_id.say(ctx, "<https://github.com/acdenisSK/serenity/tree/await_next/examples/e08_env_logging>").await?,
 
         "9" | "09" | "shard manager" =>
-            msg.channel_id.say(ctx, "<https://github.com/Lakelezz/serenity/tree/await/examples/09_shard_manager>").await?,
+            msg.channel_id.say(ctx, "<https://github.com/acdenisSK/serenity/tree/await_next/examples/e09_shard_manager>").await?,
 
         "10" | "record" | "record voice" | "recieve voice" | "recieve" =>
-            msg.channel_id.say(ctx, "<https://github.com/Lakelezz/serenity/tree/await/examples/10_voice_receive>").await?,
+            msg.channel_id.say(ctx, "<https://github.com/acdenisSK/serenity/tree/await_next/examples/e10_voice_receive>").await?,
 
         "11" | "embeds" | "file" | "files" | "send file" | "send files" | "embed" =>
-            msg.channel_id.say(ctx, "<https://github.com/Lakelezz/serenity/tree/await/examples/11_create_message_builder>").await?,
+            msg.channel_id.say(ctx, "<https://github.com/acdenisSK/serenity/tree/await_next/examples/e11_create_message_builder>").await?,
 
-        "12" | "collectors" | "await for" | "reactions" | "reply" | "wait for" =>
-            msg.channel_id.say(ctx, "<https://github.com/Lakelezz/serenity/tree/await/examples/12_collectors>").await?,
+        "12" | "collectors" | "await_next for" | "reactions" | "reply" | "wait for" =>
+            msg.channel_id.say(ctx, "<https://github.com/acdenisSK/serenity/tree/await_next/examples/e12_collectors>").await?,
 
         "13" | "intets" | "intent" =>
-            msg.channel_id.say(ctx, "<https://github.com/Lakelezz/serenity/tree/await/examples/13_gateway_intents>").await?,
+            msg.channel_id.say(ctx, "<https://github.com/acdenisSK/serenity/tree/await_next/examples/e13_gateway_intents>").await?,
 
-        _ => msg.channel_id.say(ctx, "<https://github.com/Lakelezz/serenity/tree/await/examples>").await?,
+        _ => msg.channel_id.say(ctx, "<https://github.com/acdenisSK/serenity/tree/await_next/examples>").await?,
     };
     Ok(())
 }
@@ -102,7 +102,8 @@ async fn rtfm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
     //println!("done");
 
-    msg.channel_id.say(ctx, "<https://5124.mywire.org/tmp/serenity-await/serenity/>").await?;
+    msg.channel_id.say(ctx, "serenity.await: <https://5124.mywire.org/tmp/serenity-await/serenity/>
+serenity sync: https://docs.rs/serenity/0.8.6/serenity/index.html").await?;
 
     Ok(())
 }
