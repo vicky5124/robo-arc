@@ -94,9 +94,19 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
 
     let now = Instant::now();
     let mut message = ctx.http.send_message(msg.channel_id.0, &map).await?;
-    let rest_latency = now.elapsed().as_millis();
+    let post_latency = now.elapsed().as_millis();
 
-    message.edit(ctx, |m| m.content(format!("Ping?\nGateway: {}\nREST: {}ms", shard_latency, rest_latency))).await?;
+    let now = Instant::now();
+    reqwest::get("https://discordapp.com/api/v6/gateway").await?;
+    let get_latency = now.elapsed().as_millis();
+
+    message.edit(ctx, |m| {
+        m.content("");
+        m.embed(|e| {
+            e.title("Latency");
+            e.description(format!("Gateway: {}\nREST GET: {}ms\nREST POST: {}ms", shard_latency, get_latency, post_latency))
+        })
+    }).await?;
 
     Ok(())
 }
