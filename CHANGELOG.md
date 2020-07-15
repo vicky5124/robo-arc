@@ -1,3 +1,41 @@
+# 0.2.5-alpha
+
+### Dependencies:
+- serenity:
+  Updated to PR 905
+- sqlx-cli:
+  Updated to latest version.
+- sqlx:
+  Updated to latest version with new pool builder.
+- serenity-lavalink:
+  Updated to the new Serenity PR
+
+### Commands:
+- ping:
+  Added REST GET latency.
+- help:
+  Fixed order so it's more cozy.
+- uwufy:
+  New command.
+  Translates messages to the UWU language.
+- dictionary:
+  Now it paginates definitions
+- nhentai:
+  Now it falls back to a previous page in case of failing to fetch.
+- skip:
+  Added more help to it.
+- booru_commands:
+  Now they ignore capitalization.
+- rtfm / example:
+  Updated to the new PR
+
+### Utils:
+- parse_member() now doesn't have a mention exploit
+
+### Database:
+- Added ON UPDATE CASCADE to streamer constraints.
+
+
 # 0.2.4-alpha
 
 ### Commands:
