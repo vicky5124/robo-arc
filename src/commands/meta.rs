@@ -374,10 +374,23 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
         version.to_string()
     };
 
-    let (hoster_tag, hoster_id) = {
+    let (hoster_team, hoster_tag, hoster_id) = {
         let app_info = ctx.http.get_current_application_info().await?;
 
-        (app_info.owner.tag(), app_info.owner.id)
+        if let Some(t) = app_info.team {
+            (
+                t.id.to_string(),
+                t.members[0].user.tag(),
+                t.owner_user_id,
+            )
+        } else {
+            (
+                "None".to_string(),
+                app_info.owner.tag(),
+                app_info.owner.id,
+            )
+        }
+
     };
 
     let current_user = ctx.cache.current_user().await;
@@ -388,7 +401,7 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
     let num_guilds = ctx.cache.guilds().await.len();
     let num_shards = ctx.cache.shard_count().await;
     let num_channels = ctx.cache.guild_channel_count().await;
-    let num_priv_channels = ctx.cache.private_channels().await.len();
+    let num_users = ctx.cache.user_count().await;
 
     let mut c_blank = 0;
     let mut c_comment = 0;
@@ -419,9 +432,9 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
             e.description("General Purpose Discord Bot made in [Rust](https://www.rust-lang.org/) using [serenity.rs](https://github.com/serenity-rs/serenity)\n\nHaving any issues? join the [Support Server](https://discord.gg/kH7z85n)\nBe sure to `invite` me to your server if you like what i can do!");
 
             //e.field("Creator", "Tag: nitsuga5124#2207\nID: 182891574139682816", true);
-            e.field("Statistics:", format!("Shards: {}\nGuilds: {}\nChannels: {}\nPrivate Channels: {}", num_shards, num_guilds, num_channels, num_priv_channels), true);
+            e.field("Statistics:", format!("Shards: {}\nGuilds: {}\nChannels: {}\nUsers: {}", num_shards, num_guilds, num_channels, num_users), true);
             e.field("Lines of code:", format!("Blank: {}\nComment: {}\nCode: {}\nTotal Lines: {}", c_blank, c_comment, c_code, c_lines), true);
-            e.field("Currently hosted by:", format!("Tag: {}\nID: {}", hoster_tag, hoster_id), true);
+            e.field("Currently owned by:", format!("Team: {}\nTag: {}\nID: {}", hoster_team, hoster_tag, hoster_id), true);
             e.field("Latency:", format!("Gateway:\n`{}`\nREST:\n`{}ms`", shard_latency, rest_latency), true);
             e.field("Memory usage:", format!("Complete:\n`{} KB`\nBase:\n`{} KB`",
                                             &full_mem.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en),
