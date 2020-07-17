@@ -955,7 +955,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let mut client = Client::new(&bot_token)
         .event_handler(Handler { run_loops: Mutex::new(true) })
-        .raw_event_handler(logging::RawHandler)
+        .raw_event_handler(logging::events::RawHandler)
         .framework(std_framework)
         .add_intent({
             let mut intents = GatewayIntents::all();
