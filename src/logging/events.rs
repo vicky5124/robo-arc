@@ -32,8 +32,10 @@ impl RawEventHandler for RawHandler {
                     let mut redis = redis_pool.get().await;
 
                     messages::anti_spam_message(Arc::clone(&ctx), &data, &mut redis).await;
+
+                    drop(redis_pool)
+
                     messages::log_message(Arc::clone(&ctx), &data).await;
-                    dbg!(&data);
                 },
                 Event::MessageUpdate(data) => {
                     messages::log_edit(Arc::clone(&ctx), &data).await;
