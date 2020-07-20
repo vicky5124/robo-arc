@@ -33,7 +33,7 @@ impl RawEventHandler for RawHandler {
 
                     messages::anti_spam_message(Arc::clone(&ctx), &data, &mut redis).await;
 
-                    drop(redis_pool)
+                    drop(redis_pool);
 
                     messages::log_message(Arc::clone(&ctx), &data).await;
                 },
