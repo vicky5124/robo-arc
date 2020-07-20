@@ -33,9 +33,13 @@ impl RawEventHandler for RawHandler {
 
                     messages::anti_spam_message(Arc::clone(&ctx), &data, &mut redis).await;
                     messages::log_message(Arc::clone(&ctx), &data).await;
+                    dbg!(&data);
                 },
+                Event::MessageUpdate(data) => {
+                    messages::log_edit(Arc::clone(&ctx), &data).await;
+                }
 
-                _ => (),
+                _ => ()
             }
         });
     }
