@@ -1120,6 +1120,27 @@
       ]
     }
   },
+  "c4500d9354fbf0e9fb2f199d87dcfc4494905f0660ed48d46e0cae61c1a68dce": {
+    "query": "UPDATE log_messages SET content=$2, content_history=$3, attachments=$4, attachments_history=$5, embeds=$6, embeds_history=$7, pinned=$8, was_pinned=$9, edited_timestamp=$10 WHERE id = $1",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Text",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "Bool",
+          "Bool",
+          "Timestamptz"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "c690e8726160a32d390b3af2097013bbbf349a6ad0b95c7d1af383b9f6aacfe2": {
     "query": "INSERT INTO streamers (streamer) VALUES ($1)",
     "describe": {
@@ -1320,6 +1341,68 @@
         ]
       },
       "nullable": [
+        true
+      ]
+    }
+  },
+  "f4e54787c9489225e8e5e9a492bc61aff1deeaaf86e669fb46dee540ec38eae4": {
+    "query": "SELECT content, content_history, attachments, attachments_history, embeds, embeds_history, pinned, was_pinned FROM log_messages WHERE id = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "content",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "content_history",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 2,
+          "name": "attachments",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 3,
+          "name": "attachments_history",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 4,
+          "name": "embeds",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 5,
+          "name": "embeds_history",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 6,
+          "name": "pinned",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 7,
+          "name": "was_pinned",
+          "type_info": "Bool"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      },
+      "nullable": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
         true
       ]
     }
