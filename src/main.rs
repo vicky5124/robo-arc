@@ -357,10 +357,14 @@ struct Configuration;
 // This is the basic help message
 // We use \ at the end of the line to easily allow for newlines visually on the code.
 #[individual_command_tip = "Hello!
-If youd like to get more information about a specific command or group, you can just pass it as a command argument.
-All the command examples through out the help will be shown without prefix, use whatever prefix is configured on the server instead.
 
-You can react with 🚫 on *any* message sent by the bot to delete it.\n"]
+If you would like to get more information about a specific command or group, you can just pass it as a command argument; like so: `help configuration`
+
+NOTE: All the command examples through out the help will be shown without prefix, add whatever command prefix is configured on the server.
+By default it's a mention or `.`, but it can be configured using `configure guild prefix n!` replacing `n!` with the prefix of coice.
+
+You can react with 🚫 on *any* message sent by the bot to delete it.
+Exceptions to this rule include logging messages, some notifications and webhook messages.\n"]
 // This is the text that gets displayed when a given parameter was not found for information.
 #[command_not_found_text = "Could not find: `{}`."]
 // This is the ~~strikethrough~~ text.
