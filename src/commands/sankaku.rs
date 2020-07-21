@@ -30,7 +30,7 @@ use reqwest::{
 
 #[derive(Deserialize, PartialEq)]
 struct Tag {
-    name: String,
+    name: Option<String>,
 }
 
 #[derive(Deserialize, PartialEq)]
@@ -113,7 +113,7 @@ pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 if channel.is_nsfw() || dm_channel {
                     let mut is_unsafe = false;
                     for tag in &x.tags {
-                        if UNSAFE_BANLIST.contains(&tag.name.as_str()) {
+                        if UNSAFE_BANLIST.contains(&tag.name.as_ref().unwrap_or(&"gore".to_string()).as_str()) {
                             is_unsafe = true;
                         }
                     }
@@ -124,7 +124,7 @@ pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 } else {
                     let mut is_unsafe = false;
                     for tag in &x.tags {
-                        if SAFE_BANLIST.contains(&tag.name.as_str()) || &x.rating != "s" {
+                        if SAFE_BANLIST.contains(&tag.name.as_ref().unwrap_or(&"gore".to_string()).as_str()) || &x.rating != "s" {
                             is_unsafe = true;
                         }
                     }
@@ -263,7 +263,7 @@ pub async fn chan(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 if channel.is_nsfw() || dm_channel {
                     let mut is_unsafe = false;
                     for tag in &x.tags {
-                        if UNSAFE_BANLIST.contains(&tag.name.as_str()) {
+                        if UNSAFE_BANLIST.contains(&tag.name.as_ref().unwrap_or(&"gore".to_string()).as_str()) {
                             is_unsafe = true;
                         }
                     }
@@ -274,7 +274,7 @@ pub async fn chan(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 } else {
                     let mut is_unsafe = false;
                     for tag in &x.tags {
-                        if SAFE_BANLIST.contains(&tag.name.as_str()) || x.rating != "s" {
+                        if SAFE_BANLIST.contains(&tag.name.as_ref().unwrap_or(&"gore".to_string()).as_str()) || x.rating != "s" {
                             is_unsafe = true;
                         }
                     }
