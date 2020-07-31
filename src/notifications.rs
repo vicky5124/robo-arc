@@ -1,9 +1,9 @@
 use crate::{
     ConnectionPool,
-    Lavalink,
+    //Lavalink,
     Tokens,
     SentTwitchStreams,
-    VoiceManager,
+    //VoiceManager,
     utils::booru::{
         SAFE_BANLIST,
         UNSAFE_BANLIST,
@@ -403,36 +403,36 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
     Ok(())
 }
 
-async fn _check_empty_vc(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
-    let manager_lock = ctx.data.read().await
-        .get::<VoiceManager>().cloned().expect("Expected VoiceManager in ShareMap.");
-    let user_id = ctx.cache.current_user().await.id;
-
-    for guild_id in &ctx.cache.guilds().await {
-        let mut manager = manager_lock.lock().await;
-        let has_handler = manager.get(guild_id).is_some();
-
-        if has_handler {
-            let guild = ctx.cache.guild(guild_id).await.unwrap();
-            if let Some(channel) = guild.voice_states.get(&user_id)
-                .and_then(|v| v.channel_id) {
-                    let guild_channel = ctx.cache.guild_channel(channel).await.unwrap();
-
-                    if let Ok(members) = guild_channel.members(&ctx).await {
-                        if members.len() == 1 {
-                            manager.remove(guild_id);
-
-                            let data = ctx.data.read().await;
-                            let lava_client = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
-                            lava_client.write().await.destroy(guild_id).await?;
-                        }
-                    }
-            };
-        }
-    }
-
-    Ok(())
-}
+//async fn _check_empty_vc(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
+//    let manager_lock = ctx.data.read().await
+//        .get::<VoiceManager>().cloned().expect("Expected VoiceManager in ShareMap.");
+//    let user_id = ctx.cache.current_user().await.id;
+//
+//    for guild_id in &ctx.cache.guilds().await {
+//        let mut manager = manager_lock.lock().await;
+//        let has_handler = manager.get(guild_id).is_some();
+//
+//        if has_handler {
+//            let guild = ctx.cache.guild(guild_id).await.unwrap();
+//            if let Some(channel) = guild.voice_states.get(&user_id)
+//                .and_then(|v| v.channel_id) {
+//                    let guild_channel = ctx.cache.guild_channel(channel).await.unwrap();
+//
+//                    if let Ok(members) = guild_channel.members(&ctx).await {
+//                        if members.len() == 1 {
+//                            manager.remove(guild_id);
+//
+//                            let data = ctx.data.read().await;
+//                            let lava_client = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+//                            lava_client.write().await.destroy(guild_id).await?;
+//                        }
+//                    }
+//            };
+//        }
+//    }
+//
+//    Ok(())
+//}
 
 async fn reminder_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
     let rdata = ctx.data.read().await;

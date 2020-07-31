@@ -54,7 +54,7 @@ use std::{
     convert::TryInto,
     time::{
         Instant,
-        Duration,
+        //Duration,
     },
 
     net::SocketAddr,
@@ -103,7 +103,11 @@ use warp::{
     reply::Json
 };
 
-use serenity_lavalink::LavalinkClient;
+use lavalink_rs::{
+    LavalinkClient,
+    gateway::LavalinkEventHandler,
+};
+
 
 // Serenity! what make's the bot function. Discord API wrapper.
 use serenity::{
@@ -239,7 +243,7 @@ impl TypeMapKey for VoiceManager {
 }
 
 impl TypeMapKey for Lavalink {
-    type Value = Arc<RwLock<LavalinkClient>>;
+    type Value = Arc<Mutex<LavalinkClient>>;
 }
 
 impl TypeMapKey for SentTwitchStreams {
@@ -331,7 +335,7 @@ struct Mod;
 #[group("Music")]
 #[description = "All the voice and music related commands."]
 #[only_in("guilds")]
-#[commands(join, leave, play, play_playlist, pause, stop, skip, seek, shuffle, queue, now_playing)]
+#[commands(join, leave, play, play_playlist, pause, resume, stop, skip, seek, shuffle, queue, now_playing)]
 struct Music;
 
 #[group("Serenity Documentation")]
@@ -400,6 +404,15 @@ async fn my_help(
     let _ = help_commands::with_embeds(ctx, msg, args, &ho, groups, owners).await;
     Ok(())
 }
+
+
+
+struct LavalinkHandler;
+
+#[async_trait]
+impl LavalinkEventHandler for LavalinkHandler {}
+
+
 
 // Defines the handler to be used for events.
 #[derive(Debug, Default)]
@@ -658,6 +671,7 @@ impl EventHandler for Handler {
 }
 
 
+
 // This is for errors that happen before command execution.
 #[hook]
 async fn on_dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
@@ -721,25 +735,16 @@ async fn before(ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
         if cmd_name == "play" || cmd_name == "play_playlist" {
             let manager_lock = ctx.data.read().await
                 .get::<VoiceManager>().cloned().expect("Expected VoiceManager in ShareMap.");
-            let mut manager = manager_lock.lock().await;
+            let manager = manager_lock.lock().await;
 
             if manager.get(guild_id).is_none() {
-                if let Err(why) =  _join(ctx, msg, &mut manager).await {
+                drop(manager);
+                drop(data_read);
+
+                if let Err(why) =  _join(ctx, msg).await {
                     error!("While running command: {}", cmd_name);
                     error!("{:?}", why);
                     return false;
-                }
-                std::mem::drop(manager);
-                loop {
-                    let data = ctx.data.read().await;
-                    let vgu_lock = data.get::<VoiceGuildUpdate>().unwrap();
-                    let mut vgu = vgu_lock.write().await;
-                    if !vgu.contains(&guild_id) {
-                        tokio::time::delay_for(Duration::from_millis(500)).await;
-                    } else {
-                        vgu.remove(&guild_id);
-                        break;
-                    }
                 }
             }
         }
@@ -995,20 +1000,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         {
             // TODO: get the real shard amount.
-            let _shard_count = 1;
-
             let host = configuration["lavalink"]["host"].as_str().unwrap();
             let port = configuration["lavalink"]["port"].as_integer().unwrap();
             let password = configuration["lavalink"]["password"].as_str().unwrap();
 
-            let mut lava_client = LavalinkClient::new();
-            lava_client.bot_id = bot_id;
-            lava_client.password = password.to_string();
-            lava_client.host = host.to_string();
-            lava_client.port = port.try_into().unwrap();
-            lava_client.initialize().await?;
+            let mut lava_client = LavalinkClient::new(bot_id);
 
-            data.insert::<Lavalink>(Arc::new(RwLock::new(lava_client)));
+            lava_client.set_host(host.to_string());
+            lava_client.set_password(password.to_string());
+            lava_client.set_port(port.try_into().unwrap());
+
+            let lava = lava_client.initialize(LavalinkHandler).await?;
+            data.insert::<Lavalink>(lava);
         }
 
         {

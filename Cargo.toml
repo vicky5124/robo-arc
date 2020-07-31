@@ -62,8 +62,6 @@ features = ["full"]
 
 # https://github.com/serenity-rs/serenity
 [dependencies.serenity]
-#git = "https://github.com/Lakelezz/serenity/"
-#branch = "await"
 git = "https://github.com/acdenisSK/serenity"
 branch = "await_next"
 default-features = false
@@ -81,7 +79,7 @@ version = "1.0.106"
 features = ["derive"]
 
 [dependencies.sqlx]
-#version = "0.3"
+#version = "0.4.0-beta.1"
 git = "https://github.com/launchbadge/sqlx/"
 branch = "master"
 default-features = false
@@ -92,8 +90,8 @@ features = ["runtime-tokio", "macros", "postgres", "uuid", "offline", "chrono"]
 version = "0.18.1"
 features = ["serialize"]
 
-[dependencies.serenity-lavalink]
-git = "https://gitlab.com/nitsuga5124/serenity-lavalink/"
+[dependencies.lavalink-rs]
+git = "https://gitlab.com/nitsuga5124/lavalink-rs/"
 branch = "master"
 
 # used for profiling for flamegraph

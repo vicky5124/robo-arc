@@ -222,7 +222,7 @@ impl PpCalculation {
         (score_meh * 50.0 + score_good * 100.0 + score_great * 300.0) / (h * 300.0)
     }
 
-    pub fn test() {
+    pub fn _test() {
         let mut pp = Self::default();
 
         pp.score_mods = vec![];

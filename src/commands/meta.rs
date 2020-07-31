@@ -202,7 +202,9 @@ async fn test(_ctx: &Context, _msg: &Message, _args: Args) -> CommandResult {
     //}
 
     //_msg.channel_id.say(_ctx, "test").await?;
-    crate::utils::osu::PpCalculation::test();
+    //crate::utils::osu::PpCalculation::test();
+    //
+    //msg.reply(ctx, futures::stream::iter(ctx.cache.guilds().await.iter()).map(|i| async { i.members(ctx, None, None).await.unwrap() }).filter(|i| async { !i.await.user.bot }).collect::<Vec<_>>().await.len()).await?;
 
     Ok(())
 }
