@@ -877,6 +877,11 @@
           "ordinal": 4,
           "name": "not_live_message",
           "type_info": "Text"
+        },
+        {
+          "ordinal": 5,
+          "name": "id",
+          "type_info": "Int4"
         }
       ],
       "parameters": {
@@ -887,7 +892,8 @@
         false,
         false,
         true,
-        true
+        true,
+        false
       ]
     }
   },
