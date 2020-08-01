@@ -1,0 +1,27 @@
+stages:
+  - build
+  #- check
+
+variables:
+  CARGO_HOME: $CI_PROJECT_DIR/cargo
+
+build:
+  image: "rustlang/rust:nightly"
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq libssl-dev libsodium-dev libopus-dev pkg-config
+    - cargo --version
+    - rustc --version
+  stage: build
+  script:
+    - cargo build --release
+  cache:
+    untracked: true
+    paths:
+      - target/
+      - cargo/
+  artifacts:
+    paths:
+      - target/release/arc_bot
+  only:
+  - master
+
