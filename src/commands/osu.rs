@@ -334,7 +334,7 @@ async fn get_osu_scores(user_id: i32, user_name: &str, map_id: u64, mode: i32, o
 
 // Requests to the api the recent plays of a user
 async fn get_osu_user_recent(user_id: i32, osu_key: &str) -> Result<Vec<OsuUserRecentData>, Box<dyn std::error::Error + Send + Sync>> {
-    let url = format!("https://osu.ppy.sh/api/get_user_recent?k={}&u={}&type=id", osu_key, user_id);
+    let url = format!("https://osu.ppy.sh/api/get_user_recent?k={}&u={}&type=id&limit=50", osu_key, user_id);
     let resp = reqwest::get(&url)
         .await?
         .json::<Vec<OsuUserRecentData>>()
