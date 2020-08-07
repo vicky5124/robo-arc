@@ -13,7 +13,7 @@ with open('config.toml', 'r') as f:
 
 TOKEN = config["discord"]
 
-PREFIX = ","
+PREFIX = "."
 
 bot = lightbulb.Bot(
     token=TOKEN,
