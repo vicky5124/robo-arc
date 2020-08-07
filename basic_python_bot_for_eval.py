@@ -1,8 +1,11 @@
 import textwrap
 import traceback
+
+import lightbulb
+import hikari
+from hikari.models.intents import Intent
+
 import toml
-import discord
-from discord.ext import commands
 
 with open('config.toml', 'r') as f:
     raw_config = f.read()
@@ -10,63 +13,61 @@ with open('config.toml', 'r') as f:
 
 TOKEN = config["discord"]
 
+PREFIX = ","
 
-BOT = commands.Bot(command_prefix=commands.when_mentioned_or("."))
-BOT.remove_command('help')
+bot = lightbulb.Bot(
+    token=TOKEN,
+    intents=Intent.PRIVATE_MESSAGES | Intent.GUILD_MESSAGES,
+    stateless=True,
+    prefix="​1​7h23n9187q25bwe95rw6e e68 ​fs5e78f56s49d 8f7s5df4sd48f9sd34 ​​[broad-except] Catching too general exception Exception [W0703] s798df8sd6 4fs98d6f48​, yeah, nothing is triggering the command not found error anymore, unless someone looks ​at the source :P, in that case, ​hi nerd!​"
+)
 
-# Intents seem to be broken?
-#print(BOT.intents)
-#intents = discord.Intents.none()
+command = f"{PREFIX}eval"
 
-@BOT.event
-async def on_ready():
-    print(f"Python BOT is ready.")
+@bot.listen()
+async def ready(_event: hikari.ShardReadyEvent) -> None:
+    await bot.fetch_owner_ids()
 
-@BOT.event
-async def on_message(msg):
-    app_info = await BOT.application_info()
-    if msg.author != app_info.owner:
-        return
+@bot.listen()
+async def _eval(event: hikari.MessageCreateEvent) -> None:
+    if event.message.author.id in bot.owner_ids and event.message.content.startswith(command):
+        code = event.message.content[len(command):]
+        code = code.strip("`py ")
 
-    await BOT.process_commands(msg)
+        env = {
+            "bot": bot,
+            "client": bot,
+            "msg": event.message,
+            "message": event.message,
+            "server_id": event.message.guild_id,
+            "guild_id": event.message.guild_id,
+            "channel_id": event.message.channel_id,
+            "author": event.message.author,
+        }
+        env.update(globals())
 
-@BOT.command(name='eval')
-@commands.is_owner()
-async def _eval(ctx, *, code):
-    if "import os" in code or "import sys" in code:
-        return
+        new_forced_async_code = f"async def code():\n{textwrap.indent(code, '    ')}"
 
-    code = code.strip('` ')
+        exec(new_forced_async_code, env) # shut up pylint with "[exec-used] Use of exec [W0122]"
+        code = env["code"]
 
-    env = {
-        'bot': BOT,
-        'client': BOT,
-        'ctx': ctx,
-        'message': ctx.message,
-        'server': ctx.message.guild,
-        'guild': ctx.message.guild,
-        'channel': ctx.message.channel,
-        'author': ctx.message.author,
-    }
-    env.update(globals())
+        try:
+            result = await code()
 
-    new_forced_async_code = f'async def code():\n{textwrap.indent(code, "    ")}'
+            embed = hikari.Embed(
+                title="Success!",
+                description=f"Returned value: ```py\n{result}```",
+                colour=(5, 255, 70)
+            )
+            await event.message.reply(embed=embed)
+            await event.message.add_reaction("✅")
+        except Exception as error: # shut up pylint with "[broad-except] Catching too general exception Exception [W0703]"
+            embed = hikari.Embed(
+                title="Failed to execute.",
+                description=f"{error} ```py\n{traceback.format_exc()}```",
+                colour=(255, 10, 40)
+            )
+            await event.message.reply(embed=embed)
+            await event.message.add_reaction("❌")
 
-    exec(new_forced_async_code, env)
-    code = env['code']
-
-    try:
-        await code()
-    except:
-        await ctx.send(f'```{traceback.format_exc()}```')
-        await ctx.message.add_reaction('❌')
-
-#@BOT.event
-#async def on_error(_):
-#    return
-
-@BOT.event
-async def on_command_error(_1, _2):
-    return
-
-BOT.run(TOKEN)
+bot.run()
