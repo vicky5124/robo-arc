@@ -616,6 +616,11 @@
           "ordinal": 4,
           "name": "sent_md5",
           "type_info": "TextArray"
+        },
+        {
+          "ordinal": 5,
+          "name": "id",
+          "type_info": "Int4"
         }
       ],
       "parameters": {
@@ -626,7 +631,8 @@
         false,
         true,
         true,
-        true
+        true,
+        false
       ]
     }
   },

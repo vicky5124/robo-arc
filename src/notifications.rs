@@ -16,8 +16,6 @@ use std::{
 };
 
 use sqlx;
-use futures::TryStreamExt;
-use futures::stream::StreamExt;
 use serde::Deserialize;
 use reqwest::{
     Client as ReqwestClient,
@@ -87,12 +85,12 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
     let data_read = ctx.data.read().await;
     let pool = data_read.get::<ConnectionPool>().unwrap();
 
-    let mut data = sqlx::query!("SELECT * FROM new_posts")
-        .fetch(pool)
-        .boxed();
+    let data = sqlx::query!("SELECT * FROM new_posts")
+        .fetch_all(pool)
+        .await?;
 
 
-    while let Some(i) = data.try_next().await? {
+    for i in data {
         let base_url = i.booru_url;
         let tags = i.tags;
         let webhooks = i.webhook.unwrap_or(Vec::new());
@@ -202,11 +200,11 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
     let pool = data_read.get::<ConnectionPool>().unwrap();
     let sent_streams = data_read.get::<SentTwitchStreams>().unwrap();
 
-    let mut data = sqlx::query!("SELECT * FROM streamers")
-        .fetch(pool)
-        .boxed();
+    let data = sqlx::query!("SELECT * FROM streamers")
+        .fetch_all(pool)
+        .await?;
 
-    while let Some(i) = data.try_next().await? {
+    for i in data {
         let reqwest = ReqwestClient::new();
         let url = Url::parse_with_params("https://api.twitch.tv/helix/streams", &[("user_login", &i.streamer)])?;
         let mut headers = HeaderMap::new();
@@ -225,11 +223,11 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
         let stream_data = resp.data;
         if !stream_data.is_empty() && i.is_live {
             if check_changes(&stream_data[0], Arc::clone(sent_streams)).await {
-                let mut data = sqlx::query!("SELECT * FROM streamer_notification_channel WHERE streamer = $1", &i.streamer)
-                    .fetch(pool)
-                    .boxed();
+                let data = sqlx::query!("SELECT * FROM streamer_notification_channel WHERE streamer = $1", &i.streamer)
+                    .fetch_all(pool)
+                    .await?;
 
-                while let Some(notification_place) = data.try_next().await? {
+                for notification_place in data {
                     let url = format!("https://api.twitch.tv/helix/games?id={}", stream_data[0].game_id);
                     let game_resp = reqwest.get(&url)
                         .headers(headers.clone())
@@ -290,11 +288,11 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
                 }
             }
         } else if !stream_data.is_empty() && !i.is_live {
-            let mut data = sqlx::query!("SELECT * FROM streamer_notification_channel WHERE streamer = $1", &i.streamer)
-                .fetch(pool)
-                .boxed();
+            let data = sqlx::query!("SELECT * FROM streamer_notification_channel WHERE streamer = $1", &i.streamer)
+                .fetch_all(pool)
+                .await?;
 
-            while let Some(notification_place) = data.try_next().await? {
+            for notification_place in data {
                 let url = format!("https://api.twitch.tv/helix/games?id={}", stream_data[0].game_id);
                 let game_resp = reqwest.get(&url)
                     .headers(headers.clone())
@@ -367,11 +365,11 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
 
 
         } else if stream_data.is_empty() && i.is_live {
-            let mut data = sqlx::query!("SELECT * FROM streamer_notification_channel WHERE streamer = $1", i.streamer)
-                .fetch(pool)
-                .boxed();
+            let data = sqlx::query!("SELECT * FROM streamer_notification_channel WHERE streamer = $1", i.streamer)
+                .fetch_all(pool)
+                .await?;
 
-            while let Some(notification_place) = data.try_next().await? {
+            for notification_place in data {
                 if let Ok(mut message) = ctx.http.get_message(notification_place.channel_id.unwrap_or(0) as u64, notification_place.message_id.unwrap_or(0) as u64).await
                 {
                     let _ = message.edit(&*ctx, |m| {
@@ -437,10 +435,9 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
 async fn reminder_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
     let rdata = ctx.data.read().await;
     let pool = rdata.get::<ConnectionPool>().unwrap();
-    let mut reminders = sqlx::query!("SELECT * FROM reminders")
-                        .fetch(pool);
+    let reminders = sqlx::query!("SELECT * FROM reminders").fetch_all(pool).await?;
 
-    while let Some(row) = reminders.try_next().await? {
+    for row in reminders {
         if row.date < chrono::offset::Utc::now() {
             let _ = ChannelId(row.channel_id as u64).send_message(&ctx, |m| {
                 m.content(format!("<@!{}>: Reminder!", row.user_id));
@@ -468,10 +465,9 @@ async fn reminder_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Err
 async fn unmute_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
     let rdata = ctx.data.read().await;
     let pool = rdata.get::<ConnectionPool>().unwrap();
-    let mut reminders = sqlx::query!("SELECT * FROM muted_members")
-                        .fetch(pool);
+    let muted_members = sqlx::query!("SELECT * FROM muted_members").fetch_all(pool).await?;
 
-    while let Some(row) = reminders.try_next().await? {
+    for row in muted_members {
         if row.date < chrono::offset::Utc::now() {
             let mut member = if let Ok(x) = ctx.http.get_member(row.guild_id as u64, row.user_id as u64).await { x } else {
                 let _ = ChannelId(row.channel_id as u64).say(&ctx, format!("Unable to unmute <@{}> from temporal mute.", row.user_id));

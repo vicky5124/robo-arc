@@ -86,8 +86,6 @@ use tracing_log::LogTracer;
 //use log;
 
 use sqlx::PgPool; // PostgreSQL Pool Structure
-use futures::TryStreamExt;
-use futures::stream::StreamExt;
 use darkredis::ConnectionPool as RedisConnectionPool;
 
 use toml::Value; // To parse the data of .toml files
@@ -843,11 +841,12 @@ async fn dynamic_prefix(ctx: &Context, msg: &Message) -> Option<String> { // Cus
         // Obtain the database connection for the data.
         let pool = data.get::<ConnectionPool>().unwrap();
         // Obtain the configured prefix from the database
-        let mut db_prefix = sqlx::query!("SELECT prefix FROM prefixes WHERE guild_id = $1", gid)
-            .fetch(pool)
-            .boxed();
+        let db_prefix = sqlx::query!("SELECT prefix FROM prefixes WHERE guild_id = $1", gid)
+            .fetch_optional(pool)
+            .await
+            .expect("Could not query the database");
 
-        p = if let Some(result) = db_prefix.try_next().await.expect("Could not query the database") {
+        p = if let Some(result) = db_prefix {
             result.prefix.unwrap_or(".".to_string()).to_string()
         } else {
             ".".to_string()
@@ -1042,13 +1041,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             let annoyed_channels = {
                 let pool = data.get::<ConnectionPool>().unwrap();
                 // obtain all the channels where the bot is allowed to be annoyed on from the db.
-                let mut raw_annoyed_channels = sqlx::query!("SELECT channel_id from annoyed_channels")
-                    .fetch(pool)
-                    .boxed();
+                let raw_annoyed_channels = sqlx::query!("SELECT channel_id from annoyed_channels")
+                    .fetch_all(pool)
+                    .await?;
 
                 // add every channel id from the db to a HashSet.
                 let mut annoyed_channels = HashSet::new();
-                while let Some(row) = raw_annoyed_channels.try_next().await? {
+                for row in raw_annoyed_channels {
                     annoyed_channels.insert(row.channel_id as u64);
                 }
 
