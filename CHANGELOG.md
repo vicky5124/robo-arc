@@ -1,3 +1,35 @@
+# 0.2.6-alpha
+
+### Bugs:
+- Fixed notification loop retriggering on ready
+- Replaced sqlx iterators with vectors to fix logging bug on sqlx #599.
+
+### Commands:
+- about:
+  Now it supports teams.
+- chan / idol:
+  Fixed incorrect error reported when a tag is missing.
+- help:
+  Added more information.
+  Restructured the fields.
+- play:
+  Play time is no longer are twice as long.
+- skip:
+  Now it stops the current playing song if the queue is empty.
+- recent:
+  Increased limit from 10 to 50 on pagination.
+- eval:
+  Switched from discord.py to hikari.
+  Added STDOUT, Return Value and Syntax Error handling.
+
+### Logging:
+- Restructured file structure.
+- Added message create logging.
+- Added message update logging.
+
+### Repository:
+- Added CI/CD
+
 # 0.2.5-alpha
 
 ### Dependencies:
