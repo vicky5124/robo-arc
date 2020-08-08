@@ -1,5 +1,8 @@
+import io
+import sys
 import textwrap
 import traceback
+from contextlib import redirect_stdout
 
 import lightbulb
 import hikari
@@ -24,6 +27,9 @@ bot = lightbulb.Bot(
 
 command = f"{PREFIX}eval"
 
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
 @bot.listen()
 async def ready(_event: hikari.ShardReadyEvent) -> None:
     await bot.fetch_owner_ids()
@@ -31,8 +37,12 @@ async def ready(_event: hikari.ShardReadyEvent) -> None:
 @bot.listen()
 async def _eval(event: hikari.MessageCreateEvent) -> None:
     if event.message.author.id in bot.owner_ids and event.message.content.startswith(command):
-        code = event.message.content[len(command):]
-        code = code.strip("`py ")
+        code = event.message.content[len(command) + 1:]
+
+        if code.startswith('```') and code.endswith('```'):
+            code = '\n'.join(code.split('\n')[1:-1])
+        else:
+            code = code.strip('` \n')
 
         env = {
             "bot": bot,
@@ -43,31 +53,51 @@ async def _eval(event: hikari.MessageCreateEvent) -> None:
             "guild_id": event.message.guild_id,
             "channel_id": event.message.channel_id,
             "author": event.message.author,
+            "eprint": eprint,
         }
         env.update(globals())
+        stdout = io.StringIO()
 
         new_forced_async_code = f"async def code():\n{textwrap.indent(code, '    ')}"
 
-        exec(new_forced_async_code, env) # shut up pylint with "[exec-used] Use of exec [W0122]"
-        code = env["code"]
-
         try:
-            result = await code()
-
-            embed = hikari.Embed(
-                title="Success!",
-                description=f"Returned value: ```py\n{result}```",
-                colour=(5, 255, 70)
-            )
-            await event.message.reply(embed=embed)
-            await event.message.add_reaction("✅")
+            exec(new_forced_async_code, env) # shut up pylint with "[exec-used] Use of exec [W0122]"
         except Exception as error: # shut up pylint with "[broad-except] Catching too general exception Exception [W0703]"
             embed = hikari.Embed(
                 title="Failed to execute.",
-                description=f"{error} ```py\n{traceback.format_exc()}```",
+                description=f"{error} ```py\n{traceback.format_exc()}\n```\n```py\n{error.__class__.__name__}\n```",
                 colour=(255, 10, 40)
             )
             await event.message.reply(embed=embed)
             await event.message.add_reaction("❌")
+            return
+
+        code = env["code"]
+
+        try:
+            with redirect_stdout(stdout):
+                result = await code()
+        except Exception as error: # shut up pylint with "[broad-except] Catching too general exception Exception [W0703]"
+            value = stdout.getvalue()
+            embed = hikari.Embed(
+                title="Failed to execute.",
+                description=f"{error} ```py\n{traceback.format_exc()}\n```\n```py\n{value}\n```",
+                colour=(255, 10, 40)
+            )
+            await event.message.reply(embed=embed)
+            await event.message.add_reaction("❌")
+            return
+
+        value = stdout.getvalue()
+        embed = hikari.Embed(
+            title="Success!",
+            description=f"Returned value: ```py\n{result}\n```\nStandard Output: ```py\n{value}\n```",
+            colour=(5, 255, 70)
+        )
+        await event.message.reply(embed=embed)
+        await event.message.add_reaction("✅")
+
+
+
 
 bot.run()
