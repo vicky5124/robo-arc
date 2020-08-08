@@ -92,16 +92,17 @@ export REDIS_URL="`redis_host`:`redis_port`"
 ### __**Eval command**__:
 If you'd like to have an eval command, to evaluate python code within discord, you will need to use the `basic_python_bot_for_eval.py` file.
 
-Dependencies:
+To run it, run the following commands:
 ```
-# install python 3.6 or newer and python3-pip
+# only once
+Install python 3.8.5 or newer.
+Install pipenv with `python3 -m pip install pipenv -U --user`
 
-python3 -m pip install pipenv -U --user
-pipenv install toml git+https://github.com/Rapptz/discord.py.git#egg=feature-intents
-```
-Running the file:
-```
-pipenv run python3 basic_python_bot_for_eval.py
+# run every update
+`python3 -m pipenv sync`
+
+# run to run the eval bot
+python3 -m pipenv run python basic_python_bot_for_eval.py
 ```
 
 ### __**Running the bot**__:
