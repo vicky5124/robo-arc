@@ -51,6 +51,13 @@ impl RawEventHandler for RawHandler {
 
                     senders::send_message_update(&ctx, &data).await;
                 }
+                Event::MessageDelete(data) => {
+                    if data.guild_id.is_none() {
+                        return;
+                    }
+
+                    senders::send_message_delete(&ctx, &data).await;
+                }
 
                 _ => ()
             }
