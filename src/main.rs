@@ -622,14 +622,24 @@ impl EventHandler for Handler {
                     // aka If you react with 🚫 on any message sent by the bot, it will get deleted.
                     // This is helpful for antispam and anti illegal content measures.
                     if s == "🚫" {
-                        let msg = ctx
-                            .http
-                            .as_ref()
-                            .get_message(add_reaction.channel_id.0, add_reaction.message_id.0)
-                            .await
-                            .expect("Error while obtaining message");
-                        if msg.author.id == ctx.cache.current_user().await.id {
-                            let _ = msg.delete(&ctx).await;
+                        let rdata = ctx.data.read().await;
+                        let pool = rdata.get::<ConnectionPool>().unwrap();
+
+                        let query = sqlx::query!("SELECT * FROM logging_channels WHERE channel_id = $1", add_reaction.channel_id.0 as i64)
+                            .fetch_optional(pool)
+                            .await;
+                        if let Ok(query) = query {
+                            if query.is_none() {
+                                let msg = ctx
+                                    .http
+                                    .as_ref()
+                                    .get_message(add_reaction.channel_id.0, add_reaction.message_id.0)
+                                    .await
+                                    .expect("Error while obtaining message");
+                                if msg.author.id == ctx.cache.current_user().await.id {
+                                    let _ = msg.delete(&ctx).await;
+                                }
+                            }
                         }
                     }
                 }
