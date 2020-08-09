@@ -221,6 +221,8 @@ async fn source(ctx: &Context, msg: &Message) -> CommandResult {
 #[aliases(todo_list)]
 async fn todo(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(ctx, "Alpha: ```prolog
+\"Add a message blacklist of to be deleted.\"
+
 #Osu! 
 \"Fix PP calculation with mods\"
 MapPP (calculates pp of a map, like ezpp or tillerino) / do not use oppai.
@@ -235,7 +237,8 @@ Sub/User Bomb (posts 5 posts from the subreddit or user specified)
 
 #Mod
 Clear (add specific requieriments like \"only webhooks\") / waiting for the method to return a stream.
-Logging (set a channel to log specific events)
+Logging (Add logging for all the other events)
+Logging (Make configuration of logs easier)
 RuleManagement (https://5124.16-b.it/ss/22:50:34_21-06-2020.png)
 
 #Tags

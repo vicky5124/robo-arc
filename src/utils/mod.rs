@@ -3,3 +3,4 @@ pub mod database;
 pub mod booru;
 pub mod checks;
 pub mod osu;
+pub mod logging;

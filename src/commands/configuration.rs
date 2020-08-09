@@ -1,6 +1,7 @@
 use crate::{
     utils::booru,
     utils::checks::*,
+    utils::logging::LoggingEvents,
     ConnectionPool,
     AnnoyedChannels,
     BooruCommands,
@@ -224,7 +225,7 @@ async fn booru(ctx: &Context, msg: &Message, raw_args: Args) -> CommandResult {
 #[command]
 #[required_permissions(MANAGE_CHANNELS)]
 #[only_in("guilds")]
-#[sub_commands(toggle_annoy, notifications)]
+#[sub_commands(toggle_annoy, notifications, logging)]
 #[aliases(chan)]
 async fn channel(_ctx: &Context, _message: &Message, _args: Args) -> CommandResult {
     Ok(())
@@ -1024,6 +1025,25 @@ async fn toggle_anti_spam(ctx: &Context, msg: &Message) -> CommandResult {
     }
 
     msg.react(ctx, '✅').await?;
+
+    Ok(())
+}
+
+/// Configures logging for the channel.
+///
+/// Usage: `configure channel logging 134217727`
+#[command]
+async fn logging(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let digits = args.single::<u64>()?;
+
+    let rdata = ctx.data.read().await;
+    let pool = rdata.get::<ConnectionPool>().unwrap();
+    sqlx::query!("INSERT INTO logging_channels (guild_id, channel_id, bitwise) VALUES ($1, $2, $3)", msg.guild_id.unwrap().0 as i64, msg.channel_id.0 as i64, digits as i64)
+                        .execute(pool)
+                        .await?;
+
+    let events = LoggingEvents::from_bits_truncate(digits);
+    msg.reply(ctx, format!("Successfully added logging for this events:\n{:?}", events)).await?;
 
     Ok(())
 }
