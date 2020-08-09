@@ -33,6 +33,38 @@
       "nullable": []
     }
   },
+  "0134458568ea4159703aabd5efe4a7a9bc695b8bfe24bbd676229e6bbd9d37c8": {
+    "query": "SELECT * FROM logging_channels WHERE guild_id = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "guild_id",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 1,
+          "name": "channel_id",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 2,
+          "name": "bitwise",
+          "type_info": "Int8"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "01766e993f879d974121df1b29cd9b3d821de2ee50f181aaea8e8b68a5234cf9": {
     "query": "SELECT * FROM muted_members",
     "describe": {
@@ -915,6 +947,20 @@
       "nullable": []
     }
   },
+  "8d2ea0084240df5b96e01c27aaa06141c7f8f81427a6d379c85678df6e84ad86": {
+    "query": "INSERT INTO logging_channels (guild_id, channel_id, bitwise) VALUES ($1, $2, $3)",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Int8"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "8f1494578cbf38fe3ef47766f3a2350042dac1d7469c9426f697b395cbda3c9f": {
     "query": "UPDATE best_bg SET best_girl = $1 WHERE user_id = $2",
     "describe": {
@@ -970,6 +1016,26 @@
       },
       "nullable": [
         false
+      ]
+    }
+  },
+  "9ab42bde4891cdf71db2b0c4fd85d0b3a0c1814f0ca8aedd29b5b8305b74868d": {
+    "query": "SELECT content_history FROM log_messages WHERE id = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "content_history",
+          "type_info": "TextArray"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      },
+      "nullable": [
+        true
       ]
     }
   },
