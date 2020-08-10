@@ -39,8 +39,22 @@ pub async fn send_message_update(ctx: &Context, data: &MessageUpdateEvent) {
                                 let _ = ChannelId(query.channel_id as u64).send_message(&ctx, |m| m.embed(|e| {
                                     e.title("Message Updated");
                                     e.description(format!("[Jump](https://discord.com/channels/{}/{}/{})", data.guild_id.unwrap().0, data.channel_id.0, data.id.0));
-                                    e.field("Original Content", old_message_content.unwrap_or(&String::new()).to_owned() + "\u{200b}", false);
-                                    e.field("New Content", &data.content.as_ref().unwrap_or(&"- Empty Message".to_string()), false);
+
+                                    let content = old_message_content.unwrap_or(&String::new()).to_owned() + "\u{200b}";
+                                    if content.len() > 1000 {
+                                        e.field("Original Content (1)", &content[..content.len()/2], false);
+                                        e.field("Original Content (2)", &content[content.len()/2..], false);
+                                    } else {
+                                        e.field("Original Content", &content, false);
+                                    }
+
+                                    let content = data.content.as_ref().unwrap_or(&"- Empty Message".to_string()).to_string();
+                                    if content.len() > 1000 {
+                                        e.field("New Content (1)", &content[..content.len()/2], false);
+                                        e.field("New Content (2)", &content[content.len()/2..], false);
+                                    } else {
+                                        e.field("New Content", &content, false);
+                                    }
                                     if let Some(author) = &data.author {
                                         e.author(|a| {
                                             a.icon_url(author.face());
