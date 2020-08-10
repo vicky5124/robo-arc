@@ -38,7 +38,7 @@ pub async fn send_message_update(ctx: &Context, data: &MessageUpdateEvent) {
                             if log_events.contains(LoggingEvents::MessageUpdate) {
                                 let _ = ChannelId(query.channel_id as u64).send_message(&ctx, |m| m.embed(|e| {
                                     e.title("Message Updated");
-                                    e.description(format!("[Jump](https://discord.com/{}/{}/{})", data.guild_id.unwrap().0, data.channel_id.0, data.id.0));
+                                    e.description(format!("[Jump](https://discord.com/channels/{}/{}/{})", data.guild_id.unwrap().0, data.channel_id.0, data.id.0));
                                     e.field("Original Content", old_message_content.unwrap_or(&String::new()).to_owned() + "\u{200b}", false);
                                     e.field("New Content", &data.content.as_ref().unwrap_or(&"- Empty Message".to_string()), false);
                                     if let Some(author) = &data.author {
