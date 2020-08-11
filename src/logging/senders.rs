@@ -145,3 +145,56 @@ pub async fn send_message_delete(ctx: &Context, data: &MessageDeleteEvent) {
         }
     }
 }
+
+pub async fn send_guild_member_add(ctx: &Context, data: &GuildMemberAddEvent) {
+    let rdata = ctx.data.read().await;
+    let pool = rdata.get::<ConnectionPool>().unwrap();
+
+    let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.guild_id.0 as i64)
+        .fetch_optional(pool)
+        .await;
+
+    if let Ok(query) = query {
+        if let Some(query) = query {
+            let _ = ChannelId(query.channel_id as u64).send_message(ctx, |m| m.embed(|e| {
+                e.title("Member Joined");
+                e.author(|a| {
+                    a.icon_url(data.member.user.face());
+                    a.name(data.member.user.tag())
+                });
+                e.field("Created at", &data.member.user.created_at().to_rfc2822(), false);
+                if let Some(x) = &data.member.joined_at {
+                    e.field("Joined at", x.to_rfc2822(), false);
+                }
+                e.field("ID", &data.member.user.id.0, false);
+
+                e
+            })).await;
+        }
+    }
+}
+
+pub async fn send_guild_member_remove(ctx: &Context, data: &GuildMemberRemoveEvent) {
+    let rdata = ctx.data.read().await;
+    let pool = rdata.get::<ConnectionPool>().unwrap();
+
+    let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.guild_id.0 as i64)
+        .fetch_optional(pool)
+        .await;
+
+    if let Ok(query) = query {
+        if let Some(query) = query {
+            let _ = ChannelId(query.channel_id as u64).send_message(ctx, |m| m.embed(|e| {
+                e.title("Member Left");
+                e.author(|a| {
+                    a.icon_url(data.user.face());
+                    a.name(data.user.tag())
+                });
+                e.field("Created at", &data.user.created_at().to_rfc2822(), false);
+                e.field("ID", &data.user.id.0, false);
+
+                e
+            })).await;
+        }
+    }
+}

@@ -41,7 +41,7 @@ impl RawEventHandler for RawHandler {
                     drop(redis_pool);
 
                     messages::log_message(Arc::clone(&ctx), &data).await;
-                },
+                }
                 Event::MessageUpdate(data) => {
                     if data.guild_id.is_none() {
                         return;
@@ -57,6 +57,12 @@ impl RawEventHandler for RawHandler {
                     }
 
                     senders::send_message_delete(&ctx, &data).await;
+                }
+                Event::GuildMemberAdd(data) => {
+                    senders::send_guild_member_add(&ctx, &data).await;
+                }
+                Event::GuildMemberRemove(data) => {
+                    senders::send_guild_member_remove(&ctx, &data).await;
                 }
 
                 _ => ()
