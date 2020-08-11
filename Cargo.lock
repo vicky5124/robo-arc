@@ -408,8 +408,9 @@ checksum = "0dbbb57365263e881e805dc77d94697c9118fd94d8da011240555aa7b23445bd"
 
 [[package]]
 name = "command_attr"
-version = "0.2.0"
-source = "git+https://github.com/acdenisSK/serenity?branch=await_next#b16747fcd64ae1016310b2e438c322bdd7820e2d"
+version = "0.3.0-rc.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "093ee06b40fcba41b22ddf85de7ed33728fe2e246fcdbc1b1d3ab26f87fabf3b"
 dependencies = [
  "proc-macro2 1.0.19",
  "quote 1.0.7",
@@ -1298,8 +1299,9 @@ dependencies = [
 
 [[package]]
 name = "lavalink-rs"
-version = "0.1.0-alpha"
-source = "git+https://gitlab.com/nitsuga5124/lavalink-rs/?branch=master#e5595af956695602d6b21e2660fd414e2ddfc40d"
+version = "0.1.1-alpha"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b280c603f3187be0ceaec4ab792e62bc5a9ffeefae0336201fc2620db3fcfd7"
 dependencies = [
  "async-tungstenite",
  "futures",
@@ -3035,8 +3037,9 @@ dependencies = [
 
 [[package]]
 name = "serenity"
-version = "0.8.6"
-source = "git+https://github.com/acdenisSK/serenity?branch=await_next#b16747fcd64ae1016310b2e438c322bdd7820e2d"
+version = "0.9.0-rc.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9f2b6557e836289a35b45ecc9da78b464de79cec3aa9b7cfd07f654cbc478c00"
 dependencies = [
  "async-trait",
  "async-tungstenite",
