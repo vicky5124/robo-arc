@@ -149,7 +149,7 @@ async fn skip(ctx: &Context, msg: &Message) -> CommandResult {
                 e.title(&track_info.title);
                 e.thumbnail(format!("https://i.ytimg.com/vi/{}/default.jpg", &track_info.identifier));
                 e.url(&track_info.uri);
-                e.footer(|f| f.text(format!("Submited by unknwon")));
+                e.footer(|f| f.text(format!("Submited by unknown")));
                 e.field("Uploader", &track_info.author, true);
                 e.field("Length", format!("{}:{}",
                     track_info.length / 1000  % 3600 /  60,
@@ -225,7 +225,7 @@ async fn now_playing(ctx: &Context, msg: &Message) -> CommandResult {
                     e.title(&track_info.title);
                     e.thumbnail(format!("https://i.ytimg.com/vi/{}/default.jpg", track_info.identifier));
                     e.url(&track_info.uri);
-                    e.footer(|f| f.text(format!("Submited by unknwon")));
+                    e.footer(|f| f.text(format!("Submited by unknown")));
                     e.field("Uploader", &track_info.author, true);
                     e.field("Length", format!("{}:{}",
                         track_info.length / 1000  % 3600 /  60,
