@@ -207,6 +207,26 @@ async fn queue(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
+/// Clears the current queue.
+#[command]
+#[aliases(cque, clearqueue, clearque, cqueue)]
+async fn clear_queue(ctx: &Context, msg: &Message) -> CommandResult {
+    let data = ctx.data.read().await;
+    let lava_client_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+    let mut lava_client = lava_client_lock.lock().await;
+    if let Some(node) = lava_client.nodes.get_mut(&msg.guild_id.unwrap().0) {
+        if !node.queue.is_empty() {
+            node.queue = vec![];
+
+            msg.react(ctx, '✅').await?;
+        } else {
+            msg.channel_id.say(ctx, "The queue is already empty.").await?;
+        }
+    };
+
+    Ok(())
+}
+
 /// Displays the information about the currently playing song.
 #[command]
 #[aliases(np, nowplaying, playing)]
