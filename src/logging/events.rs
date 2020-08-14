@@ -58,11 +58,91 @@ impl RawEventHandler for RawHandler {
 
                     senders::send_message_delete(&ctx, &data).await;
                 }
+                Event::MessageDeleteBulk(data) => {
+                    if data.guild_id.is_none() {
+                        return;
+                    }
+
+                    senders::send_message_delete_bulk(&ctx, &data).await;
+                }
                 Event::GuildMemberAdd(data) => {
                     senders::send_guild_member_add(&ctx, &data).await;
                 }
                 Event::GuildMemberRemove(data) => {
                     senders::send_guild_member_remove(&ctx, &data).await;
+                }
+                Event::GuildMemberUpdate(data) => {
+                    senders::send_guild_member_update(&ctx, &data).await;
+                }
+                Event::GuildRoleCreate(data) => {
+                    senders::send_guild_role_create(&ctx, &data).await;
+                }
+                Event::GuildRoleDelete(data) => {
+                    senders::send_guild_role_delete(&ctx, &data).await;
+                }
+                Event::GuildRoleUpdate(data) => {
+                    senders::send_guild_role_update(&ctx, &data).await;
+                }
+                Event::ReactionAdd(data) => {
+                    if data.reaction.guild_id.is_none() {
+                        return;
+                    }
+
+                    senders::send_reaction_add(&ctx, &data).await;
+                }
+                Event::ReactionRemove(data) => {
+                    if data.reaction.guild_id.is_none() {
+                        return;
+                    }
+
+                    senders::send_reaction_remove(&ctx, &data).await;
+                }
+                Event::ReactionRemoveAll(data) => {
+                    if data.guild_id.is_none() {
+                        return;
+                    }
+
+                    senders::send_reaction_remove_all(&ctx, &data).await;
+                }
+                Event::ChannelCreate(data) => {
+                    if data.channel.clone().private().is_some() {
+                        return;
+                    }
+
+                    senders::send_channel_create(&ctx, &data).await;
+                }
+                Event::ChannelDelete(data) => {
+                    if data.channel.clone().private().is_some() {
+                        return;
+                    }
+
+                    senders::send_channel_delete(&ctx, &data).await;
+                }
+                Event::ChannelUpdate(data) => {
+                    if data.channel.clone().private().is_some() {
+                        return;
+                    }
+
+                    senders::send_channel_update(&ctx, &data).await;
+                }
+                Event::ChannelPinsUpdate(data) => {
+                    if data.guild_id.is_none() {
+                        return;
+                    }
+
+                    senders::send_channel_pins_update(&ctx, &data).await;
+                }
+                Event::GuildBanAdd(data) => {
+                    senders::send_guild_ban_add(&ctx, &data).await;
+                }
+                Event::GuildBanRemove(data) => {
+                    senders::send_guild_ban_remove(&ctx, &data).await;
+                }
+                Event::GuildEmojisUpdate(data) => {
+                    senders::send_guild_emojis_update(&ctx, &data).await;
+                }
+                Event::GuildIntegrationsUpdate(data) => {
+                    senders::send_guild_integrations_update(&ctx, &data).await;
                 }
 
                 _ => ()
