@@ -102,7 +102,7 @@ async fn rtfm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
     //println!("done");
 
-    msg.channel_id.say(ctx, "Serenity Async: <https://docs.rs/serenity/0.9.0-rc.0/serenity/>
+    msg.channel_id.say(ctx, "Serenity Tokio: <https://docs.rs/serenity/0.9.0-rc.0/serenity/>
 Serenity ThreadPool: <https://docs.rs/serenity/0.8.7/serenity/>").await?;
 
     Ok(())
