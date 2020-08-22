@@ -211,13 +211,17 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
         headers.insert(AUTHORIZATION, format!("Bearer {}", token).parse().unwrap());
         headers.insert("Client-ID", format!("{}", client_id).parse().unwrap());
 
-        let resp = if let Ok(x) = reqwest.get(url)
+        let resp = match reqwest.get(url)
             .headers(headers.clone())
             .send()
             .await?
             .json::<TwitchStreams>()
-            .await { x } else {
-                continue
+            .await { 
+                Ok(x) => x,
+                Err(why) => {
+                    error!("Error quering Helix API: {}", &why);
+                    continue;
+                }
             };
 
         let stream_data = resp.data;
