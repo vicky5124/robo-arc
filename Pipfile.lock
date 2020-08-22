@@ -59,19 +59,19 @@
         },
         "hikari": {
             "hashes": [
-                "sha256:8836efd78dbf945038db845890321ac0b0011521ad7e90295e829f781e55d5ff",
-                "sha256:9e8aa43e46249c47e0ba3aafe9685bd87539b33034fc6546bb9ee02242b24c47"
+                "sha256:0e8dc356e039692a2c8c3bc4d3f37082f46e233c9857adb0134fc4ee1e473f2d",
+                "sha256:d4122532efd5bcb335f0d2832abd6218d7ba9acf0607633afd8388d8dc98d6cb"
             ],
             "index": "pypi",
-            "version": "==2.0.0.dev56"
+            "version": "==2.0.0.dev68"
         },
         "hikari-lightbulb": {
             "hashes": [
-                "sha256:862984a29d0567aee944a93ba1ed5f85b48232f5bac04402572fda5a09658fc5",
-                "sha256:e1edcb6d85eb11205c31e517c73fa3e8acd60fa6ee74f67a6dfa448a2bd6faa9"
+                "sha256:09f4b8ca10639dac4b9be89433889f28b6aeadf1b0944360129b5bf1d1a8699b",
+                "sha256:8ebc285ced49f3f0ed6a1f1c1b2bcfc0b00e506b4fdad45e22bb85af8f8fa822"
             ],
             "index": "pypi",
-            "version": "==0.0.33"
+            "version": "==0.0.39"
         },
         "idna": {
             "hashes": [

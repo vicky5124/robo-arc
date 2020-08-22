@@ -6,7 +6,7 @@ from contextlib import redirect_stdout
 
 import lightbulb
 import hikari
-from hikari.models.intents import Intent
+from hikari.models.intents import Intents
 
 import toml
 
@@ -20,7 +20,7 @@ PREFIX = "."
 
 bot = lightbulb.Bot(
     token=TOKEN,
-    intents=Intent.PRIVATE_MESSAGES | Intent.GUILD_MESSAGES,
+    intents=Intents.PRIVATE_MESSAGES | Intents.GUILD_MESSAGES,
     stateless=True,
     prefix="​1​7h23n9187q25bwe95rw6e e68 ​fs5e78f56s49d 8f7s5df4sd48f9sd34 ​​[broad-except] Catching too general exception Exception [W0703] s798df8sd6 4fs98d6f48​, yeah, nothing is triggering the command not found error anymore, unless someone looks ​at the source :P, in that case, ​hi nerd!​"
 )
