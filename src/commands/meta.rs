@@ -218,62 +218,9 @@ async fn source(ctx: &Context, msg: &Message) -> CommandResult {
 
 /// Sends the current TO-DO list of the bot
 #[command]
-#[aliases(todo_list)]
+#[aliases(todo_list, issues, bugs, bug)]
 async fn todo(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(ctx, "Alpha: ```prolog
-\"Add a message blacklist of to be deleted.\"
-
-#Osu! 
-\"Fix PP calculation with mods\"
-MapPP (calculates pp of a map, like ezpp or tillerino) / do not use oppai.
-
-#Twitch
-ConfigureMessage (to configure the live message)
-
-#Reddit / tsu_katana has to make this.
-Subreddit (posts a random post from the subreddit specified)
-User (posts a random post from the user specified)
-Sub/User Bomb (posts 5 posts from the subreddit or user specified)
-
-#Mod
-Clear (add specific requieriments like \"only webhooks\") / waiting for the method to return a stream.
-Logging (Add logging for all the other events)
-Logging (Make configuration of logs easier)
-RuleManagement (https://5124.16-b.it/ss/22:50:34_21-06-2020.png)
-
-#Tags
-\"Basically the same as R. Danny, but with personal tags supported\"
-```
-Beta: ```prolog
-#Configure
-YandeRe (make it possible to remove notifications)
-
-#Osu!
-\"Rewrite almost everything lol\"
-OsuC (move to configure group and add compare boolean)
-Score (allow to get scores from other users)
-Compare (split from Score, make it see your scores on your latest recent invoke)
-
-#Optimizations
-PrefixCheck (cache this on a dashmap rather than checking the database every time)
-BooruImages (cache returned data on a dashmap rather than requesting every time)
-
-#Web Server
-\"Update the server list every time the bot joins a guild\"
-Dashboard (allow to configure the bot with a dashboard)
-
-#Readavility
-\"Add comments to everything\"
-
-#AntiSpam
-\"Allow per guild configuration of the action taken when someone spams (mute, ban, kick, nothing)\"
-\"Allow per guild configuration of the number of messages and seconds\"
-\"Allow per guild configuration of the different types of spam to prevent\"
-\"Implement antispam for repeated messages\"
-\"Implement antispam for similar messages\"
-\"Implement antispam for single letter messages\"
-\"Implement antispam for (configurable) lines long messages\"
-```").await?;
+    msg.channel_id.say(ctx, "The TODO List and all the open Issues can be found here:\n<https://gitlab.com/nitsuga5124/robo-arc/-/boards>").await?;
     Ok(())
 }
 
