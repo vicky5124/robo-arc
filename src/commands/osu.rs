@@ -132,7 +132,7 @@ struct OsuUserRecentData {
 struct OsuBeatmapData {
     approved: String,
     submit_date: String,
-    approved_date: String,
+    approved_date: Option<String>,
     last_update: String,
     artist: String,
     beatmap_id: String,
@@ -349,6 +349,7 @@ async fn get_osu_beatmap(beatmap_id: &str, osu_key: &str) -> Result<Vec<OsuBeatm
         .await?
         .json::<Vec<OsuBeatmapData>>()
         .await?;
+
     Ok(resp)
 }
 
@@ -369,10 +370,14 @@ async fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: 
     let osu_key = event_data.osu_key.as_ref().unwrap();
 
     let user_recent = &user_recent_raw[index];
+    println!("1");
     let user_raw = get_osu_user(&user_data.name, &osu_key).await?;
+    println!("2");
     let user = &user_raw[0];
 
+    println!("3");
     let beatmap_raw = get_osu_beatmap(&user_recent.beatmap_id, &osu_key).await?;
+    println!("4");
     let beatmap = &beatmap_raw[0];
 
     let accuracy = acc_math(user_recent.count300.parse()?, user_recent.count100.parse()?, user_recent.count50.parse()?, user_recent.countmiss.parse()?).await;
@@ -382,6 +387,7 @@ async fn short_recent_builder(http: Arc<Http>, event_data: &EventData, bot_msg: 
     let attempts = index;
     let mods: String = get_mods_short(user_recent.enabled_mods.parse()?).await;
 
+    println!("5");
     let rating_url = if user_recent.rank == "F" {
         String::from("https://5124.mywire.org/HDD/Downloads/BoneF.png")
     } else {
@@ -1018,7 +1024,8 @@ async fn recent(ctx: &Context, msg: &Message, arguments: Args) -> CommandResult 
                 _ => (),
             }
 
-            if let Err(_) = short_recent_builder(ctx.http.clone(), &event_data, bot_msg.clone(), page).await {
+            if let Err(why) = short_recent_builder(ctx.http.clone(), &event_data, bot_msg.clone(), page).await {
+                dbg!(&why);
                 break;
             }
             let _ = reaction.as_inner_ref().delete(ctx).await;
