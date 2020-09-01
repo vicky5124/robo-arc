@@ -121,6 +121,7 @@ dependencies = [
  "tokio",
  "toml",
  "tracing",
+ "tracing-futures",
  "tracing-log",
  "tracing-subscriber",
  "walkdir",

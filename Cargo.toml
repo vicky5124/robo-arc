@@ -26,6 +26,7 @@ qrcode = "0.12" # https://github.com/kennytm/qrcode-rust
 tracing = "0.1" # https://github.com/tokio-rs/tracing
 tracing-subscriber = "0.2" # https://github.com/tokio-rs/tracing
 tracing-log = "0.1" # https://github.com/tokio-rs/tracing
+tracing-futures = "0.2" # https://github.com/tokio-rs/tracing
 futures = "0.3" # https://github.com/rust-lang/futures-rs
 http = "0.2" # https://github.com/hyperium/http
 rust-crypto = "0.2" # https://github.com/dagenix/rust-crypto

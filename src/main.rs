@@ -414,9 +414,24 @@ impl LavalinkEventHandler for LavalinkHandler {}
 
 
 // Defines the handler to be used for events.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct Handler {
     run_loops: Mutex<bool>,
+}
+
+async fn is_on_guild(guild_id: u64, ctx: Arc<Context>) -> Result<Json, warp::Rejection> {
+    let cache = &ctx.cache;
+    let guilds = cache.guilds()
+        .await
+        .iter()
+        .map(|i| i.0)
+        .collect::<Vec<_>>();
+
+    let data = Allow {
+        allowed: guilds.contains(&guild_id.clone())
+    };
+    
+    Ok(json(&data))
 }
 
 #[async_trait]
@@ -440,21 +455,11 @@ impl EventHandler for Handler {
 
             let notification_loop = tokio::spawn(async move {notification_loop(ctx_clone).await});
 
-            tokio::spawn(async move {
-                let guilds = ctx_clone2.clone().cache
-                    .guilds()
-                    .await
-                    .iter()
-                    .map(|i| i.0)
-                    .collect::<Vec<_>>();
 
-                let routes = warp::path::param().map(move |guild_id: u64| -> Json {
-                    let data = Allow {
-                        allowed: guilds.contains(&guild_id.clone())
-                    };
-                
-                    json(&data)
-                });
+            tokio::spawn(async move {
+                let routes = warp::path::param()
+                    .and(warp::any().map(move || ctx_clone2.clone()))
+                    .and_then(is_on_guild);
 
                 let ip = web_server_info["server_ip"].as_str().unwrap();
                 let port = web_server_info["server_port"].as_integer().unwrap();
@@ -973,7 +978,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .help(&MY_HELP); // Load the custom help command.
 
     let mut client = Client::new(&bot_token)
-        .event_handler(Handler { run_loops: Mutex::new(true) })
+        .event_handler(Handler {
+            run_loops: Mutex::new(true),
+        })
         .raw_event_handler(logging::events::RawHandler)
         .framework(std_framework)
         .add_intent({
