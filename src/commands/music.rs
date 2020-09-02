@@ -25,6 +25,8 @@ use serenity::{
 
 use lavalink_rs::LavalinkClient;
 
+use tokio::process::Command;
+
 use serde_json;
 use regex::Regex;
 
@@ -403,12 +405,33 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         let lava_client = lava_lock.lock().await;
 
         let mut iter = 0;
+        let mut already_checked = false;
+
         let query_information = loop {
             iter += 1;
             let res = lava_client.auto_search_tracks(&query).await?;
 
             if res.tracks.is_empty() {
                 if iter == 5 {
+                    if !already_checked {
+                        already_checked = true;
+
+                        let output: std::process::Output = Command::new("youtube-dl")
+                            .arg("-g")
+                            .arg(&query)
+                            .output()
+                            .await?;
+
+                        if !output.stdout.is_empty() {
+                            let mut url = String::from_utf8(output.stdout)?;
+                            url.pop();
+
+                            iter = 0;
+                            query = url;
+
+                            continue;
+                        }
+                    }
                     msg.channel_id.say(&ctx, "Could not find any video of the search query.").await?;
                     return Ok(());
                 }
