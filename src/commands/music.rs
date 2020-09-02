@@ -423,11 +423,13 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                             .await?;
 
                         if !output.stdout.is_empty() {
-                            let mut url = String::from_utf8(output.stdout)?;
-                            url.pop();
+                            let stdout = String::from_utf8(output.stdout)?;
+                            let mut stdout = stdout.split('\n').collect::<Vec<_>>();
+                            stdout.pop();
+                            let url = stdout.last().unwrap();
 
                             iter = 0;
-                            query = url;
+                            query = url.to_string();
 
                             continue;
                         }
