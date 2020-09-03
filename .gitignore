@@ -2,6 +2,7 @@
 **/*.rs.bk
 tokens.toml
 config.toml
+Makefile.toml
 .env
 i_want_to_see.txt
 *.log

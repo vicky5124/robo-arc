@@ -1,0 +1,59 @@
+[env]
+PSQL_URL = "postgres://username:password@localhost:5432/database_name"
+DEPLOY_SSH = "pi@10.10.10.1"
+DEPLOY_PATH = "/home/pi/Documents/robo-arc"
+DATABASE_URL = { unset = true }
+
+[tasks.build]
+command = "cargo"
+args = ["build", "${@}"]
+
+[tasks.build_release]
+command = "cargo"
+args = ["build", "--release", "${@}"]
+
+[tasks.build_arm]
+command = "cross"
+args = ["build", "--target", "armv7-unknown-linux-gnueabihf", "--features", "vendored-openssl"]
+
+[tasks.build_arm_release]
+command = "cross"
+args = ["build", "--target", "armv7-unknown-linux-gnueabihf", "--release", "--features", "vendored-openssl"]
+
+[tasks.sqlx_migrate]
+env = { "DATABASE_URL" = "${PSQL_URL}" }
+command = "cargo"
+args = ["sqlx", "migrate", "run"]
+
+[tasks.sqlx_migrate_info]
+env = { "DATABASE_URL" = "${PSQL_URL}" }
+command = "cargo"
+args = ["sqlx", "migrate", "info"]
+
+[tasks.sqlx_prepare]
+aliases = ["offline"]
+env = { "DATABASE_URL" = "${PSQL_URL}" }
+command = "cargo"
+args = ["sqlx", "prepare"]
+
+[tasks.sqlx_prepare_check]
+aliases = ["offline_check"]
+env = { "DATABASE_URL" = "${PSQL_URL}" }
+command = "cargo"
+args = ["sqlx", "prepare", "--check"]
+
+[tasks.git_reset]
+command = "git"
+args = ["reset", "--hard"]
+
+[tasks.git_pull]
+command = "git"
+args = ["pull"]
+
+[tasks.pi]
+dependencies = ["git_reset", "git_pull", "sqlx_migrate", "sqlx_migrate_info", "build_arm_release"]
+
+[tasks.deploy]
+aliases = ["scp"]
+command = "scp"
+args = ["./target/armv7-unknown-linux-gnueabihf/release/arc_bot", "${DEPLOY_SSH}:${DEPLOY_PATH}"]
