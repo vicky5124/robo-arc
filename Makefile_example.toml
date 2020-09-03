@@ -30,14 +30,18 @@ env = { "DATABASE_URL" = "${PSQL_URL}" }
 command = "cargo"
 args = ["sqlx", "migrate", "info"]
 
+[tasks.offline]
+alias = "sqlx_prepare"
+
 [tasks.sqlx_prepare]
-aliases = ["offline"]
 env = { "DATABASE_URL" = "${PSQL_URL}" }
 command = "cargo"
 args = ["sqlx", "prepare"]
 
+[tasks.offline_check]
+alias = "sqlx_prepare_check"
+
 [tasks.sqlx_prepare_check]
-aliases = ["offline_check"]
 env = { "DATABASE_URL" = "${PSQL_URL}" }
 command = "cargo"
 args = ["sqlx", "prepare", "--check"]
@@ -53,7 +57,9 @@ args = ["pull"]
 [tasks.pi]
 dependencies = ["git_reset", "git_pull", "sqlx_migrate", "sqlx_migrate_info", "build_arm_release"]
 
+[tasks.scp]
+alias = "deploy"
+
 [tasks.deploy]
-aliases = ["scp"]
 command = "scp"
 args = ["./target/armv7-unknown-linux-gnueabihf/release/arc_bot", "${DEPLOY_SSH}:${DEPLOY_PATH}"]
