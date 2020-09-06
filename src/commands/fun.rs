@@ -4,7 +4,10 @@ use crate::{
     utils::basic_functions::string_to_seconds,
 };
 
-use std::time::Duration;
+use std::{
+    time::Duration,
+    collections::HashMap,
+};
 
 use serenity::{
     prelude::Context,
@@ -18,7 +21,10 @@ use serenity::{
     },
 };
 
-use serde::Deserialize;
+use serde::{
+    Deserialize,
+    Serialize,
+};
 use tracing::error;
 use qrcode::{
     QrCode,
@@ -66,12 +72,27 @@ struct UrbanList {
     list: Vec<UrbanDict>
 }
 
-// Struct used to deserialize the response from the yandex translate api call.
-#[derive(Deserialize)]
-struct YandexTranslate {
-    code: u16,
-    lang: Option<String>,
-    text: Option<Vec<String>>,
+#[derive(Debug, Serialize, Deserialize)]
+struct Translate {
+    translations: Vec<Translation>,
+    word_count: i64,
+    character_count: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Translation {
+    translation: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct TranslateIdentify {
+    languages: Vec<Language>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Language {
+    language: String,
+    confidence: f64,
 }
 
 /// Sends a qr code of the term mentioned.
@@ -143,82 +164,113 @@ async fn urban(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
 /// Translates a text to the specified language.
 ///
+/// Available languages can be found here:
+/// http://5124.mywire.org:8088/paste/7WobXTQ?lang=json
+///
+/// Note: Some lesser used languages may take longer to translate.
+///
 /// Usage:
 ///
 /// Translate to japanese:
 /// `translate ja Hello, World!`
-/// Translate from spanish to japanese:
+/// Translate from spanish to english:
 /// `translate es-en Hola!`
 #[command]
 #[aliases(trans)]
 #[min_args(2)]
 async fn translate(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let yandex_token = {
+    let (token, url) = {
         let data_read = ctx.data.read().await;
         let tokens = data_read.get::<Tokens>().unwrap();
-        tokens["yandex"].as_str().unwrap().to_string()
+        (
+            tokens["ibm"]["token"].as_str().unwrap().to_string(),
+            tokens["ibm"]["url"].as_str().unwrap().to_string(),
+        )
     };
 
-    let mut dest = args.single::<String>()?;
-    let text = args.rest();
-
-    dest = match dest.as_str() {
-        "jp" => "ja".to_string(),
-        "kr" => "ko".to_string(),
-        _ => dest,
-    };
-
-    let url = Url::parse_with_params("https://translate.yandex.net/api/v1.5/tr.json/translate",
-                                     &[
-                                        ("key", yandex_token),
-                                        ("text", text.to_string()),
-                                        ("lang", dest),
-                                     ])?;
+    let mut dest = args.single_quoted::<String>()?;
+    dest = dest.replace("@", "");
+    let text = args.rest().to_string();
 
     let reqwest = ReqwestClient::new();
-    let resp = reqwest.get(url)
-        .send()
-        .await?
-        .json::<YandexTranslate>()
-        .await?;
 
-    if resp.code == 200 {
-        let mut fields = vec![
-            ("Original Text", text.to_string() + "\n", false),
-        ];
-
-        let mut resp_langs = if let Some(l) = &resp.lang {
-            l.split('-').into_iter()
-        } else {
-            msg.channel_id.say(ctx, "An invalid destination language was given").await?;
-            return Ok(());
+    if dest.split('-').count() == 1 {
+        dest = match dest.as_str() {
+            "jp" => "ja".to_string(),
+            "kr" => "ko".to_string(),
+            "no" => "nb".to_string(),
+            "nk" => "nb".to_string(),
+            "po" => "pl".to_string(),
+            "ch" => "zh".to_string(),
+            _ => dest,
         };
 
-        for translated_text in &resp.text.unwrap() {
-            fields.push(("Translation", translated_text.to_string(), false));
+        let identify_url = format!("{}/v3/identify?version=2018-05-01", url);
+
+        let resp = reqwest.post(&identify_url)
+            .basic_auth("apikey", Some(&token))
+            .body(text.to_string())
+            .send()
+            .await?
+            .json::<TranslateIdentify>()
+            .await?;
+
+        let original = resp.languages.iter().filter_map(|i| {
+            if i.confidence > 0.1 {
+                Some(i.language.to_string())
+            } else {
+                None
+            }
+        }).collect::<Vec<_>>();
+
+        if original.is_empty() {
+            msg.reply(ctx, format!("The source language could not be detected, please use `lang-{}` on the command, where lang is the short for the original language used", dest)).await?;
+            return Ok(());
+        } else if original.len() == 1 {
+            dest = format!("{}-{}", original[0], dest);
+        } else {
+            let langs = original.iter().map(|i| format!("`{}-{}`", i, dest)).collect::<Vec<_>>();
+            msg.reply(ctx, format!("A language could not be specified, please use one of the following:\n{}; as the laanguage argument", langs.join(", "))).await?;
+            return Ok(());
         }
-
-
-        msg.channel_id.send_message(ctx, |m| {
-            m.content(format!("From **{}** to **{}**", resp_langs.next().unwrap(), resp_langs.next().unwrap()));
-            m.embed(|e| {
-                e.fields(fields)
-            })
-        }).await?;
-    } else if resp.code == 404 {
-        msg.channel_id.say(ctx, "The daily translation limit was exceeded.").await?;
-    } else if resp.code == 413 {
-        msg.channel_id.say(ctx, "The text length limit was exceeded.").await?;
-    } else if resp.code == 422 {
-        msg.channel_id.say(ctx, "The text could not be translated.").await?;
-    } else if resp.code == 501 {
-        msg.channel_id.say(ctx, "The specified target language is not supported.").await?;
-    } else if resp.code == 502 {
-        msg.channel_id.say(ctx, "The specified language doesn't exist.").await?;
-    } else {
-        msg.channel_id.say(ctx, "An unhandled error happened.").await?;
     }
 
+    let translate_url = format!("{}/v3/translate?version=2018-05-01", url);
+
+    let mut map: HashMap<&str, String> = HashMap::new();
+    map.insert("text", text);
+    map.insert("model_id", dest);
+
+    let resp = reqwest.post(&translate_url)
+        .basic_auth("apikey", Some(&token))
+        .json(&map)
+        .send()
+        .await?
+        .json::<Translate>()
+        .await;
+
+    let resp = match resp {
+        Ok(x) => x,
+        Err(_) => {
+            let mut dest = map["model_id"].splitn(2, "-");
+            msg.reply(ctx, format!("Failed to translate, probably because either `{}` or `{}` or both, are invalid languages.\n Please see <http://5124.mywire.org:8088/paste/7WobXTQ?lang=json> for a list of valid languages.", dest.next().unwrap(), dest.next().unwrap())).await?;
+            return Ok(());
+        }
+    };
+
+    let fields = vec![
+        ("Original Text", map["text"].to_string() + "\n", false),
+        ("Translation", resp.translations[0].translation.to_string(), false),
+    ];
+
+    let mut dest = map["model_id"].splitn(2, "-");
+
+    msg.channel_id.send_message(ctx, |m| {
+        m.content(format!("From **{}** to **{}**", dest.next().unwrap(), dest.next().unwrap()));
+        m.embed(|e| {
+            e.fields(fields)
+        })
+    }).await?;
     Ok(())
 }
 
