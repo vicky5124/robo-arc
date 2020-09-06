@@ -1,6 +1,5 @@
 osu = "" # https://osu.ppy.sh/p/api/
 discord = "" 
-yandex = "" # https://translate.yandex.com/developers/keys
 
 # This needs to be an oauth token
 # curl  -X POST https://id.twitch.tv/oauth2/token\?client_id\={}\&client_secret\={}\&grant_type=client_credentials
@@ -29,3 +28,9 @@ password = "youshallnotpass"
 [web_server]
 server_ip = "127.0.0.1" # only an ip is supported
 server_port = 54424
+
+# https://cloud.ibm.com
+# Language Translator Service
+[ibm]
+token = ""
+url = ""
