@@ -42,10 +42,7 @@ use utils::database::*; // Obtain the get_database function from the utilities.
 use utils::basic_functions::capitalize_first; // Obtain the capitalize_first function from the utilities.
 
 use std::{
-    collections::{
-        HashSet, // Low cost indexable lists.
-        //HashMap,
-    },
+    collections::HashSet, // Low cost indexable lists.
     // For saving / reading files
     fs::File,
     io::prelude::*,
@@ -53,10 +50,7 @@ use std::{
     // For having refferences between threads
     sync::Arc,
     convert::TryInto,
-    time::{
-        Instant,
-        //Duration,
-    },
+    time::Instant,
 
     net::SocketAddr,
     str::FromStr,
