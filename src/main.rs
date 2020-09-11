@@ -553,6 +553,7 @@ impl EventHandler for Handler {
             for i in 0..l {
                 if pif.chars().into_iter().nth(i) != content.chars().into_iter().nth(i) {
                     correct = false;
+                    break;
                 }
             }
 
