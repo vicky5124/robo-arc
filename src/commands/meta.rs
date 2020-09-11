@@ -421,7 +421,7 @@ async fn terms_of_service(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(ctx, "
 I know you likely don't care much about this, so i'll keep them short.
 
-By agreeing with this terms of service you agree that the application should be able to store all your messages and discord user data; This user data includes your account ID, Username, Password and Avatar, along with a history of each; No personal information is ever stored.
+By agreeing with this terms of service you agree that the application should be able to store all your messages and discord user data; This user data includes your account ID, Username, Discriminator and Avatar, along with a history of each; No personal information is ever stored.
 The application is completely open source, so you always are able to see what data is exactly being stored.
 
 All of this data is completely encrypted and will NEVER be used for any other purpose than logging inside discord itself.
@@ -429,5 +429,15 @@ All of this data is completely encrypted and will NEVER be used for any other pu
 If you still don't want to have this data stored, contact nitsuga5124#2207, and all your data will be deleted and stopped from being logged.
 ").await?;
 
+    Ok(())
+}
+
+#[command]
+#[aliases(features, bugs, report, reports, suggest, suggestions)]
+async fn issues(ctx: &Context, msg: &Message) -> CommandResult {
+    msg.channel_id.say(ctx, "
+You are free to submit issues, bug reports and new features to the issues page:
+<https://gitlab.com/nitsuga5124/robo-arc/-/issues>
+").await?;
     Ok(())
 }
