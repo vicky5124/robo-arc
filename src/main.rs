@@ -264,7 +264,7 @@ struct Master;
 // this group includes the commands that basically every bot has, nothing really special.
 #[group("Meta")]
 #[description = "All the basic commands that basically every bot has."]
-#[commands(ping, test, invite, source, todo, prefixes, about, changelog, reload_db)]
+#[commands(ping, test, invite, source, todo, prefixes, about, changelog, reload_db, terms_of_service)]
 struct Meta;
 
 // The SankakuComplex command group.
