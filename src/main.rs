@@ -1,5 +1,6 @@
 #![feature(core_intrinsics)]
 #![feature(async_closure)]
+#![type_length_limit="1331829"]
 /// This is a discord bot made with `serenity.rs` as a Rust learning project.
 /// If you see a lot of different ways to do the same thing, specially with error handling,
 /// this is indentional, as it helps me remember the concepts that rust provides, so they can be
