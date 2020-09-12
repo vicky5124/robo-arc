@@ -1,0 +1,17 @@
+[package]
+name = "eval"
+version = "0.1.0"
+authors = ["nitsuga5124 <nitsuga5124@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde_json = "1.0"
+tokio = { version = "0.2", features = ["full"]}
+
+twilight-model = { branch = "trunk", git = "https://github.com/twilight-rs/twilight" }
+twilight-mention = { branch = "trunk", git = "https://github.com/twilight-rs/twilight" }
+twilight-embed-builder = { branch = "trunk", git = "https://github.com/twilight-rs/twilight" }
+twilight-http = { branch = "trunk", git = "https://github.com/twilight-rs/twilight" }
+twilight-standby = { branch = "trunk", git = "https://github.com/twilight-rs/twilight" }

@@ -6,11 +6,13 @@ use crate::{
         basic_functions::seconds_to_days,
     },
     Uptime,
+    Tokens,
 };
 use std::{
     fs::{
         File,
         read_to_string,
+        OpenOptions,
     },
     io::prelude::*,
     process::id,
@@ -43,6 +45,108 @@ use toml::Value;
 use tokio::process::Command;
 use serde_json::json;
 use walkdir::WalkDir;
+
+use serde::{
+    Deserialize,
+    Serialize,
+};
+use serde_aux::prelude::*;
+
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EvalMessage {
+    #[serde(deserialize_with = "deserialize_string_from_number")]
+    pub id: String,
+    #[serde(rename = "type")]
+    pub eval_message_type: i64,
+    pub content: String,
+    #[serde(deserialize_with = "deserialize_string_from_number")]
+    pub channel_id: String,
+    pub author: EvalMessageAuthor,
+    pub attachments: Vec<Attachment>,
+    pub embeds: Vec<Embed>,
+    pub pinned: bool,
+    pub mention_everyone: bool,
+    pub tts: bool,
+    pub timestamp: String,
+    pub flags: i64,
+
+    pub mention_roles: Vec<Option<serde_json::Value>>,
+    pub mentions: Vec<Option<serde_json::Value>>,
+    pub edited_timestamp: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Attachment {
+    #[serde(deserialize_with = "deserialize_string_from_number")]
+    pub id: String,
+    pub filename: String,
+    pub size: i64,
+    pub url: String,
+    pub proxy_url: String,
+    pub width: i64,
+    pub height: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EvalMessageAuthor {
+    #[serde(deserialize_with = "deserialize_string_from_number")]
+    pub id: String,
+    pub username: String,
+    pub avatar: String,
+    #[serde(deserialize_with = "deserialize_string_from_number")]
+    pub discriminator: String,
+    pub bot: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Embed {
+    #[serde(rename = "type")]
+    pub embed_type: String,
+    pub url: String,
+    pub title: String,
+    pub description: String,
+    pub color: i64,
+    pub timestamp: String,
+    pub fields: Vec<Field>,
+    pub author: EmbedAuthor,
+    pub image: Image,
+    pub thumbnail: Image,
+    pub footer: Footer,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EmbedAuthor {
+    pub name: String,
+    pub url: String,
+    pub icon_url: String,
+    pub proxy_icon_url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Field {
+    pub name: String,
+    pub value: String,
+    pub inline: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Footer {
+    pub text: String,
+    pub icon_url: String,
+    pub proxy_icon_url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Image {
+    pub url: String,
+    pub proxy_url: String,
+    pub width: i64,
+    pub height: i64,
+}
+
+
 
 #[command] // Sets up a command
 #[aliases("pong", "latency")] // Sets up aliases to that command.
@@ -439,5 +543,85 @@ async fn issues(ctx: &Context, msg: &Message) -> CommandResult {
 You are free to submit issues, bug reports and new features to the issues page:
 <https://gitlab.com/nitsuga5124/robo-arc/-/issues>
 ").await?;
+    Ok(())
+}
+
+#[command]
+#[owners_only]
+async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let token = {
+        let read_data = ctx.data.read().await;
+        let config = read_data.get::<Tokens>().unwrap();
+        config["discord"].clone()
+    };
+
+    let message = serde_json::to_string(&msg)?;
+    let message: EvalMessage = serde_json::from_str(&message)?;
+    let message = serde_json::to_string(&message)?;
+
+    let raw_eval_code = args.message();
+
+    let eval_code = if raw_eval_code.starts_with("```rs") && raw_eval_code.ends_with("```") {
+        raw_eval_code[5..raw_eval_code.len()-3].to_string() + ";"
+    } else if raw_eval_code.starts_with("```") && raw_eval_code.ends_with("```") {
+        raw_eval_code[3..raw_eval_code.len()-3].to_string() + ";"
+    } else {
+        raw_eval_code.to_string() + ";"
+    };
+
+    let mut file = OpenOptions::new()
+        .write(true)
+        .append(false)
+        .create(true)
+        .open("eval/src/main.rs")?;
+
+    let code = format!(r#####"
+#![allow(unused_variables)]
+#![allow(redundant_semicolons)]
+use std::error::Error;
+
+use twilight_http::Client;
+use twilight_model::channel::message::Message;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {{
+    let client = Client::new({});
+    let ctx = &client;
+
+    let msg: Message = serde_json::from_str(r####"{}"####)?;
+
+{}
+
+    Ok(())
+}}
+"#####, token, message, eval_code);
+
+    file.set_len(0)?;
+    write!(file, "{}", code)?;
+
+    let output = Command::new("cargo")
+        .arg("make")
+        .arg("-l")
+        .arg("error")
+        .arg("eval")
+        .output()
+        .await?;
+
+    let stdout = String::from_utf8(output.stdout.clone()).unwrap();
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    if !stdout.is_empty() {
+        msg.channel_id.send_message(ctx, |m| m.embed(|e| {
+            e.title("Rust Eval (stdout)");
+            e.description(format!("```rs\n{}\n```", stdout))
+        })).await?;
+    }
+    if !stderr.is_empty() {
+        msg.channel_id.send_message(ctx, |m| m.embed(|e| {
+            e.title("Rust Eval (stderr)");
+            e.description(format!("```rs\n{}\n```", stderr))
+        })).await?;
+    }
+
     Ok(())
 }
