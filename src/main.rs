@@ -490,6 +490,11 @@ impl EventHandler for Handler {
                 Some(Activity::listening(info["status"].as_str().unwrap())),
                 OnlineStatus::Online
             ).await;
+        } else if info["play_or_listen"].as_str().unwrap() == "competing" {
+            ctx.set_presence(
+                Some(Activity::competing(info["status"].as_str().unwrap())),
+                OnlineStatus::Online
+            ).await;
         }
         info!("Bot is READY");
         println!("{} is ready to rock!", ready.user.name);
