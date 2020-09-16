@@ -127,7 +127,7 @@ async fn urban(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .await?;
 
     if resp.list.is_empty() {
-        msg.channel_id.say(ctx, format!("The term '{}' has no Urban Definitions", term)).await?;
+        msg.channel_id.say(ctx, format!("The term '{}' has no Urban Definitions", term.replace("@", ""))).await?;
     } else {
         let choice = &resp.list[0];
         let parsed_definition = &choice.definition.replace("[", "").replace("]", "");
