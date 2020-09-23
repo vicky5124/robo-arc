@@ -10,3 +10,5 @@ i_want_to_see.txt
 /dev*
 *.dev
 /eval/target
+/opus
+/eval/src/

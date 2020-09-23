@@ -1,4 +1,4 @@
-use crate::ConnectionPool;
+use crate::global_data::DatabasePool;
 use crate::utils::logging::LoggingEvents;
 
 //use tracing::{
@@ -23,10 +23,13 @@ use serenity::{
 };
 
 pub async fn send_message_update(ctx: &Context, data: &MessageUpdateEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
+
     let old_message = sqlx::query!("SELECT content_history FROM log_messages WHERE id = $1", data.id.0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await;
     if let Ok(old_message) = old_message {
         if let Some(old_message) = old_message {
@@ -34,7 +37,7 @@ pub async fn send_message_update(ctx: &Context, data: &MessageUpdateEvent) {
                 let old_message_content = old_message.get(old_message.len().checked_sub(1).unwrap_or(0));
                 if old_message_content.clone().unwrap_or(&String::new()) != &data.content.clone().unwrap_or_default() {
                     let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.guild_id.unwrap().0 as i64)
-                        .fetch_optional(pool)
+                        .fetch_optional(&pool)
                         .await;
 
                     if let Ok(query) = query {
@@ -83,15 +86,18 @@ pub async fn send_message_update(ctx: &Context, data: &MessageUpdateEvent) {
 }
 
 pub async fn send_message_delete(ctx: &Context, data: &MessageDeleteEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
+
     let result = sqlx::query!("SELECT content, author_id, attachments, pinned, edited_timestamp, tts, webhook_id FROM log_messages WHERE id = $1", data.message_id.0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await;
 
     if let Ok(message) = result {
         let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.guild_id.unwrap().0 as i64)
-            .fetch_optional(pool)
+            .fetch_optional(&pool)
             .await;
 
         if let Ok(query) = query {
@@ -153,11 +159,13 @@ pub async fn send_message_delete(ctx: &Context, data: &MessageDeleteEvent) {
 }
 
 pub async fn send_guild_member_add(ctx: &Context, data: &GuildMemberAddEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.guild_id.0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await;
 
     if let Ok(query) = query {
@@ -181,11 +189,13 @@ pub async fn send_guild_member_add(ctx: &Context, data: &GuildMemberAddEvent) {
 }
 
 pub async fn send_guild_member_remove(ctx: &Context, data: &GuildMemberRemoveEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.guild_id.0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await;
 
     if let Ok(query) = query {
@@ -206,11 +216,13 @@ pub async fn send_guild_member_remove(ctx: &Context, data: &GuildMemberRemoveEve
 }
 
 pub async fn send_message_delete_bulk(ctx: &Context, data: &MessageDeleteBulkEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.guild_id.unwrap().0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await;
 
     if let Ok(query) = query {
@@ -227,11 +239,13 @@ pub async fn send_message_delete_bulk(ctx: &Context, data: &MessageDeleteBulkEve
 }
 
 pub async fn send_guild_role_create(ctx: &Context, data: &GuildRoleCreateEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.guild_id.0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await;
 
     if let Ok(query) = query {
@@ -255,11 +269,13 @@ pub async fn send_guild_role_create(ctx: &Context, data: &GuildRoleCreateEvent) 
 }
 
 pub async fn send_guild_role_delete(ctx: &Context, data: &GuildRoleDeleteEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.guild_id.0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await;
 
     if let Ok(query) = query {
@@ -279,6 +295,7 @@ pub async fn send_guild_role_delete(ctx: &Context, data: &GuildRoleDeleteEvent) 
 }
 
 // discord sends update of every single role, even if a role has not changed...
+// possition changes smh
 pub async fn send_guild_role_update(_ctx: &Context, _data: &GuildRoleUpdateEvent) {
     //let rdata = ctx.data.read().await;
     //let pool = rdata.get::<ConnectionPool>().unwrap();
@@ -308,11 +325,13 @@ pub async fn send_guild_role_update(_ctx: &Context, _data: &GuildRoleUpdateEvent
 }
 
 pub async fn send_guild_member_update(ctx: &Context, data: &GuildMemberUpdateEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.guild_id.0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await;
 
     if let Ok(query) = query {
@@ -323,7 +342,7 @@ pub async fn send_guild_member_update(ctx: &Context, data: &GuildMemberUpdateEve
                     a.icon_url(data.user.face());
                     a.name(data.user.tag())
                 });
-                e.description(format!("The user <@{}> has been updated", &data.user.id.0));
+                e.description(format!("The user <@!{}> has been updated", &data.user.id.0));
                 e.field("User ID", &data.user.id.0, false);
                 if let Some(nick) = &data.nick {
                     e.field("Nickname", nick, false);
@@ -341,11 +360,13 @@ pub async fn send_guild_member_update(ctx: &Context, data: &GuildMemberUpdateEve
 }
 
 pub async fn send_reaction_add(ctx: &Context, data: &ReactionAddEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.reaction.guild_id.unwrap().0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await;
 
     if let Ok(query) = query {
@@ -353,7 +374,7 @@ pub async fn send_reaction_add(ctx: &Context, data: &ReactionAddEvent) {
             let reaction = &data.reaction;
             let _ = ChannelId(query.channel_id as u64).send_message(ctx, |m| m.embed(|e| {
                 e.title("Reaction Added");
-                e.description(format!("Reaction on <#{0}> in [this message](https://discord.com/channels/{1}/{0}/{2})", reaction.channel_id.0, reaction.guild_id.unwrap().0, reaction.message_id.0));
+                e.description(format!("Reaction on <#{0}> in [this message](https://discord.com/channels/{1}/{0}/{2}) by <@!{3}>", reaction.channel_id.0, reaction.guild_id.unwrap().0, reaction.message_id.0, reaction.user_id.unwrap().0));
                 e.field("User ID", reaction.user_id.unwrap().0, false);
 
                 let mut id = 0;
@@ -394,11 +415,13 @@ pub async fn send_reaction_add(ctx: &Context, data: &ReactionAddEvent) {
 }
 
 pub async fn send_reaction_remove(ctx: &Context, data: &ReactionRemoveEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.reaction.guild_id.unwrap().0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await;
 
     if let Ok(query) = query {
@@ -406,7 +429,7 @@ pub async fn send_reaction_remove(ctx: &Context, data: &ReactionRemoveEvent) {
             let reaction = &data.reaction;
             let _ = ChannelId(query.channel_id as u64).send_message(ctx, |m| m.embed(|e| {
                 e.title("Reaction Removed");
-                e.description(format!("Reaction on <#{0}> in [this message](https://discord.com/channels/{1}/{0}/{2})", reaction.channel_id.0, reaction.guild_id.unwrap().0, reaction.message_id.0));
+                e.description(format!("Reaction on <#{0}> in [this message](https://discord.com/channels/{1}/{0}/{2}) by <@!{3}>", reaction.channel_id.0, reaction.guild_id.unwrap().0, reaction.message_id.0, reaction.user_id.unwrap().0));
                 e.field("User ID", reaction.user_id.unwrap().0, false);
 
                 let mut id = 0;
@@ -447,11 +470,13 @@ pub async fn send_reaction_remove(ctx: &Context, data: &ReactionRemoveEvent) {
 }
 
 pub async fn send_reaction_remove_all(ctx: &Context, data: &ReactionRemoveAllEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.guild_id.unwrap().0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await;
 
     if let Ok(query) = query {
@@ -472,15 +497,17 @@ pub async fn send_reaction_remove_all(ctx: &Context, data: &ReactionRemoveAllEve
 }
 
 pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let mut channel_id = 0;
 
     match &data.channel {
         Channel::Guild(channel) => {
             let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", channel.guild_id.0 as i64)
-                .fetch_optional(pool)
+                .fetch_optional(&pool)
                 .await;
             if let Ok(query) = query {
                 if let Some(query) = query {
@@ -490,7 +517,7 @@ pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
         }
         Channel::Category(category) => {
             let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", category.guild_id.0 as i64)
-                .fetch_optional(pool)
+                .fetch_optional(&pool)
                 .await;
             if let Ok(query) = query {
                 if let Some(query) = query {
@@ -597,15 +624,17 @@ pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
 }
 
 pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let mut channel_id = 0;
 
     match &data.channel {
         Channel::Guild(channel) => {
             let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", channel.guild_id.0 as i64)
-                .fetch_optional(pool)
+                .fetch_optional(&pool)
                 .await;
             if let Ok(query) = query {
                 if let Some(query) = query {
@@ -615,7 +644,7 @@ pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
         }
         Channel::Category(category) => {
             let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", category.guild_id.0 as i64)
-                .fetch_optional(pool)
+                .fetch_optional(&pool)
                 .await;
             if let Ok(query) = query {
                 if let Some(query) = query {
@@ -722,15 +751,17 @@ pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
 }
 
 pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let mut channel_id = 0;
 
     match &data.channel {
         Channel::Guild(channel) => {
             let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", channel.guild_id.0 as i64)
-                .fetch_optional(pool)
+                .fetch_optional(&pool)
                 .await;
             if let Ok(query) = query {
                 if let Some(query) = query {
@@ -740,7 +771,7 @@ pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
         }
         Channel::Category(category) => {
             let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", category.guild_id.0 as i64)
-                .fetch_optional(pool)
+                .fetch_optional(&pool)
                 .await;
             if let Ok(query) = query {
                 if let Some(query) = query {
@@ -847,11 +878,13 @@ pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
 }
 
 pub async fn send_channel_pins_update(ctx: &Context, data: &ChannelPinsUpdateEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.guild_id.unwrap().0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await;
 
     if let Ok(query) = query {
@@ -874,11 +907,13 @@ pub async fn send_channel_pins_update(ctx: &Context, data: &ChannelPinsUpdateEve
 }
 
 pub async fn send_guild_ban_add(ctx: &Context, data: &GuildBanAddEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.guild_id.0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await;
 
     if let Ok(query) = query {
@@ -908,11 +943,13 @@ pub async fn send_guild_ban_add(ctx: &Context, data: &GuildBanAddEvent) {
 }
 
 pub async fn send_guild_ban_remove(ctx: &Context, data: &GuildBanRemoveEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.guild_id.0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await;
 
     if let Ok(query) = query {
@@ -942,11 +979,13 @@ pub async fn send_guild_ban_remove(ctx: &Context, data: &GuildBanRemoveEvent) {
 }
 
 pub async fn send_guild_emojis_update(ctx: &Context, data: &GuildEmojisUpdateEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.guild_id.0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await;
 
     if let Ok(query) = query {
@@ -973,11 +1012,13 @@ pub async fn send_guild_emojis_update(ctx: &Context, data: &GuildEmojisUpdateEve
 }
 
 pub async fn send_guild_integrations_update(ctx: &Context, data: &GuildIntegrationsUpdateEvent) {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let query = sqlx::query!("SELECT * FROM logging_channels WHERE guild_id = $1", data.guild_id.0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await;
 
     if let Ok(query) = query {

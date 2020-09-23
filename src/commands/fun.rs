@@ -1,6 +1,8 @@
 use crate::{
-    Tokens,
-    ConnectionPool,
+    global_data::{
+        Tokens,
+        DatabasePool,
+    },
     utils::basic_functions::string_to_seconds,
 };
 
@@ -183,8 +185,8 @@ async fn translate(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
         let data_read = ctx.data.read().await;
         let tokens = data_read.get::<Tokens>().unwrap();
         (
-            tokens["ibm"]["token"].as_str().unwrap().to_string(),
-            tokens["ibm"]["url"].as_str().unwrap().to_string(),
+            tokens.ibm.token.to_string(),
+            tokens.ibm.url.to_string(),
         )
     };
 
@@ -579,8 +581,10 @@ async fn calculator(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[aliases(remindme, reminder, remind, schedule)]
 #[min_args(1)]
 async fn remind_me(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let unformatted_time = args.single_quoted::<String>()?;
     let text = args.rest();
@@ -606,7 +610,7 @@ async fn remind_me(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
         msg.author.id.0 as i64,
         message,
     )
-    .execute(pool)
+    .execute(&pool)
     .await?;
 
     msg.react(ctx, '👍').await?;

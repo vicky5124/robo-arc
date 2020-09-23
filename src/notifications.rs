@@ -1,14 +1,10 @@
-use crate::{
-    ConnectionPool,
-    //Lavalink,
-    Tokens,
-    SentTwitchStreams,
-    //VoiceManager,
-    utils::booru::{
-        SAFE_BANLIST,
-        UNSAFE_BANLIST,
-    },
+use crate::utils::booru::{
+    SAFE_BANLIST,
+    UNSAFE_BANLIST,
 };
+
+use crate::global_data::*;
+
 use std::{
     time::Duration,
     sync::Arc,
@@ -82,11 +78,13 @@ struct TwitchUserData {
 }
 
 async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
-    let data_read = ctx.data.read().await;
-    let pool = data_read.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let data = sqlx::query!("SELECT * FROM new_posts")
-        .fetch_all(pool)
+        .fetch_all(&pool)
         .await?;
 
 
@@ -139,9 +137,9 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
                     }
 
                     let allow_hooks = {
-                        let read_data = ctx.data.read().await;
-                        let config = read_data.get::<Tokens>().unwrap();
-                        config["webhook_notifications"].as_bool().unwrap()
+                        let data_read = ctx.data.read().await;
+                        let config = data_read.get::<Tokens>().unwrap();
+                        config.webhook_notifications
                     };
 
                     if allow_hooks {
@@ -168,7 +166,7 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
                     sqlx::query!(
                         "UPDATE new_posts SET sent_md5 = $1 WHERE booru_url = $2 AND tags = $3",
                         &md5s, &base_url, &tags
-                    ).execute(pool).await?;
+                    ).execute(&pool).await?;
                 }
             }
         }
@@ -187,21 +185,26 @@ async fn check_changes(data: &TwitchStreamData, sent_streams: Arc<RwLock<Vec<Twi
 }
 
 async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
-    let (token, client_id) = {
+    let (pool, sent_streams, token, client_id) = {
         let data_read = ctx.data.read().await;
+
         let tokens = data_read.get::<Tokens>().unwrap();
-        let token = tokens["twitch"].as_str().unwrap().to_string();
-        let client_id = tokens["twitch_client_id"].as_str().unwrap().to_string();
-        (token, client_id)
+        let pool = data_read.get::<DatabasePool>().unwrap();
+        let sent_streams = data_read.get::<SentTwitchStreams>().unwrap();
+
+        let token = tokens.twitch.to_string();
+        let client_id = tokens.twitch_client_id.to_string();
+
+        (
+            pool.clone(),
+            sent_streams.clone(),
+            token,
+            client_id
+        )
     };
 
-    let data_read = ctx.data.read().await;
-
-    let pool = data_read.get::<ConnectionPool>().unwrap();
-    let sent_streams = data_read.get::<SentTwitchStreams>().unwrap();
-
     let data = sqlx::query!("SELECT * FROM streamers")
-        .fetch_all(pool)
+        .fetch_all(&pool)
         .await?;
 
     for i in data {
@@ -226,9 +229,9 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
 
         let stream_data = resp.data;
         if !stream_data.is_empty() && i.is_live {
-            if check_changes(&stream_data[0], Arc::clone(sent_streams)).await {
+            if check_changes(&stream_data[0], Arc::clone(&sent_streams)).await {
                 let data = sqlx::query!("SELECT * FROM streamer_notification_channel WHERE streamer = $1", &i.streamer)
-                    .fetch_all(pool)
+                    .fetch_all(&pool)
                     .await?;
 
                 for notification_place in data {
@@ -293,7 +296,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
             }
         } else if !stream_data.is_empty() && !i.is_live {
             let data = sqlx::query!("SELECT * FROM streamer_notification_channel WHERE streamer = $1", &i.streamer)
-                .fetch_all(pool)
+                .fetch_all(&pool)
                 .await?;
 
             for notification_place in data {
@@ -347,7 +350,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
                 }).await;
                 if let Ok(message_ok) = message {
                     sqlx::query!("UPDATE streamer_notification_channel SET message_id = $1 WHERE channel_id = $2 AND streamer = $3", message_ok.id.as_u64().to_owned() as i64, message_ok.channel_id.0 as i64, &i.streamer)
-                        .execute(pool)
+                        .execute(&pool)
                         .await?;
                 }
 
@@ -364,13 +367,13 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
             }
 
             sqlx::query!("UPDATE streamers SET is_live = true WHERE streamer = $1", &i.streamer)
-                .execute(pool)
+                .execute(&pool)
                 .await?;
 
 
         } else if stream_data.is_empty() && i.is_live {
             let data = sqlx::query!("SELECT * FROM streamer_notification_channel WHERE streamer = $1", i.streamer)
-                .fetch_all(pool)
+                .fetch_all(&pool)
                 .await?;
 
             for notification_place in data {
@@ -397,7 +400,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
                 }
             }
             sqlx::query!("UPDATE streamers SET is_live = false WHERE streamer = $1", i.streamer)
-                .execute(pool)
+                .execute(&pool)
                 .await?;
         }
     }
@@ -437,9 +440,14 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
 //}
 
 async fn reminder_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
-    let reminders = sqlx::query!("SELECT * FROM reminders").fetch_all(pool).await?;
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
+
+    let reminders = sqlx::query!("SELECT * FROM reminders")
+        .fetch_all(&pool)
+        .await?;
 
     for row in reminders {
         if row.date < chrono::offset::Utc::now() {
@@ -458,8 +466,9 @@ async fn reminder_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Err
                     ), true)
                 })
             }).await;
+
             sqlx::query!("DELETE FROM reminders WHERE id = $1", row.id)
-                .execute(pool)
+                .execute(&pool)
                 .await?;
         }
     }
@@ -467,9 +476,14 @@ async fn reminder_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Err
     Ok(())
 }
 async fn unmute_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
-    let muted_members = sqlx::query!("SELECT * FROM muted_members").fetch_all(pool).await?;
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
+
+    let muted_members = sqlx::query!("SELECT * FROM muted_members")
+        .fetch_all(&pool)
+        .await?;
 
     for row in muted_members {
         if row.date < chrono::offset::Utc::now() {
@@ -480,7 +494,7 @@ async fn unmute_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error
 
             let role_id = {
                 let role_row = sqlx::query!("SELECT role_id FROM muted_roles WHERE guild_id = $1", row.guild_id)
-                    .fetch_optional(pool)
+                    .fetch_optional(&pool)
                     .await?;
 
                 if let Some(role_row) = role_row {
@@ -511,13 +525,12 @@ async fn unmute_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error
                     ), true)
                 })
             }).await;
+
             sqlx::query!("DELETE FROM muted_members WHERE id = $1", row.id)
-                .execute(pool)
+                .execute(&pool)
                 .await?;
         }
     }
-
-
 
     Ok(())
 }
@@ -525,6 +538,7 @@ async fn unmute_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error
 pub async fn notification_loop(ctx: Arc<Context>) {
     let ctx = Arc::clone(&ctx);
     let ctx_clone = Arc::clone(&ctx);
+
     tokio::spawn(async move {
         loop {
             info!("Notification loop started.");

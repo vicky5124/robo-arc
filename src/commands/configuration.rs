@@ -2,11 +2,9 @@ use crate::{
     utils::booru,
     utils::checks::*,
     utils::logging::LoggingEvents,
-    ConnectionPool,
-    AnnoyedChannels,
-    BooruCommands,
     notifications::Post,
     MASTER_GROUP,
+    global_data::*,
 };
 
 use std::time::Duration;
@@ -41,13 +39,15 @@ use serenity::{
 };
 
 async fn set_best_tags(sex: &str, ctx: &Context, msg: &Message, mut tags: String) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let user_id = msg.author.id.0 as i64;
 
     let data = sqlx::query!("SELECT best_boy, best_girl FROM best_bg WHERE user_id = $1", user_id)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await?;
 
     if let None = data {
@@ -56,7 +56,7 @@ async fn set_best_tags(sex: &str, ctx: &Context, msg: &Message, mut tags: String
             tags += " 1boy";
 
             sqlx::query!("INSERT INTO best_bg (best_boy, user_id) VALUES ($1, $2)", &tags, user_id)
-                .execute(pool)
+                .execute(&pool)
                 .await?;
 
             msg.reply(ctx, format!("Successfully set your husbando to `{}`", &tags)).await?;
@@ -65,7 +65,7 @@ async fn set_best_tags(sex: &str, ctx: &Context, msg: &Message, mut tags: String
             tags += " 1girl";
 
             sqlx::query!("INSERT INTO best_bg (best_girl, user_id) VALUES ($1, $2)", &tags, user_id)
-                .execute(pool)
+                .execute(&pool)
                 .await?;
 
             msg.reply(ctx, format!("Successfully set your waifu to `{}`", &tags)).await?;
@@ -75,7 +75,7 @@ async fn set_best_tags(sex: &str, ctx: &Context, msg: &Message, mut tags: String
         tags += " 1boy";
 
         sqlx::query!("UPDATE best_bg SET best_boy = $1 WHERE user_id = $2", &tags, user_id)
-            .execute(pool)
+            .execute(&pool)
             .await?;
 
         msg.reply(ctx, format!("You successfully broke up with your old husbando, now your husbando is `{}`", &tags)).await?;
@@ -84,7 +84,7 @@ async fn set_best_tags(sex: &str, ctx: &Context, msg: &Message, mut tags: String
         tags += " 1girl";
 
         sqlx::query!("UPDATE best_bg SET best_girl = $1 WHERE user_id = $2", &tags, user_id)
-            .execute(pool)
+            .execute(&pool)
             .await?;
 
         msg.reply(ctx, format!("You successfully broke up with your old waifu, now your waifu is `{}`", &tags)).await?;
@@ -115,8 +115,10 @@ async fn user(_ctx: &Context, _msg: &Message, _args: Args) -> CommandResult {
 #[min_args(1)]
 #[checks("bot_has_manage_roles")]
 async fn streamrole(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let streamer = args.single_quoted::<String>()?;
     let mut channels = Vec::new();
@@ -126,7 +128,7 @@ async fn streamrole(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
     }
 
     let role_ids = sqlx::query!("SELECT role_id FROM streamer_notification_channel WHERE streamer = $1 AND channel_id = ANY($2)", &streamer, &channels)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .boxed()
         .await?;
 
@@ -184,13 +186,15 @@ async fn best_girl(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 async fn booru(ctx: &Context, msg: &Message, raw_args: Args) -> CommandResult {
     let booru = raw_args.message().to_lowercase();
 
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let user_id = msg.author.id.0 as i64;
 
     let data = sqlx::query!("SELECT best_boy, best_girl FROM best_bg WHERE user_id = $1", user_id)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .boxed()
         .await?;
 
@@ -200,7 +204,7 @@ async fn booru(ctx: &Context, msg: &Message, raw_args: Args) -> CommandResult {
             return Ok(());
         }
         sqlx::query!("INSERT INTO best_bg (booru, user_id) VALUES ($1, $2)", &booru, user_id)
-            .execute(pool)
+            .execute(&pool)
             .await?;
 
         msg.reply(ctx, format!("Successfully set your main booru to `{}`", &booru)).await?;
@@ -208,7 +212,7 @@ async fn booru(ctx: &Context, msg: &Message, raw_args: Args) -> CommandResult {
         if booru.as_str() == "" {return Ok(());}
 
         sqlx::query!("UPDATE best_bg SET booru = $1 WHERE user_id = $2", &booru, user_id)
-            .execute(pool)
+            .execute(&pool)
             .await?;
 
         msg.reply(ctx, format!("Successfully edited your main booru to `{}`", &booru)).await?;
@@ -374,8 +378,10 @@ async fn check_hook(ctx: &Context, msg: &Message, embed: &mut impl Hook) {
 }
 
 async fn configure_yandere(ctx: &Context, msg: &mut Message, og_message: &Message, is_create: bool, is_hook: bool) -> CommandResult {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let mut config = YandeRe::default();
     let author = &og_message.author;
@@ -434,7 +440,7 @@ async fn configure_yandere(ctx: &Context, msg: &mut Message, og_message: &Messag
                     let hook_url = format!("https://discord.com/api/webhooks/{}/{}", webhook.id, webhook.token);
 
                     let query = sqlx::query!("SELECT webhook FROM new_posts WHERE booru_url = 'yande.re' AND tags = $1", &config.tags)
-                        .fetch_optional(pool)
+                        .fetch_optional(&pool)
                         .await?;
 
                     if let Some(row) = query {
@@ -443,7 +449,7 @@ async fn configure_yandere(ctx: &Context, msg: &mut Message, og_message: &Messag
                         hooks.dedup();
 
                         sqlx::query!("UPDATE new_posts SET webhook = $2 WHERE booru_url = 'yande.re' AND tags = $1", &config.tags, &hooks)
-                            .execute(pool)
+                            .execute(&pool)
                             .await?;
 
                     } else {
@@ -462,7 +468,7 @@ async fn configure_yandere(ctx: &Context, msg: &mut Message, og_message: &Messag
                         };
             
                         sqlx::query!("INSERT INTO new_posts (booru_url, tags, webhook, sent_md5) VALUES ('yande.re', $1, $2, $3)", &config.tags, &hooks, &md5s)
-                            .execute(pool)
+                            .execute(&pool)
                             .await?;
 
                     }
@@ -474,7 +480,7 @@ async fn configure_yandere(ctx: &Context, msg: &mut Message, og_message: &Messag
                 }
             } else {
                 let query = sqlx::query!("SELECT channel_id FROM new_posts WHERE booru_url = 'yande.re' AND tags = $1", &config.tags)
-                    .fetch_optional(pool)
+                    .fetch_optional(&pool)
                     .await?;
 
                 if let Some(row) = query {
@@ -483,7 +489,7 @@ async fn configure_yandere(ctx: &Context, msg: &mut Message, og_message: &Messag
                     channels.dedup();
 
                     sqlx::query!("UPDATE new_posts SET channel_id = $2 WHERE booru_url = 'yande.re' AND tags = $1", &config.tags, &channels)
-                        .execute(pool)
+                        .execute(&pool)
                         .await?;
 
                 } else {
@@ -502,7 +508,7 @@ async fn configure_yandere(ctx: &Context, msg: &mut Message, og_message: &Messag
                     };
             
                     sqlx::query!("INSERT INTO new_posts (booru_url, tags, channel_id, sent_md5) VALUES ('yande.re', $1, $2, $3)", &config.tags, &channels, &md5s)
-                        .execute(pool)
+                        .execute(&pool)
                         .await?;
                 }
             }
@@ -516,8 +522,10 @@ async fn configure_yandere(ctx: &Context, msg: &mut Message, og_message: &Messag
 }
 
 async fn configure_twitch(ctx: &Context, msg: &mut Message, og_message: &Message, is_create: bool, is_hook: bool) -> CommandResult {
-    let data_read = ctx.data.read().await;
-    let pool = data_read.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let author = &og_message.author;
     let mut config = Twitch::default();
@@ -569,12 +577,12 @@ async fn configure_twitch(ctx: &Context, msg: &mut Message, og_message: &Message
                 }
 
                 let streamer_data = sqlx::query!("SELECT streamer FROM streamers WHERE streamer = $1", &config.streamer)
-                    .fetch_optional(pool)
+                    .fetch_optional(&pool)
                     .await?;
 
                 if streamer_data.is_none() {
                     sqlx::query!("INSERT INTO streamers (streamer) VALUES ($1)", &config.streamer)
-                        .execute(pool)
+                        .execute(&pool)
                         .await?;
                 }
 
@@ -590,7 +598,7 @@ async fn configure_twitch(ctx: &Context, msg: &mut Message, og_message: &Message
                         let hook_url = format!("https://discord.com/api/webhooks/{}/{}", webhook.id, webhook.token);
 
                         sqlx::query!("INSERT INTO streamer_notification_webhook (streamer, role_id, use_default, webhook) VALUES ($1, $2, $3, $4)", &config.streamer, config.role_id, use_default, hook_url)
-                            .execute(pool)
+                            .execute(&pool)
                             .await?;
                     } else {
                         og_message.reply(ctx, "There was an error obtaining a webhook. Make sure i have the permission to manage webhooks.").await?;
@@ -599,7 +607,7 @@ async fn configure_twitch(ctx: &Context, msg: &mut Message, og_message: &Message
                     }
                 } else {
                     sqlx::query!("INSERT INTO streamer_notification_channel (streamer, role_id, use_default, channel_id) VALUES ($1, $2, $3, $4)", &config.streamer, config.role_id, use_default, msg.channel_id.0 as i64)
-                        .execute(pool)
+                        .execute(&pool)
                         .await?;
                 }
 
@@ -645,7 +653,7 @@ async fn configure_twitch(ctx: &Context, msg: &mut Message, og_message: &Message
             }
 
             let mut query = sqlx::query!("SELECT streamer FROM streamer_notification_webhook WHERE webhook = $1", &hook_url)
-                .fetch(pool);
+                .fetch(&pool);
 
             let mut streamers = Vec::new();
             while let Some(i) = query.try_next().await? {
@@ -693,11 +701,11 @@ async fn configure_twitch(ctx: &Context, msg: &mut Message, og_message: &Message
             };
 
             sqlx::query!("DELETE FROM streamer_notification_webhook WHERE streamer = $1 AND webhook = $2", &config.streamer, &hook_url)
-                .execute(pool)
+                .execute(&pool)
                 .await?;
         } else {
             let mut query = sqlx::query!("SELECT streamer FROM streamer_notification_channel WHERE channel_id = $1", msg.channel_id.0 as i64)
-                .fetch(pool);
+                .fetch(&pool);
 
             let mut streamers = Vec::new();
             while let Some(i) = query.try_next().await? {
@@ -745,7 +753,7 @@ async fn configure_twitch(ctx: &Context, msg: &mut Message, og_message: &Message
             };
 
             sqlx::query!("DELETE FROM streamer_notification_channel WHERE streamer = $1 AND channel_id = $2", &config.streamer, msg.channel_id.0 as i64)
-                .execute(pool)
+                .execute(&pool)
                 .await?;
         }
     }
@@ -766,25 +774,27 @@ async fn timeout(ctx: &Context, msg: &mut Message, og_message: &Message) -> Comm
 #[command]
 #[aliases(annoy)]
 async fn toggle_annoy(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let channel_id = msg.channel_id.0 as i64;
 
     let data = sqlx::query!("SELECT channel_id FROM annoyed_channels WHERE channel_id = $1", channel_id)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await?;
 
     if let Some(_) = data {
         sqlx::query!("DELETE FROM annoyed_channels WHERE channel_id IN ($1)", channel_id)
-            .execute(pool)
+            .execute(&pool)
             .await?;
 
         msg.channel_id.say(ctx, format!("Successfully removed `{}` from the list of channels that allows the bot to do annoying features.", msg.channel_id.name(ctx).await.unwrap())).await?;
 
     } else {
         sqlx::query!("INSERT INTO annoyed_channels (channel_id) VALUES ($1)", channel_id)
-            .execute(pool)
+            .execute(&pool)
             .await?;
 
         msg.channel_id.say(ctx, format!("Successfully added `{}` to the list of channels that allows the bot to do annoying features.", msg.channel_id.name(ctx).await.unwrap())).await?;
@@ -792,10 +802,14 @@ async fn toggle_annoy(ctx: &Context, msg: &Message, _args: Args) -> CommandResul
 
     {
         let mut raw_annoyed_channels = sqlx::query!("SELECT channel_id from annoyed_channels")
-            .fetch(pool)
+            .fetch(&pool)
             .boxed();
 
-        let channels_lock = rdata.get::<AnnoyedChannels>().unwrap();
+        let channels_lock = {
+            let data_read = ctx.data.read().await;
+            data_read.get::<AnnoyedChannels>().unwrap().clone()
+        };
+
         let mut channels = channels_lock.write().await;
         channels.clear();
 
@@ -834,15 +848,17 @@ async fn mute_role(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
         return Ok(());
     };
 
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     dbg!(&role);
 
     sqlx::query!("INSERT INTO muted_roles (guild_id, role_id) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET role_id = $2",
                   msg.guild_id.unwrap().0 as i64,
                   role.0 as i64)
-        .execute(pool)
+        .execute(&pool)
         .await?;
 
     msg.react(ctx, '👍').await?;
@@ -860,23 +876,25 @@ async fn prefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let prefix = args.message();
 
     // change prefix on db 
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let guild_id = msg.guild_id.unwrap().0 as i64;
 
     let data = sqlx::query!("SELECT prefix FROM prefixes WHERE guild_id = $1", guild_id)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .boxed()
         .await?;
 
     if let None = data {
         sqlx::query!("INSERT INTO prefixes (guild_id, prefix) VALUES ($1, $2)", guild_id, &prefix)
-            .execute(pool)
+            .execute(&pool)
             .await?;
     } else {
         sqlx::query!("UPDATE prefixes SET prefix = $2 WHERE guild_id = $1", guild_id, &prefix)
-            .execute(pool)
+            .execute(&pool)
             .await?;
     }
 
@@ -894,8 +912,10 @@ async fn prefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[command]
 #[min_args(1)]
 async fn disable_command(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let data_read = ctx.data.read().await;
-    let booru_commands = data_read.get::<BooruCommands>().unwrap();
+    let booru_commands = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<BooruCommands>().unwrap().clone()
+    };
 
     let mut command_name = args.single_quoted::<String>()?;
     if booru_commands.contains(&command_name) {
@@ -905,14 +925,17 @@ async fn disable_command(ctx: &Context, msg: &Message, mut args: Args) -> Comman
     for group in MASTER_GROUP.options.sub_groups {
         for command in group.options.commands {
             if command.options.names.contains(&command_name.as_str()) {
-                let pool = data_read.get::<ConnectionPool>().unwrap();
+                let pool = {
+                    let data_read = ctx.data.read().await;
+                    data_read.get::<DatabasePool>().unwrap().clone()
+                };
 
                 let command_name = command.options.names[0];
 
                 let disallowed_commands = sqlx::query!(
                     "SELECT disallowed_commands FROM prefixes WHERE guild_id = $1",
                     msg.guild_id.unwrap().0 as i64,
-                ).fetch_optional(pool).await?;
+                ).fetch_optional(&pool).await?;
 
                 if let Some(x) = disallowed_commands {
                     if let Some(mut disallowed_commands) = x.disallowed_commands {
@@ -920,13 +943,13 @@ async fn disable_command(ctx: &Context, msg: &Message, mut args: Args) -> Comman
                         sqlx::query!("UPDATE prefixes SET disallowed_commands = $1 WHERE guild_id = $2",
                             &disallowed_commands,
                             msg.guild_id.unwrap().0 as i64,
-                        ).execute(pool).await?;
+                        ).execute(&pool).await?;
                     } else {
                         let disallowed_commands = vec![command_name.to_string()];
                         sqlx::query!("UPDATE prefixes SET disallowed_commands = $1 WHERE guild_id = $2",
                             &disallowed_commands,
                             msg.guild_id.unwrap().0 as i64,
-                        ).execute(pool).await?;
+                        ).execute(&pool).await?;
                     }
                 } else {
                     let disallowed_commands = vec![command_name.to_string()];
@@ -934,7 +957,7 @@ async fn disable_command(ctx: &Context, msg: &Message, mut args: Args) -> Comman
                         &disallowed_commands,
                         msg.guild_id.unwrap().0 as i64,
                         ".".to_string(),
-                    ).execute(pool).await?;
+                    ).execute(&pool).await?;
                 }
 
                 msg.reply(ctx, format!("Command `{}` successfully disabled.", command_name)).await?;
@@ -952,8 +975,10 @@ async fn disable_command(ctx: &Context, msg: &Message, mut args: Args) -> Comman
 /// Usage: `config guild enable_command urban`
 #[command]
 async fn enable_command(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let data_read = ctx.data.read().await;
-    let booru_commands = data_read.get::<BooruCommands>().unwrap();
+    let booru_commands = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<BooruCommands>().unwrap().clone()
+    };
 
     let mut command_name = args.single_quoted::<String>()?;
     if booru_commands.contains(&command_name) {
@@ -965,12 +990,15 @@ async fn enable_command(ctx: &Context, msg: &Message, mut args: Args) -> Command
             if command.options.names.contains(&command_name.as_str()) {
                 let command_name = command.options.names[0];
 
-                let pool = data_read.get::<ConnectionPool>().unwrap();
+                let pool = {
+                    let data_read = ctx.data.read().await;
+                    data_read.get::<DatabasePool>().unwrap().clone()
+                };
 
                 let disallowed_commands = sqlx::query!(
                     "SELECT disallowed_commands FROM prefixes WHERE guild_id = $1",
                     msg.guild_id.unwrap().0 as i64,
-                ).fetch_optional(pool).await?;
+                ).fetch_optional(&pool).await?;
 
                 if let Some(x) = disallowed_commands {
                     if let Some(mut disallowed_commands) = x.disallowed_commands {
@@ -982,7 +1010,7 @@ async fn enable_command(ctx: &Context, msg: &Message, mut args: Args) -> Command
                             sqlx::query!("UPDATE prefixes SET disallowed_commands = $1 WHERE guild_id = $2",
                                 &disallowed_commands,
                                 msg.guild_id.unwrap().0 as i64,
-                            ).execute(pool).await?;
+                            ).execute(&pool).await?;
 
                             msg.reply(ctx, format!("Command `{}` successfully enabled.", command_name)).await?;
                             return Ok(());
@@ -1006,21 +1034,23 @@ async fn enable_command(ctx: &Context, msg: &Message, mut args: Args) -> Command
 #[command]
 #[aliases(toggleantispam, antispam, anti_spam, "toggle-anti-spam", "anti-spam")]
 async fn toggle_anti_spam(ctx: &Context, msg: &Message) -> CommandResult {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let data = sqlx::query!("SELECT enabled FROM anti_spam WHERE guild_id = $1", msg.guild_id.unwrap().0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await?;
 
     if let Some(row) = data {
         sqlx::query!("UPDATE anti_spam SET enabled = $2 WHERE guild_id = $1", msg.guild_id.unwrap().0 as i64, !row.enabled)
-            .execute(pool)
+            .execute(&pool)
             .await?;
 
     } else {
         sqlx::query!("INSERT INTO anti_spam (guild_id, enabled) VALUES ($1, true)", msg.guild_id.unwrap().0 as i64)
-            .execute(pool)
+            .execute(&pool)
             .await?;
     }
 
@@ -1036,10 +1066,13 @@ async fn toggle_anti_spam(ctx: &Context, msg: &Message) -> CommandResult {
 async fn logging(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let digits = args.single::<u64>()?;
 
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
+
     sqlx::query!("INSERT INTO logging_channels (guild_id, channel_id, bitwise) VALUES ($1, $2, $3)", msg.guild_id.unwrap().0 as i64, msg.channel_id.0 as i64, digits as i64)
-                        .execute(pool)
+                        .execute(&pool)
                         .await?;
 
     let events = LoggingEvents::from_bits_truncate(digits);

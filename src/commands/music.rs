@@ -1,4 +1,4 @@
-use crate::{
+use crate::global_data::{
     VoiceManager,
     Lavalink,
     VoiceGuildUpdate,
@@ -67,7 +67,11 @@ pub async fn _join(ctx: &Context, msg: &Message) -> Result<String, Error> {
         }
     };
 
-    let manager_lock = ctx.data.read().await.get::<VoiceManager>().cloned().expect("Expected VoiceManager in TypeMap.");
+    let manager_lock = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<VoiceManager>().unwrap().clone()
+    };
+
     let mut manager = manager_lock.lock().await;
     let has_joined = manager.join(guild_id, connect_to).is_some();
 
@@ -75,10 +79,14 @@ pub async fn _join(ctx: &Context, msg: &Message) -> Result<String, Error> {
         drop(manager);
 
         loop {
-            let data = ctx.data.read().await;
-            let vgu_lock = data.get::<VoiceGuildUpdate>().unwrap();
+            let vgu_lock = {
+                let data_read = ctx.data.read().await;
+                data_read.get::<VoiceGuildUpdate>().unwrap().clone()
+            };
+
             let mut vgu = vgu_lock.write().await;
             if !vgu.contains(&guild_id) {
+                drop(vgu);
                 tokio::time::delay_for(Duration::from_millis(500)).await;
             } else {
                 vgu.remove(&guild_id);
@@ -86,19 +94,26 @@ pub async fn _join(ctx: &Context, msg: &Message) -> Result<String, Error> {
             }
         }
 
-        let manager_lock = ctx.data.read().await.get::<VoiceManager>().cloned().expect("Expected VoiceManager in TypeMap.");
+        let manager_lock = {
+            let data_read = ctx.data.read().await;
+            data_read.get::<VoiceManager>().unwrap().clone()
+        };
+
         let manager = manager_lock.lock().await;
 
-        let mut data = ctx.data.write().await;
-        let lava_client_lock = data.get_mut::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+        let lava_client_lock = {
+            let data_read = ctx.data.read().await;
+            data_read.get::<Lavalink>().unwrap().clone()
+        };
+
         let handler = manager.get(guild_id).unwrap();
         lava_client_lock.lock().await.create_session(guild_id, &handler).await?;
 
         Ok(connect_to.mention())
+
     } else {
         msg.channel_id.say(ctx, "Error joining the channel").await?;
         Err(JoinError.into())
-
     }
 }
 
@@ -116,8 +131,11 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases(randomize)]
 async fn shuffle(ctx: &Context, msg: &Message) -> CommandResult {
-    let data = ctx.data.read().await;
-    let lava_client_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+    let lava_client_lock = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<Lavalink>().unwrap().clone()
+    };
+
     let mut lava_client = lava_client_lock.lock().await;
     if let Some(node) = lava_client.nodes.get_mut(&msg.guild_id.unwrap().0) {
         {
@@ -139,8 +157,11 @@ async fn shuffle(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases(next)]
 async fn skip(ctx: &Context, msg: &Message) -> CommandResult {
-    let data = ctx.data.read().await;
-    let lava_client_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+    let lava_client_lock = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<Lavalink>().unwrap().clone()
+    };
+
     let mut lava_client = lava_client_lock.lock().await;
 
     if let Some(track) = lava_client.skip(msg.guild_id.unwrap()).await {
@@ -182,11 +203,14 @@ async fn skip(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases(que)]
 async fn queue(ctx: &Context, msg: &Message) -> CommandResult {
-    let data = ctx.data.read().await;
-    let lava_client_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+    let lava_client_lock = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<Lavalink>().unwrap().clone()
+    };
+
     let mut lava_client = lava_client_lock.lock().await;
     if let Some(node) = lava_client.nodes.get_mut(&msg.guild_id.unwrap().0) {
-        if !node.queue.is_empty() {
+        if !node.queue.len() <= 1 {
             let mut queue = String::from("```st\n");
             for (index, track) in node.queue.iter().skip(1).take(10).enumerate() {
                 queue +=  &format!("{}: {}\n", index + 1, track.track.info.as_ref().unwrap().title);
@@ -213,8 +237,11 @@ async fn queue(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases(cque, clearqueue, clearque, cqueue)]
 async fn clear_queue(ctx: &Context, msg: &Message) -> CommandResult {
-    let data = ctx.data.read().await;
-    let lava_client_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+    let lava_client_lock = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<Lavalink>().unwrap().clone()
+    };
+
     let mut lava_client = lava_client_lock.lock().await;
     if let Some(node) = lava_client.nodes.get_mut(&msg.guild_id.unwrap().0) {
         if !node.queue.is_empty() {
@@ -233,8 +260,11 @@ async fn clear_queue(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases(np, nowplaying, playing)]
 async fn now_playing(ctx: &Context, msg: &Message) -> CommandResult {
-    let data = ctx.data.read().await;
-    let lava_client_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+    let lava_client_lock = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<Lavalink>().unwrap().clone()
+    };
+
     let lava_client = lava_client_lock.lock().await;
 
     if let Some(node) = lava_client.nodes.get(&msg.guild_id.unwrap().0) {
@@ -283,8 +313,11 @@ async fn seek(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         return Ok(());
     };
 
-    let data = ctx.data.read().await;
-    let lava_client_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+    let lava_client_lock = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<Lavalink>().unwrap().clone()
+    };
+
     let mut lava_client = lava_client_lock.lock().await;
 
     lava_client.seek(msg.guild_id.unwrap(), Duration::from_secs(num)).await?;
@@ -297,8 +330,11 @@ async fn seek(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 /// Stops the current player.
 #[command]
 async fn stop(ctx: &Context, msg: &Message) -> CommandResult {
-    let data = ctx.data.read().await;
-    let lava_client_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+    let lava_client_lock = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<Lavalink>().unwrap().clone()
+    };
+
     let mut lava_client = lava_client_lock.lock().await;
 
     lava_client.stop(msg.guild_id.unwrap()).await?;
@@ -311,8 +347,11 @@ async fn stop(ctx: &Context, msg: &Message) -> CommandResult {
 /// Pauses the current player.
 #[command]
 async fn pause(ctx: &Context, msg: &Message) -> CommandResult {
-    let data = ctx.data.read().await;
-    let lava_client_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+    let lava_client_lock = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<Lavalink>().unwrap().clone()
+    };
+
     let mut lava_client = lava_client_lock.lock().await;
 
     lava_client.set_pause(msg.guild_id.unwrap(), true).await?;
@@ -326,8 +365,11 @@ async fn pause(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases(unpause)]
 async fn resume(ctx: &Context, msg: &Message) -> CommandResult {
-    let data = ctx.data.read().await;
-    let lava_client_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+    let lava_client_lock = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<Lavalink>().unwrap().clone()
+    };
+
     let mut lava_client = lava_client_lock.lock().await;
 
     lava_client.set_pause(msg.guild_id.unwrap(), false).await?;
@@ -342,15 +384,22 @@ async fn resume(ctx: &Context, msg: &Message) -> CommandResult {
 async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
     let guild_id = ctx.cache.guild_channel_field(msg.channel_id, |channel| channel.guild_id).await.unwrap();
 
-    let manager_lock = ctx.data.read().await.get::<VoiceManager>().cloned().expect("Expected VoiceManager in TypeMap.");
+    let manager_lock = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<VoiceManager>().unwrap().clone()
+    };
+
     let mut manager = manager_lock.lock().await;
     let has_handler = manager.get(guild_id).is_some();
 
     if has_handler {
         manager.remove(guild_id);
 
-        let mut data = ctx.data.write().await;
-        let lava_client_lock = data.get_mut::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+        let lava_client_lock = {
+            let data_read = ctx.data.read().await;
+            data_read.get::<Lavalink>().unwrap().clone()
+        };
+
         lava_client_lock.lock().await.destroy(guild_id).await?;
 
         msg.react(ctx, '✅').await?;
@@ -395,14 +444,20 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         },
     };
 
-    let manager_lock = ctx.data.read().await
-        .get::<VoiceManager>().cloned().expect("Expected VoiceManager in ShareMap.");
+    let manager_lock = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<VoiceManager>().unwrap().clone()
+    };
+
     let mut manager = manager_lock.lock().await;
 
     if let Some(_handler) = manager.get_mut(guild_id) {
-        let data = ctx.data.read().await;
-        let lava_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
-        let lava_client = lava_lock.lock().await;
+        let lava_client_lock = {
+            let data_read = ctx.data.read().await;
+            data_read.get::<Lavalink>().unwrap().clone()
+        };
+
+        let lava_client = lava_client_lock.lock().await;
 
         let mut iter = 0;
         let mut already_checked = false;
@@ -447,7 +502,7 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
         drop(lava_client);
 
-        LavalinkClient::play(guild_id, query_information.tracks[0].clone()).queue(Arc::clone(lava_lock)).await?;
+        LavalinkClient::play(guild_id, query_information.tracks[0].clone()).queue(Arc::clone(&lava_client_lock)).await?;
 
         msg.channel_id.send_message(ctx, |m| {
             m.content("Added to queue:");
@@ -511,14 +566,20 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
         },
     };
 
-    let manager_lock = ctx.data.read().await
-        .get::<VoiceManager>().cloned().expect("Expected VoiceManager in ShareMap.");
+    let manager_lock = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<VoiceManager>().unwrap().clone()
+    };
+
     let mut manager = manager_lock.lock().await;
 
     if let Some(_handler) = manager.get_mut(guild_id) {
-        let data = ctx.data.read().await;
-        let lava_lock = data.get::<Lavalink>().expect("Expected a lavalink client in TypeMap");
-        let lava_client = lava_lock.lock().await;
+        let lava_client_lock = {
+            let data_read = ctx.data.read().await;
+            data_read.get::<Lavalink>().unwrap().clone()
+        };
+
+        let lava_client = lava_client_lock.lock().await;
 
         let mut iter = 0;
         let query_information = loop {
@@ -538,7 +599,7 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
         drop(lava_client);
 
         for track in query_information.tracks {
-            LavalinkClient::play(guild_id, track.clone()).queue(Arc::clone(lava_lock)).await?;
+            LavalinkClient::play(guild_id, track.clone()).queue(Arc::clone(&lava_client_lock)).await?;
         }
         
         msg.channel_id.send_message(ctx, |m| {

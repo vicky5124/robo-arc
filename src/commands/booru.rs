@@ -15,11 +15,8 @@ use crate::{
             UNSAFE_BANLIST,
         }
     },
-    // import all the types that are used for the global data.
+    global_data::*,
     Booru,
-    BooruList,
-    BooruCommands,
-    ConnectionPool,
 };
 
 use std::{
@@ -452,21 +449,30 @@ pub async fn get_booru(ctx: &Context, msg: &Message, booru: &Booru, args: Args) 
 #[usage("testing")]
 #[aliases("picture", "pic", "booru", "boorus")]
 pub async fn booru_command(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    // open the context data lock in read mode.
-    let data = ctx.data.read().await;
-    // get the database connection from the context data.
-    let pool = data.get::<ConnectionPool>().unwrap();
-    // get the list of booru commands.
-    let commands = data.get::<BooruCommands>();
-    // get the data from "boorus.json"
-    let boorus = data.get::<BooruList>().unwrap();
+    let (pool, commands, boorus) = {
+        // open the context data lock in read mode.
+        let data = ctx.data.read().await;
+
+        // get the database connection from the context data.
+        let pool = data.get::<DatabasePool>().unwrap();
+        // get the list of booru commands.
+        let commands = data.get::<BooruCommands>().unwrap();
+        // get the data from "boorus.json"
+        let boorus = data.get::<BooruList>().unwrap();
+
+        (
+            pool.clone(),
+            commands.clone(),
+            boorus.clone(),
+        )
+    };
 
     // get the author_id as a signed 64 bit int, because that's what the database asks for.
     let author_id = *msg.author.id.as_u64() as i64; 
 
     // read from the database, and obtain the booru from the user.
     let data = sqlx::query!("SELECT booru FROM best_bg WHERE user_id = $1", author_id)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .boxed()
         .await?;
 
@@ -496,12 +502,12 @@ pub async fn booru_command(ctx: &Context, msg: &Message, args: Args) -> CommandR
     } else if booru == "sankaku" || booru == "chan" {
         chan(ctx, msg, args).await?;
     // if the command is a part of the boorus.json file, invoke the get_booru() function.
-    } else if commands.as_ref().unwrap().contains(&booru.to_string()) {
+    } else if commands.contains(&booru.to_string()) {
         // obtain the rest of the data from the boorus.json file, of the specific booru.
         let b: Booru = {
             let mut x = Booru::default();
 
-            for b in boorus {
+            for b in boorus.iter() {
                 if b.names.contains(&booru.to_string()) {
                     x = b.clone()
                 }
@@ -532,21 +538,30 @@ pub async fn booru_command(ctx: &Context, msg: &Message, args: Args) -> CommandR
 #[command]
 #[aliases(bg, bestgirl, waifu, wife)]
 pub async fn best_girl(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    // open the context data lock in read mode.
-    let data = ctx.data.read().await;
-    // get the database connection from the context data.
-    let pool = data.get::<ConnectionPool>().unwrap();
-    // get the list of booru commands.
-    let commands = data.get::<BooruCommands>();
-    // get the data from "boorus.json"
-    let boorus = data.get::<BooruList>().unwrap();
+    let (pool, commands, boorus) = {
+        // open the context data lock in read mode.
+        let data = ctx.data.read().await;
+
+        // get the database connection from the context data.
+        let pool = data.get::<DatabasePool>().unwrap();
+        // get the list of booru commands.
+        let commands = data.get::<BooruCommands>().unwrap();
+        // get the data from "boorus.json"
+        let boorus = data.get::<BooruList>().unwrap();
+
+        (
+            pool.clone(),
+            commands.clone(),
+            boorus.clone(),
+        )
+    };
 
     // get the author_id as a signed 64 bit int, because that's what the database asks for.
     let author_id = *msg.author.id.as_u64() as i64; 
 
     // read from the database, and obtain the best girl and booru from the user.
     let data = sqlx::query!("SELECT best_girl, booru FROM best_bg WHERE user_id = $1", author_id)
-        .fetch(pool).boxed().try_next().await?;
+        .fetch(&pool).boxed().try_next().await?;
 
     let (tags, mut booru);
 
@@ -605,12 +620,12 @@ pub async fn best_girl(ctx: &Context, msg: &Message, args: Args) -> CommandResul
     } else if booru == "sankaku" || booru == "chan" {
         chan(ctx, msg, args_tags).await?;
     // if the command is a part of the boorus.json file, invoke the get_booru() function.
-    } else if commands.as_ref().unwrap().contains(&booru.to_string()) {
+    } else if commands.contains(&booru.to_string()) {
         // obtain the rest of the data from the boorus.json file, of the specific booru.
         let b: Booru = {
             let mut x = Booru::default();
 
-            for b in boorus {
+            for b in boorus.iter() {
                 if b.names.contains(&booru.to_string()) {
                     x = b.clone()
                 }
@@ -636,21 +651,30 @@ pub async fn best_girl(ctx: &Context, msg: &Message, args: Args) -> CommandResul
 #[command]
 #[aliases(bb, bestboy, husbando, husband)]
 pub async fn best_boy(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    // open the context data lock in read mode.
-    let data = ctx.data.read().await;
-    // get the database connection from the context data.
-    let pool = data.get::<ConnectionPool>().unwrap();
-    // get the list of booru commands.
-    let commands = data.get::<BooruCommands>();
-    // get the data from "boorus.json"
-    let boorus = data.get::<BooruList>().unwrap();
+    let (pool, commands, boorus) = {
+        // open the context data lock in read mode.
+        let data = ctx.data.read().await;
+
+        // get the database connection from the context data.
+        let pool = data.get::<DatabasePool>().unwrap();
+        // get the list of booru commands.
+        let commands = data.get::<BooruCommands>().unwrap();
+        // get the data from "boorus.json"
+        let boorus = data.get::<BooruList>().unwrap();
+
+        (
+            pool.clone(),
+            commands.clone(),
+            boorus.clone(),
+        )
+    };
 
     // get the author_id as a signed 64 bit int, because that's what the database asks for.
     let author_id = *msg.author.id.as_u64() as i64; 
 
     // read from the database, and obtain the best boy and booru from the user.
     let data = sqlx::query!("SELECT best_boy, booru FROM best_bg WHERE user_id = $1", author_id)
-        .fetch(pool).boxed().try_next().await?;
+        .fetch(&pool).boxed().try_next().await?;
 
     let (tags, mut booru);
 
@@ -709,12 +733,12 @@ pub async fn best_boy(ctx: &Context, msg: &Message, args: Args) -> CommandResult
     } else if booru == "sankaku" || booru == "chan" {
         chan(ctx, msg, args_tags).await?;
     // if the command is a part of the boorus.json file, invoke the get_booru() function.
-    } else if commands.as_ref().unwrap().contains(&booru.to_string()) {
+    } else if commands.contains(&booru.to_string()) {
         // obtain the rest of the data from the boorus.json file, of the specific booru.
         let b: Booru = {
             let mut x = Booru::default();
 
-            for b in boorus {
+            for b in boorus.iter() {
                 if b.names.contains(&booru.to_string()) {
                     x = b.clone()
                 }

@@ -1,8 +1,10 @@
 //! This is the file containing all the osu! related commands.
 
 use crate::{
-    ConnectionPool,
-    Tokens,
+    global_data::{
+        DatabasePool,
+        Tokens,
+    },
     MY_HELP,
     OSU_GROUP,
     utils::osu::*,
@@ -487,15 +489,17 @@ async fn configure_osu(ctx: &Context, msg: &Message, arguments: Args) -> Command
     let osu_key = {
         let data = ctx.data.read().await; // set inmutable global data.
         let tokens = data.get::<Tokens>().unwrap().clone(); // get the tokens from the global data.
-        tokens["osu"].as_str().unwrap().to_string()
+        tokens.osu.to_string()
     };
 
-    let data = ctx.data.write().await; // set mutable global data.
-    let pool = data.get::<ConnectionPool>().unwrap(); // get the database connection from the global data.
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let author_id = *msg.author.id.as_u64() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
     let data = sqlx::query!("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
-                            author_id).fetch_optional(pool).boxed().await?; // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
+                            author_id).fetch_optional(&pool).boxed().await?; // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
     let empty_data: bool;
 
     let mut user_data = OsuUserDBData::default(); // generate a basic structure with the default values.
@@ -602,7 +606,7 @@ async fn configure_osu(ctx: &Context, msg: &Message, arguments: Args) -> Command
     // Insert a row to the table, but if it conflicts, update the existing one.
     sqlx::query!("INSERT INTO osu_user (osu_id, osu_username, pp, mode, short_recent, discord_id) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (discord_id) DO UPDATE SET osu_id = $1, osu_username = $2, pp = $3, mode = $4, short_recent = $5",
         user_data.osu_id, user_data.name, user_data.pp.unwrap(), user_data.mode.unwrap(), user_data.short_recent.unwrap(), author_id)
-        .execute(pool)
+        .execute(&pool)
         .await?;
    
     // if the id obtained is 0, it means the user doesn't exist.
@@ -641,15 +645,16 @@ async fn configure_osu(ctx: &Context, msg: &Message, arguments: Args) -> Command
 #[aliases("oprofile", "oprof", "osuprofile", "osuprof", "osu_prof", "osu_p", "osup", "osu_p", "osu")]
 async fn osu_profile(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     // Obtains the osu! api key from the "global" data
-    let osu_key: &str = {
+    let osu_key = {
         let data = ctx.data.read().await; // set inmutable global data.
         let tokens = data.get::<Tokens>().unwrap().clone(); // get the tokens from the global data.
-        &tokens["osu"].as_str().unwrap().to_string()
+        tokens.osu.to_string()
     };
     
-    // Obtain the client connection from the "global" data
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().expect("no database connection found"); // get the database connection from the global data.
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let mut username = args.message().replace(" ", "_");
     let author_id = *msg.author.id.as_u64() as i64;
@@ -660,13 +665,11 @@ async fn osu_profile(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
     let user_data = {
         if username.is_empty() {
             sqlx::query_as!(OsuUserRawDBDataMinimal, "SELECT osu_username, pp FROM osu_user WHERE discord_id = $1", author_id)
-                .fetch_optional(pool)
-                .boxed()
+                .fetch_optional(&pool)
                 .await?
         } else {
             sqlx::query_as!(OsuUserRawDBDataMinimal, "SELECT osu_username, pp FROM osu_user WHERE osu_username = $1", username)
-                .fetch_optional(pool)
-                .boxed()
+                .fetch_optional(&pool)
                 .await?
         }
     };
@@ -800,19 +803,19 @@ async fn score(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let osu_key = {
         let data = ctx.data.read().await; // set inmutable global data.
         let tokens = data.get::<Tokens>().unwrap().clone(); // get the tokens from the global data.
-        tokens["osu"].as_str().unwrap().to_string()
+        tokens.osu.to_string()
     };
     
-    // Obtain the client connection from the "global" data
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().expect("no database connection found"); // get the database connection from the global data.
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     // get the author_id as a signed 64 bit int, because that's what the database asks for.
     let author_id = *msg.author.id.as_u64() as i64;
 
     let user_data = sqlx::query_as!(OsuUserRawDBData, "SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", author_id)
-        .fetch_optional(pool)
-        .boxed()
+        .fetch_optional(&pool)
         .await?;
 
     let mut pp = true;
@@ -921,12 +924,13 @@ async fn recent(ctx: &Context, msg: &Message, arguments: Args) -> CommandResult 
     let osu_key = {
         let data = ctx.data.read().await; // set inmutable global data.
         let tokens = data.get::<Tokens>().unwrap().clone(); // get the tokens from the global data.
-        tokens["osu"].as_str().unwrap().to_string()
+        tokens.osu.to_string()
     };
     
-    // Obtain the client connection from the "global" data.
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().expect("no database connection found"); // get the database connection from the global data.
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let mut user_data = OsuUserDBData::default(); // generate a basic structure with the default values.
 
@@ -935,10 +939,10 @@ async fn recent(ctx: &Context, msg: &Message, arguments: Args) -> CommandResult 
         let author_id = *msg.author.id.as_u64() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
         arg_user = msg.author.name.clone();
         sqlx::query_as!(OsuUserRawDBData, "SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
-                            author_id).fetch_optional(pool).boxed().await? // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
+                            author_id).fetch_optional(&pool).await? // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
     } else {
         sqlx::query_as!(OsuUserRawDBData, "SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE osu_username = $1", // query the SQL to the database.
-                            arg_user).fetch_optional(pool).boxed().await?
+                            arg_user).fetch_optional(&pool).await?
     };
 
     if let Some(x) = data { // if the data is not empty, aka if the user is on the database already
@@ -1088,19 +1092,23 @@ async fn osu_top(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         args_user = msg.author.name.to_string();
     }
 
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let osu_key = {
-        let tokens = rdata.get::<Tokens>().unwrap().clone();
-        tokens["osu"].as_str().unwrap().to_string()
+        let data_read = ctx.data.read().await;
+        let tokens = data_read.get::<Tokens>().unwrap().clone();
+
+        tokens.osu.to_string()
     };
 
     let mut config = OsuData::default();
 
     if let Ok(id) = args_user.parse::<i32>() {
         let data = sqlx::query!("SELECT * FROM osu_user WHERE osu_id = $1", id)
-            .fetch_optional(pool)
+            .fetch_optional(&pool)
             .await?;
         if let Some(info) = data {
             config.username = info.osu_username;
@@ -1108,7 +1116,7 @@ async fn osu_top(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             config.pp = info.pp.unwrap_or(true);
         } else {
             let data = sqlx::query!("SELECT * FROM osu_user WHERE osu_username = $1", &args_user)
-                .fetch_optional(pool)
+                .fetch_optional(&pool)
                 .await?;
             if let Some(info) = data {
                 config.username = info.osu_username;
@@ -1131,7 +1139,7 @@ async fn osu_top(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         }
     } else {
         let data = sqlx::query!("SELECT * FROM osu_user WHERE osu_username = $1", &args_user)
-            .fetch_optional(pool)
+            .fetch_optional(&pool)
             .await?;
         if let Some(info) = data {
             config.username = info.osu_username;

@@ -1,8 +1,9 @@
 use crate::{
-    ShardManagerContainer,
-    ConnectionPool,
+    global_data::{
+        ShardManagerContainer,
+        DatabasePool,
+    },
     utils::{
-        database::obtain_postgres_pool,
         basic_functions::seconds_to_days,
     },
     Uptime,
@@ -20,8 +21,6 @@ use std::{
 };
 
 use sqlx;
-use futures::TryStreamExt;
-use futures::stream::StreamExt;
 
 use serenity::{
     prelude::Context,
@@ -46,106 +45,6 @@ use tokio::process::Command;
 use serde_json::json;
 use walkdir::WalkDir;
 
-use serde::{
-    Deserialize,
-    Serialize,
-};
-use serde_aux::prelude::*;
-
-
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct EvalMessage {
-    #[serde(deserialize_with = "deserialize_string_from_number")]
-    pub id: String,
-    #[serde(rename = "type")]
-    pub eval_message_type: i64,
-    pub content: String,
-    #[serde(deserialize_with = "deserialize_string_from_number")]
-    pub channel_id: String,
-    pub author: EvalMessageAuthor,
-    pub attachments: Vec<Attachment>,
-    pub embeds: Vec<Embed>,
-    pub pinned: bool,
-    pub mention_everyone: bool,
-    pub tts: bool,
-    pub timestamp: String,
-    pub flags: i64,
-
-    pub mention_roles: Vec<Option<serde_json::Value>>,
-    pub mentions: Vec<Option<serde_json::Value>>,
-    pub edited_timestamp: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Attachment {
-    #[serde(deserialize_with = "deserialize_string_from_number")]
-    pub id: String,
-    pub filename: String,
-    pub size: i64,
-    pub url: String,
-    pub proxy_url: String,
-    pub width: i64,
-    pub height: i64,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct EvalMessageAuthor {
-    #[serde(deserialize_with = "deserialize_string_from_number")]
-    pub id: String,
-    pub username: String,
-    pub avatar: String,
-    #[serde(deserialize_with = "deserialize_string_from_number")]
-    pub discriminator: String,
-    pub bot: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Embed {
-    #[serde(rename = "type")]
-    pub embed_type: String,
-    pub url: String,
-    pub title: String,
-    pub description: String,
-    pub color: i64,
-    pub timestamp: String,
-    pub fields: Vec<Field>,
-    pub author: EmbedAuthor,
-    pub image: Image,
-    pub thumbnail: Image,
-    pub footer: Footer,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct EmbedAuthor {
-    pub name: String,
-    pub url: String,
-    pub icon_url: String,
-    pub proxy_icon_url: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Field {
-    pub name: String,
-    pub value: String,
-    pub inline: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Footer {
-    pub text: String,
-    pub icon_url: String,
-    pub proxy_icon_url: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Image {
-    pub url: String,
-    pub proxy_url: String,
-    pub width: i64,
-    pub height: i64,
-}
-
 
 
 #[command] // Sets up a command
@@ -158,14 +57,10 @@ pub struct Image {
 async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
     // The shard manager is an interface for mutating, stopping, restarting, and
     // retrieving information about shards.
-    let data = ctx.data.read().await;
-    let shard_manager = match data.get::<ShardManagerContainer>() {
-        Some(v) => v,
-        None => {
-            msg.reply(ctx, "There was a problem getting the shard manager").await?;
+    let shard_manager = {
+        let data = ctx.data.read().await;
 
-            return Ok(());
-        },
+        data.get::<ShardManagerContainer>().unwrap().clone()
     };
 
     let manager = shard_manager.lock().await;
@@ -326,26 +221,28 @@ async fn todo(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases(prefixes)]
 async fn prefix(ctx: &Context, msg: &Message) -> CommandResult {
-    let data_read = ctx.data.read().await;
-    let guild_id = &msg.guild_id;
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let prefix;
-    if let Some(id) = guild_id {
+    if let Some(id) = &msg.guild_id {
         // obtain the id of the guild as an i64, because the id is stored as a u64, which is
         // not compatible with the postgre datbase types.
         let gid = id.0 as i64;
 
-        // Obtain the database connection.
-        let pool = data_read.get::<ConnectionPool>().unwrap();
         // Read the configured prefix of the guild from the database.
         let db_prefix = sqlx::query!("SELECT prefix FROM prefixes WHERE guild_id = $1", gid)
-            .fetch(pool).boxed().try_next().await?;
-        // If the guild doesn't have a configured prefix, return the default prefix.
-        if let None = db_prefix {
-            prefix = ".".to_string();
-        // Else, just read the value that was stored on the database and return it.
+            .fetch_optional(&pool)
+            .await?;
+
+        // Just read the value that was stored on the database and return it.
+        if let Some(x) = db_prefix {
+            prefix = x.prefix.unwrap().to_string();
+        // Else, the guild doesn't have a configured prefix, return the default prefix.
         } else {
-            prefix = db_prefix.unwrap().prefix.unwrap().to_string();
+            prefix = ".".to_string();
         }
     } else {
         prefix = ".".to_string();
@@ -361,8 +258,10 @@ async fn prefix(ctx: &Context, msg: &Message) -> CommandResult {
 #[aliases(info)]
 async fn about(ctx: &Context, msg: &Message) -> CommandResult {
     let shard_latency = {
-        let data = ctx.data.read().await;
-        let shard_manager = data.get::<ShardManagerContainer>().unwrap();
+        let shard_manager = {
+            let data_read = ctx.data.read().await;
+            data_read.get::<ShardManagerContainer>().unwrap().clone()
+        };
 
         let manager = shard_manager.lock().await;
         let runners = manager.runners.lock().await;
@@ -379,8 +278,11 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
     };
 
     let uptime = {
-        let data = ctx.data.read().await;
-        let instant = data.get::<Uptime>().unwrap();
+        let instant = {
+            let data_read = ctx.data.read().await;
+            data_read.get::<Uptime>().unwrap().clone()
+        };
+
         let duration = instant.elapsed();
         seconds_to_days(duration.as_secs())
     };
@@ -511,15 +413,6 @@ async fn changelog(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
-#[owners_only]
-async fn reload_db(ctx: &Context, msg: &Message) -> CommandResult {
-    let mut data = ctx.data.write().await;
-    data.insert::<ConnectionPool>(obtain_postgres_pool().await?);
-    msg.channel_id.say(ctx, "Ok.").await?;
-    Ok(())
-}
-
-#[command]
 #[aliases(tos, terms)]
 async fn terms_of_service(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(ctx, "
@@ -552,12 +445,10 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let token = {
         let read_data = ctx.data.read().await;
         let config = read_data.get::<Tokens>().unwrap();
-        config["discord"].clone()
+        config.discord.to_string()
     };
 
     let message = serde_json::to_string(&msg)?;
-    let message: EvalMessage = serde_json::from_str(&message)?;
-    let message = serde_json::to_string(&message)?;
 
     let raw_eval_code = args.message();
 
@@ -585,7 +476,7 @@ use twilight_model::channel::message::Message;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {{
-    let client = Client::new({});
+    let client = Client::new("{}");
     let ctx = &client;
 
     let msg: Message = serde_json::from_str(r####"{}"####)?;

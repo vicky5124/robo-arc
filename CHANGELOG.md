@@ -1,3 +1,11 @@
+# 0.3.0-alpha
+
+###  Bugs:
+- Removed A LOT of DeadLocks!
+- Empty queue no longer sends an empty codeblock.
+- Eval no longer deserializes to custom struct.
+- Improved code quality some.
+
 # 0.2.7-alpha
 
 ### Bugs:

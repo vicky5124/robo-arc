@@ -1,4 +1,4 @@
-use crate::ConnectionPool;
+use crate::global_data::DatabasePool;
 
 use std::{
     collections::HashMap,
@@ -51,15 +51,17 @@ pub async fn log_message(ctx: Arc<Context>, data: &MessageCreateEvent) {
     let tts = message.tts;
     let webhook_id = if let Some(x) = message.webhook_id { Some(x.0 as i64) } else { None };
 
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     if let Err(why) = sqlx::query!("INSERT INTO log_messages (id, channel_id, guild_id, author_id, content, attachments, embeds, pinned, creation_timestamp, tts, webhook_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
             message_id, channel_id, guild_id, author_id,
             content, &attachments, &embeds,
             pinned, timestamp, tts, webhook_id, //kind,
         )
-        .execute(pool)
+        .execute(&pool)
         .await
     {
         error!("Error inserting message to database: {}", why);
@@ -73,11 +75,13 @@ pub async fn anti_spam_message(ctx: Arc<Context>, data: &MessageCreateEvent, red
         return;
     }
 
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let data = match sqlx::query!("SELECT enabled FROM anti_spam WHERE guild_id = $1", message.guild_id.unwrap().0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await {
             Err(why) => {
                 error!("Error quering database for anti_spam: {}", why);
@@ -142,11 +146,13 @@ pub async fn log_edit(ctx: Arc<Context>, data: &MessageUpdateEvent) {
 
     let message_id = data.id.0 as i64;
 
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let mut old_message = match sqlx::query!("SELECT content, content_history, attachments, attachments_history, embeds, embeds_history, pinned, was_pinned FROM log_messages WHERE id = $1", message_id)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await {
             Err(why) => {
                 error!("Error getting existing message message of an edit from database: {}", why);
@@ -220,7 +226,7 @@ pub async fn log_edit(ctx: Arc<Context>, data: &MessageUpdateEvent) {
             embeds.as_deref(), old_message.embeds_history.as_deref(),
             pinned, was_pinned, timestamp,
         )
-        .execute(pool)
+        .execute(&pool)
         .await
     {
         error!("Error updating message from edit to database: {}", why);

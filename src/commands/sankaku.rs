@@ -4,7 +4,7 @@ use crate::{
         SAFE_BANLIST,
         UNSAFE_BANLIST,
     },
-    Tokens,
+    global_data::Tokens,
 };
 
 use std::borrow::Cow;
@@ -53,9 +53,10 @@ pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         let data = ctx.data.read().await; // set inmutable global data.
         let tokens = data.get::<Tokens>().unwrap(); 
 
-        let login = tokens["sankaku"]["idol_login"].as_str().unwrap().to_owned();
-        let pass = tokens["sankaku"]["idol_passhash"].as_str().unwrap().to_owned();
-        (login, pass)
+        (
+            tokens.sankaku.idol_login.to_string(),
+            tokens.sankaku.idol_passhash.to_string(),
+        )
     };
 
     let channel = ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.

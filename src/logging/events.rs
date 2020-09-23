@@ -1,5 +1,5 @@
-use crate::RedisPool;
 use crate::logging::*;
+use crate::global_data::CachePool;
 
 use std::sync::Arc;
 
@@ -32,13 +32,16 @@ impl RawEventHandler for RawHandler {
                         return;
                     }
 
-                    let data_read = ctx.data.read().await;
-                    let redis_pool = data_read.get::<RedisPool>().unwrap();
-                    let mut redis = redis_pool.get().await;
+                    let redis_pool = {
+                        let data_read = ctx.data.read().await;
+                        data_read.get::<CachePool>().unwrap().clone()
+                    };
 
-                    messages::anti_spam_message(Arc::clone(&ctx), &data, &mut redis).await;
+                    {
+                        let mut redis = redis_pool.get().await;
 
-                    drop(redis_pool);
+                        messages::anti_spam_message(Arc::clone(&ctx), &data, &mut redis).await;
+                    }
 
                     messages::log_message(Arc::clone(&ctx), &data).await;
                 }

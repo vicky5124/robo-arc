@@ -1,4 +1,4 @@
-use crate::ConnectionPool;
+use crate::global_data::DatabasePool;
 use crate::utils::basic_functions::string_to_seconds;
 use crate::utils::checks::BOT_HAS_MANAGE_ROLES_CHECK;
 
@@ -219,11 +219,13 @@ async fn permanent_mute(ctx: &Context, msg: &Message, mut args: Args) -> Command
     let member_arg = args.single_quoted::<String>()?;
     let mut member = parse_member(ctx, msg, member_arg).await?;
 
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let row = sqlx::query!("SELECT role_id FROM muted_roles WHERE guild_id = $1", msg.guild_id.unwrap().0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await?;
 
     if let Some(row) = row {
@@ -276,8 +278,10 @@ async fn permanent_self_mute(ctx: &Context, msg: &Message) -> CommandResult {
 #[aliases(tempmute, tmute, temporalmute, temp_mute)]
 #[checks(bot_has_manage_roles)]
 async fn temporal_mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let rdata = ctx.data.read().await;
-    let pool = rdata.get::<ConnectionPool>().unwrap();
+    let pool = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<DatabasePool>().unwrap().clone()
+    };
 
     let raw_member = args.single_quoted::<String>()?;
     let mut member = parse_member(ctx, msg, raw_member).await?;
@@ -298,7 +302,7 @@ async fn temporal_mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
     };
 
     let row = sqlx::query!("SELECT role_id FROM muted_roles WHERE guild_id = $1", msg.guild_id.unwrap().0 as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await?;
 
     if let Some(row) = row {
@@ -312,7 +316,7 @@ async fn temporal_mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
             member.user.id.0 as i64,
             message,
         )
-        .execute(pool)
+        .execute(&pool)
         .await?;
 
         msg.reply(ctx, format!("Successfully muted member `{}#{}` with id `{}`\n until `{}`",
@@ -382,11 +386,13 @@ async fn permanent_ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
             msg.guild_id.unwrap().ban_with_reason(ctx, user, 0, &format!("User ID {} has been banned PERMANENTLY by {}", user.0, msg.author.id.0)).await?;
             msg.reply(ctx, format!("<@{}> has been **PERMANENTLY** banned.", user.0)).await?;
 
-            let rdata = ctx.data.read().await;
-            let pool = rdata.get::<ConnectionPool>().unwrap();
+            let pool = {
+                let data_read = ctx.data.read().await;
+                data_read.get::<DatabasePool>().unwrap().clone()
+            };
 
             sqlx::query!("INSERT INTO permanent_bans (guild_id, user_id, banner_user_id) VALUES ($1, $2, $3)", msg.guild_id.unwrap().0 as i64, user.0 as i64, msg.author.id.0 as i64)
-                .execute(pool)
+                .execute(&pool)
                 .await?;
 
             warn!("{} PERMANENTLY BANNED {} on guild {}", msg.author.id.0, user.0, msg.guild_id.unwrap().0);

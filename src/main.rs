@@ -1,17 +1,18 @@
 #![feature(core_intrinsics)]
 #![feature(async_closure)]
 #![type_length_limit="1331829"]
-/// This is a discord bot made with `serenity.rs` as a Rust learning project.
-/// If you see a lot of different ways to do the same thing, specially with error handling,
-/// this is indentional, as it helps me remember the concepts that rust provides, so they can be
-/// used in the future for whatever they could be needed.
-///
-/// This is lisenced with the copyleft license Mozilla Public License Version 2.0
+//! This is a discord bot made with `serenity.rs` as a Rust learning project.
+//! If you see a lot of different ways to do the same thing, specially with error handling,
+//! this is indentional, as it helps me remember the concepts that rust provides, so they can be
+//! used in the future for whatever they could be needed.
+//!
+//! This is lisenced with the copyleft license Mozilla Public License Version 2.0
 
 mod utils; // Load the utils module
 mod commands; // Load the commands module
 mod notifications;
 mod logging;
+mod global_data;
 
 // Import this 2 commands in specific with a different name
 // as they interfere with the configuration commands that are also being imported.
@@ -21,10 +22,8 @@ use commands::booru::{
 };
 use commands::meta::PREFIX_COMMAND as PREFIXES_COMMAND;
 
-use crate::notifications::{
-    notification_loop,
-    TwitchStreamData,
-};
+use crate::global_data::*;
+use crate::notifications::notification_loop;
 
 use commands::booru::*; // Import everything from the booru module.
 use commands::sankaku::*; // Import everything from the sankaku booru module.
@@ -63,9 +62,7 @@ use dotenv;
 use tracing::{
     // Log macros.
     info,
-    trace,
     debug,
-    //warn,
     error,
 
     // Others
@@ -81,10 +78,6 @@ use tracing_log::LogTracer;
 //use tracing_futures::Instrument;
 //use log;
 
-use sqlx::PgPool; // PostgreSQL Pool Structure
-use darkredis::ConnectionPool as RedisConnectionPool;
-
-use toml::Value; // To parse the data of .toml files
 use serde_json; // To parse the data of .json files (where's serde_toml smh)
 use serde::{
     Deserialize, // To deserialize data into structures
@@ -109,13 +102,7 @@ use serenity::{
     utils::Colour, // To change the embed help color
     client::{
         Client, // To create a client that runs eveyrthing.
-        bridge::{
-            gateway::{
-                ShardManager, // To manage shards, or in the case of this small bot, just to get the latency of it for ping.
-                GatewayIntents,
-            },
-            voice::ClientVoiceManager,
-        },
+        bridge::gateway::GatewayIntents,
     },
     http::Http,
     model::{
@@ -140,7 +127,6 @@ use serenity::{
     prelude::{
         EventHandler,
         Context,
-        TypeMapKey,
         RwLock,
     },
     framework::standard::{
@@ -184,78 +170,53 @@ struct Allow {
     allowed: bool,
 }
 
-// Defining the structures to be used for "global" data
-// this data is not really global, it's just shared with Context.data
-struct ShardManagerContainer; // Shard manager to use for the latency.
-struct ConnectionPool; // A pool of connections to the database.
-struct RedisPool; // The connection to the redis cache database.
-struct Tokens; // For the configuration found on "config.toml"
-struct AnnoyedChannels; // This is a HashSet of all the channels the bot is allowed to be annoyed on.
-struct BooruList; // This is a HashSet of all the boorus found on "boorus.json"
-struct BooruCommands; // This is a HashSet of all the commands/aliases found on "boorus.json"
-struct VoiceManager; //  This is the struct for the voice manager.
-struct Lavalink; //  This is the struct for the lavalink client.
-struct SentTwitchStreams; //  This is the struct for the stream data that has already been sent.
-struct Uptime; //  This is for the startup time of the bot.
-struct VoiceGuildUpdate; //  This is for the startup time of the bot.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ConfigurationData {
+    pub osu: String,
+    pub discord: String,
+    pub twitch: String,
+    pub twitch_client_id: String,
+    pub trace_level: String,
+    pub enable_tracing: bool,
+    pub webhook_notifications: bool,
 
-// Implementing a type for each structure
-// This is made to make a Map<Struct, TypeValue>
-impl TypeMapKey for ShardManagerContainer {
-    // Mutex allows for the arc refference to be mutated
-    type Value = Arc<Mutex<ShardManager>>;
+    pub presence: PresenceConfig,
+    pub sankaku: SankakuConfig,
+    pub lavalink: LavalinkConfig,
+    pub web_server: WebServerConfig,
+    pub ibm: IBMConfig,
 }
 
-impl TypeMapKey for ConnectionPool {
-    // RwLock (aka Read Write Lock) makes the data only modifyable by 1 thread at a time
-    // So you can only have the lock open with write a single use at a time.
-    // You can have multiple reads, but you can't read as soon as the lock is opened for writing.
-    //type Value = Arc<RwLock<PgPool>>;
-    type Value = PgPool;
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PresenceConfig {
+    pub play_or_listen: String,
+    pub status: String,
 }
 
-impl TypeMapKey for Tokens {
-    // Value is not to be confused with the other values.
-    // This Value is toml::Value
-    type Value = Value;
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct SankakuConfig {
+    pub idol_login: String,
+    pub idol_passhash: String,
 }
 
-impl TypeMapKey for AnnoyedChannels {
-    type Value = RwLock<HashSet<u64>>;
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct LavalinkConfig {
+    pub host: String,
+    pub port: u16,
+    pub password: String,
 }
 
-impl TypeMapKey for BooruList {
-    type Value = Vec<Booru>; 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct WebServerConfig {
+    pub server_ip: String,
+    pub server_port: u16,
 }
 
-impl TypeMapKey for BooruCommands {
-    type Value = HashSet<String>; 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct IBMConfig {
+    pub token: String,
+    pub url: String,
 }
-
-impl TypeMapKey for VoiceManager {
-    type Value = Arc<Mutex<ClientVoiceManager>>;
-}
-
-impl TypeMapKey for Lavalink {
-    type Value = Arc<Mutex<LavalinkClient>>;
-}
-
-impl TypeMapKey for SentTwitchStreams {
-    type Value = Arc<RwLock<Vec<TwitchStreamData>>>;
-}
-
-impl TypeMapKey for Uptime {
-    type Value = Instant;
-}
-
-impl TypeMapKey for VoiceGuildUpdate {
-    type Value = Arc<RwLock<HashSet<GuildId>>>;
-}
-
-impl TypeMapKey for RedisPool {
-    type Value = RedisConnectionPool;
-}
-
 
 #[group("Master")]
 #[sub_groups(Meta, Sankaku, Osu, Fun, Music, AllBoorus, ImageManipulation, Mod, SerenityDocs, Games)]
@@ -265,7 +226,7 @@ struct Master;
 // this group includes the commands that basically every bot has, nothing really special.
 #[group("Meta")]
 #[description = "All the basic commands that basically every bot has."]
-#[commands(ping, test, invite, source, todo, prefixes, about, changelog, reload_db, terms_of_service, issues, eval)]
+#[commands(ping, test, invite, source, todo, prefixes, about, changelog, terms_of_service, issues, eval)]
 struct Meta;
 
 // The SankakuComplex command group.
@@ -406,8 +367,6 @@ struct LavalinkHandler;
 #[async_trait]
 impl LavalinkEventHandler for LavalinkHandler {}
 
-
-
 // Defines the handler to be used for events.
 #[derive(Debug)]
 struct Handler {
@@ -442,7 +401,7 @@ impl EventHandler for Handler {
             let web_server_info = {
                 let read_data = ctx.data.read().await;
                 let config = read_data.get::<Tokens>().unwrap();
-                config["web_server"].clone()
+                config.web_server.clone()
             };
 
             let ctx_clone = Arc::clone(&ctx);
@@ -456,8 +415,8 @@ impl EventHandler for Handler {
                     .and(warp::any().map(move || ctx_clone2.clone()))
                     .and_then(is_on_guild);
 
-                let ip = web_server_info["server_ip"].as_str().unwrap();
-                let port = web_server_info["server_port"].as_integer().unwrap();
+                let ip = web_server_info.server_ip;
+                let port = web_server_info.server_port;
 
                 warp::serve(routes)
                     .run(SocketAddr::from_str(
@@ -477,25 +436,26 @@ impl EventHandler for Handler {
         let info = {
             let read_data = ctx.data.read().await;
             let config = read_data.get::<Tokens>().unwrap();
-            config["presence"].clone()
+            config.presence.clone()
         };
 
-        if info["play_or_listen"].as_str().unwrap() == "playing" {
+        if info.play_or_listen == "playing" {
             ctx.set_presence(
-                Some(Activity::playing(info["status"].as_str().unwrap())),
+                Some(Activity::playing(&info.status)),
                 OnlineStatus::Online
             ).await;
-        } else if info["play_or_listen"].as_str().unwrap() == "listening" {
+        } else if info.play_or_listen == "listening" {
             ctx.set_presence(
-                Some(Activity::listening(info["status"].as_str().unwrap())),
+                Some(Activity::listening(&info.status)),
                 OnlineStatus::Online
             ).await;
-        } else if info["play_or_listen"].as_str().unwrap() == "competing" {
+        } else if info.play_or_listen == "competing" {
             ctx.set_presence(
-                Some(Activity::competing(info["status"].as_str().unwrap())),
+                Some(Activity::competing(&info.status)),
                 OnlineStatus::Online
             ).await;
         }
+
         info!("Bot is READY");
         println!("{} is ready to rock!", ready.user.name);
     }
@@ -503,20 +463,17 @@ impl EventHandler for Handler {
     // on_message event on d.py
     // This function triggers every time a message is sent.
     async fn message(&self, ctx: Context, msg: Message) {
-        // Ignores itself.
-        //if &msg.author.id.0 == ctx.cache.read().user.id.as_u64() {
-        //    return;
-        //}
-        // Ignores bot accounts.
         if msg.author.bot {
             return;
         }
 
-        // Read the global data lock
-        let data_read = ctx.data.read().await;
+        let annoyed_channels = {
+            // Read the global data lock
+            let data_read = ctx.data.read().await;
+            // Get the list of channels where the bot is allowed to be annoying
+            data_read.get::<AnnoyedChannels>().unwrap().clone()
+        };
 
-        // Get the list of channels where the bot is allowed to be annoying
-        let annoyed_channels = data_read.get::<AnnoyedChannels>().unwrap();
         // if the channel the message was sent on is on the list
         if (annoyed_channels.read().await).contains(&msg.channel_id.0) {
             // NO U
@@ -528,7 +485,8 @@ impl EventHandler for Handler {
 
             }
         }
-        if msg.content.contains("discordapp.com/channels/") {
+
+        if msg.content.contains("discordapp.com/channels/") || msg.content.contains("discord.com/channels/") {
             let mut splits = msg.content.split('/');
             if splits.clone().count() == 7 {
                 let channel_id  = splits.nth(5).unwrap_or("0").parse::<u64>().expect("NaN");
@@ -571,9 +529,9 @@ impl EventHandler for Handler {
         }
 
         if msg.guild_id.unwrap_or_default().0 == 159686161219059712 {
-            if msg.content.contains("ping me on nsfw!") {
+            if msg.content.to_lowercase().contains("ping me on nsfw!") {
                 let _ = ChannelId(354294536198946817).say(&ctx, format!("<@{}>", msg.author.id)).await;
-            } else if msg.content.contains("ping him on nsfw!") {
+            } else if msg.content.to_lowercase().contains("ping him on nsfw!") {
                 let _ = ChannelId(354294536198946817).say(&ctx, "<@299624139633721345>").await;
             }
         }
@@ -595,10 +553,18 @@ impl EventHandler for Handler {
         };
 
         // Obtain the "global" data in read mode
-        let data_read = ctx.data.read().await;
+        let (pool, annoyed_channels) = {
+            let data_read = &ctx.data.read().await;
 
-        // Check if the channel is on the list of channels that can be annoyed
-        let annoyed_channels = data_read.get::<AnnoyedChannels>().unwrap();
+            let pool = data_read.get::<DatabasePool>().unwrap();
+            let annoyed_channels = data_read.get::<AnnoyedChannels>().unwrap();
+
+            (
+                pool.clone(),
+                annoyed_channels.clone(),
+            )
+        };
+
         let annoy = (annoyed_channels.read().await).contains(&msg.channel_id.0);
 
         match add_reaction.emoji {
@@ -607,10 +573,11 @@ impl EventHandler for Handler {
                 // If the emote is the GW version of slof, React back.
                 // This also shows a couple ways to do error handling.
                 if id.0 == 375_459_870_524_047_361 {
-                    let reaction = msg.react(&ctx, add_reaction.emoji).await;
-                    if let Err(why) = reaction {
-                        eprintln!("There was an error adding a reaction: {}", why)
+                    
+                    if let Err(why) = msg.react(&ctx, add_reaction.emoji).await {
+                        error!("There was an error adding a reaction: {}", why);
                     }
+
                     if annoy {
                         let _ = msg.channel_id.say(&ctx, format!("<@{}>: qt", add_reaction.user_id.unwrap().0)).await;
                     }
@@ -621,31 +588,24 @@ impl EventHandler for Handler {
                 if annoy {
                     // This will not be kept here for long, as i see it being very annoying eventually.
                     if s == "🤔" {
-                        let _ = msg.channel_id.say(&ctx, format!("<@{}>: What ya thinking so much about",
-                                                                 add_reaction.user_id.unwrap().0)).await;
+                        let _ = msg.channel_id.say(&ctx,
+                            format!("<@{}>: What ya thinking so much about", add_reaction.user_id.unwrap().0)
+                        ).await;
                     }
-                } else {
-                    // This makes every message sent by the bot get deleted if 🚫 is on the reactions.
-                    // aka If you react with 🚫 on any message sent by the bot, it will get deleted.
-                    // This is helpful for antispam and anti illegal content measures.
-                    if s == "🚫" {
-                        let rdata = ctx.data.read().await;
-                        let pool = rdata.get::<ConnectionPool>().unwrap();
+                }
 
-                        let query = sqlx::query!("SELECT * FROM logging_channels WHERE channel_id = $1", add_reaction.channel_id.0 as i64)
-                            .fetch_optional(pool)
-                            .await;
-                        if let Ok(query) = query {
-                            if query.is_none() {
-                                let msg = ctx
-                                    .http
-                                    .as_ref()
-                                    .get_message(add_reaction.channel_id.0, add_reaction.message_id.0)
-                                    .await
-                                    .expect("Error while obtaining message");
-                                if msg.author.id == ctx.cache.current_user().await.id {
-                                    let _ = msg.delete(&ctx).await;
-                                }
+                // This makes every message sent by the bot get deleted if 🚫 is on the reactions.
+                // aka If you react with 🚫 on any message sent by the bot, it will get deleted.
+                // This is helpful for antispam and anti illegal content measures.
+                if s == "🚫" {
+                    let query = sqlx::query!("SELECT * FROM logging_channels WHERE channel_id = $1", add_reaction.channel_id.0 as i64)
+                        .fetch_optional(&pool)
+                        .await;
+
+                    if let Ok(query) = query {
+                        if query.is_none() {
+                            if msg.author.id == ctx.cache.current_user().await.id {
+                                let _ = msg.delete(&ctx).await;
                             }
                         }
                     }
@@ -659,19 +619,24 @@ impl EventHandler for Handler {
 
     async fn voice_server_update(&self, ctx: Context, voice: VoiceServerUpdateEvent) {
         if let Some(guild_id) = voice.guild_id {
-            let data = ctx.data.read().await;
-            let voice_server_lock = data.get::<VoiceGuildUpdate>().unwrap();
+            let voice_server_lock = {
+                let data_read = ctx.data.read().await;
+                data_read.get::<VoiceGuildUpdate>().unwrap().clone()
+            };
+
             let mut voice_server = voice_server_lock.write().await;
             voice_server.insert(guild_id);
         }
     }
 
     async fn guild_member_addition(&self, ctx: Context, guild_id: GuildId, member: Member) {
-        let rdata = &ctx.data.read().await;
-        let pool = rdata.get::<ConnectionPool>().unwrap();
+        let pool = {
+            let data_read = &ctx.data.read().await;
+            data_read.get::<DatabasePool>().unwrap().clone()
+        };
 
         let data = sqlx::query!("SELECT banner_user_id FROM permanent_bans WHERE guild_id = $1 AND user_id = $2", guild_id.0 as i64, member.user.id.0 as i64)
-            .fetch_optional(pool)
+            .fetch_optional(&pool)
             .await
             .unwrap();
 
@@ -730,11 +695,13 @@ async fn on_dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
 #[hook]
 async fn before(ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
     if let Some(guild_id) = msg.guild_id {
-        let data_read = ctx.data.read().await;
-        let pool = data_read.get::<ConnectionPool>().unwrap();
+        let pool = {
+            let data_read = ctx.data.read().await;
+            data_read.get::<DatabasePool>().unwrap().clone()
+        };
 
         let disallowed_commands = sqlx::query!("SELECT disallowed_commands FROM prefixes WHERE guild_id = $1", guild_id.0 as i64)
-            .fetch_optional(pool)
+            .fetch_optional(&pool)
             .await
             .unwrap();
 
@@ -748,13 +715,15 @@ async fn before(ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
         }
 
         if cmd_name == "play" || cmd_name == "play_playlist" {
-            let manager_lock = ctx.data.read().await
-                .get::<VoiceManager>().cloned().expect("Expected VoiceManager in ShareMap.");
+            let manager_lock = {
+                let data_read = ctx.data.read().await;
+                data_read.get::<VoiceManager>().cloned().expect("Expected VoiceManager in ShareMap.").clone()
+            };
+
             let manager = manager_lock.lock().await;
 
             if manager.get(guild_id).is_none() {
                 drop(manager);
-                drop(data_read);
 
                 if let Err(why) =  _join(ctx, msg).await {
                     error!("While running command: {}", cmd_name);
@@ -791,12 +760,24 @@ async fn after(ctx: &Context, msg: &Message, cmd_name: &str, error: CommandResul
 // Small error event that triggers when a command doesn't exist.
 #[hook]
 async fn unrecognised_command(ctx: &Context, msg: &Message, command_name: &str) {
-    let data_read = ctx.data.read().await;
+    let (pool, commands, boorus) = {
+        let data_read = ctx.data.read().await;
+
+        let pool = data_read.get::<DatabasePool>().unwrap();
+        let commands = data_read.get::<BooruCommands>().unwrap();
+        let boorus = data_read.get::<BooruList>().unwrap();
+
+        (
+            pool.clone(),
+            commands.clone(),
+            boorus.clone(),
+        )
+    };
+
     if let Some(guild_id) = msg.guild_id {
-        let pool = data_read.get::<ConnectionPool>().unwrap();
 
         let disallowed_commands = sqlx::query!("SELECT disallowed_commands FROM prefixes WHERE guild_id = $1", guild_id.0 as i64)
-            .fetch_optional(pool)
+            .fetch_optional(&pool)
             .await
             .unwrap();
 
@@ -810,13 +791,11 @@ async fn unrecognised_command(ctx: &Context, msg: &Message, command_name: &str) 
         }
     }
 
-    let commands = data_read.get::<BooruCommands>();
-    let boorus = data_read.get::<BooruList>().unwrap();
 
-    if commands.as_ref().unwrap().contains(command_name) {
+    if commands.contains(command_name) {
         let booru: Booru = {
             let mut x = Booru::default();
-            for b in boorus {
+            for b in boorus.iter() {
                 if b.names.contains(&command_name.to_string()) {
                     x = b.clone();
                 }
@@ -849,32 +828,43 @@ async fn dynamic_prefix(ctx: &Context, msg: &Message) -> Option<String> { // Cus
     let guild_id = &msg.guild_id;
 
     let p;
+
     // If the command was invoked on a guild
     if let Some(id) = guild_id {
         // Get the real guild id, and the i64 type becaues that's what postgre uses.
         let gid = id.0 as i64;
-        // Open the context data lock in read mode.
-        let data = ctx.data.read().await;
-        // Obtain the database connection for the data.
-        let pool = data.get::<ConnectionPool>().unwrap();
-        // Obtain the configured prefix from the database
-        let db_prefix = sqlx::query!("SELECT prefix FROM prefixes WHERE guild_id = $1", gid)
-            .fetch_optional(pool)
-            .await
-            .expect("Could not query the database");
-
-        p = if let Some(result) = db_prefix {
-            result.prefix.unwrap_or(".".to_string()).to_string()
-        } else {
-            ".".to_string()
+        let pool = {
+            // Open the context data lock in read mode.
+            let data = ctx.data.read().await;
+            // it's safe to clone PgPool
+            data.get::<DatabasePool>().unwrap().clone()
         };
+
+        // Obtain the database connection for the data.
+        // Obtain the configured prefix from the database
+        match sqlx::query!("SELECT prefix FROM prefixes WHERE guild_id = $1", gid)
+            .fetch_optional(&pool)
+            .await {
+                Err(why) => {
+                    error!("Could not query database: {}", why);
+                    p = ".".to_string();
+                },
+                Ok(db_prefix) => {
+                    p = if let Some(result) = db_prefix {
+                        result.prefix.unwrap_or(".".to_string()).to_string()
+                    } else {
+                        ".".to_string()
+                    };
+                }
+            }
+
 
     // If the command was invoked on a dm
     } else {
         p = ".".to_string();
     };
+
     // dynamic_prefix() needs an Option<String>
-    //Some(p.to_lowercase())
     Some(p)
 }
 
@@ -894,23 +884,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
 
     // gets the data from the config.toml file
-    let configuration = contents.parse::<Value>().unwrap();
+    let configuration = toml::from_str::<ConfigurationData>(&contents).unwrap();
     
-    if configuration["enable_tracing"].as_bool().unwrap() {
+    if configuration.enable_tracing {
         LogTracer::init()?;
-        trace!("test log");
+
         // obtains the tracing level from the config
-        let base_level = configuration["trace_level"].as_str().unwrap();
-        let level = match base_level {
+        let level = match configuration.trace_level.as_str() {
             "error" => Level::ERROR,
             "warn" => Level::WARN,
             "info" => Level::INFO,
             "debug" => Level::DEBUG,
             "trace" => Level::TRACE,
-            _ => Level::TRACE,
+            _ => Level::INFO,
         };
 
-        info!("Tracer initialized.");
+        info!("Tracer initialized with level {}.", level);
 
         if let Ok(_) = dotenv::dotenv() {
             let subscriber = FmtSubscriber::builder()
@@ -929,7 +918,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     }
 
     // obtains the discord token from the config
-    let bot_token = configuration["discord"].as_str().unwrap();
+    let bot_token = configuration.discord.to_string();
     // Defines a client with the token obtained from the config.toml file.
     // This also starts up the Event Handler structure defined earlier.
     
@@ -1005,27 +994,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut data = client.data.write().await;
 
         // Add the databases connection pools to the data.
-        let pool = obtain_postgres_pool().await?;
-        data.insert::<ConnectionPool>(pool);
-        let pool = obtain_redis_pool().await?;
-        data.insert::<RedisPool>(pool);
+        let pg_pool = obtain_postgres_pool().await?;
+        data.insert::<DatabasePool>(pg_pool.clone());
+
+        let redis_pool = obtain_redis_pool().await?;
+        data.insert::<CachePool>(redis_pool);
 
         // Add the shard manager to the data.
-        data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
-        // Add the tokens to the data.
-        data.insert::<Tokens>(configuration.clone());
+        data.insert::<ShardManagerContainer> (
+            Arc::clone(&client.shard_manager)
+        );
+
         // Add the Voice Manager.
-        data.insert::<VoiceManager>(Arc::clone(&client.voice_manager));
+        data.insert::<VoiceManager> (
+            Arc::clone(&client.voice_manager)
+        );
+
+        // Add the tokens to the data.
+        data.insert::<Tokens> (
+            Arc::new(configuration.clone())
+        );
+
         // Add the sent streams.
-        data.insert::<SentTwitchStreams>(Arc::new(RwLock::new(Vec::new())));
-        data.insert::<Uptime>(Instant::now());
-        data.insert::<VoiceGuildUpdate>(Arc::new(RwLock::new(HashSet::new())));
+        data.insert::<SentTwitchStreams> (
+            Arc::new(RwLock::new(Vec::new()))
+        );
+
+        data.insert::<Uptime> (
+            Arc::new(Instant::now())
+        );
+
+        data.insert::<VoiceGuildUpdate> (
+            Arc::new(RwLock::new(HashSet::new()))
+        );
 
         {
             // TODO: get the real shard amount.
-            let host = configuration["lavalink"]["host"].as_str().unwrap();
-            let port = configuration["lavalink"]["port"].as_integer().unwrap();
-            let password = configuration["lavalink"]["password"].as_str().unwrap();
+            let host = configuration.lavalink.host;
+            let port = configuration.lavalink.port;
+            let password = configuration.lavalink.password;
 
             let mut lava_client = LavalinkClient::new(bot_id);
 
@@ -1057,16 +1064,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             }
 
             // Add the json file struct and the HashSet of all the commands to the data.
-            data.insert::<BooruList>(boorus.boorus);
-            data.insert::<BooruCommands>(all_names);
+            data.insert::<BooruList> (
+                Arc::new(boorus.boorus)
+            );
+            data.insert::<BooruCommands> (
+                Arc::new(all_names)
+            );
         }
 
         {
             let annoyed_channels = {
-                let pool = data.get::<ConnectionPool>().unwrap();
                 // obtain all the channels where the bot is allowed to be annoyed on from the db.
                 let raw_annoyed_channels = sqlx::query!("SELECT channel_id from annoyed_channels")
-                    .fetch_all(pool)
+                    .fetch_all(&pg_pool)
                     .await?;
 
                 // add every channel id from the db to a HashSet.
@@ -1079,7 +1089,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             };
 
             // Insert the HashSet of annoyed channels to the data.
-            data.insert::<AnnoyedChannels>(RwLock::new(annoyed_channels));
+            data.insert::<AnnoyedChannels> (
+                Arc::new(RwLock::new(annoyed_channels))
+            );
         }
     }
 
