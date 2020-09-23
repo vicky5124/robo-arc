@@ -680,7 +680,7 @@ async fn osu_profile(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
         }
     } else {
         if username.is_empty() {
-            if let Some(m) = msg.member(ctx).await {
+            if let Ok(m) = msg.member(ctx).await {
                 username = m.display_name().to_string();
             } else {
                 username = msg.author.name.to_string();
@@ -826,7 +826,7 @@ async fn score(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         username = row.osu_username;
         osu_id = row.osu_id;
     } else {
-        if let Some(m) = msg.member(ctx).await {
+        if let Ok(m) = msg.member(ctx).await {
             username = m.display_name().to_string();
         } else {
             username = msg.author.name.to_string();
