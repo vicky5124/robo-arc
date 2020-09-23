@@ -1,3 +1,28 @@
+# 0.2.7-alpha
+
+### Bugs:
+- Fixed everyone mention bugs.
+- Fixed owners_only macro on teams.
+- HTTP Server now doesn't use a clone of cache.
+- Fixed BeatmapData to serialize good types.
+- Fixed Error handling on twitch notifications.
+- Updated RTFM to use the main repo.
+- Properly handle messages that are too long for embed fields on logging.
+- Logging messages cannot be deleted with reactions.
+
+### Dependencies:
+- Updated Dependencies.
+
+### Features:
+- Added Competing status.
+- Added Rust eval command.
+- Swaped Translate from Yandex to IBM
+- Added cargo-make support.
+- Play can now search with youtube-dl
+- Moved TODO to Gitlab Boards.
+- Added clear_queue command.
+- Added basic logging for almost every event.
+
 # 0.2.6-alpha
 
 ### Bugs:
