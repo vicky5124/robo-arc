@@ -1339,7 +1339,7 @@ dependencies = [
 [[package]]
 name = "lavalink-rs"
 version = "0.2.0-alpha"
-source = "git+https://gitlab.com/nitsuga5124/lavalink-rs/?branch=serenity_next#28432a812df345e66c48ec3f665d8f9e106f4ebf"
+source = "git+https://gitlab.com/nitsuga5124/lavalink-rs/?branch=serenity_next#add7ec38536b18bdc18387691b8752b052081062"
 dependencies = [
  "async-tungstenite 0.4.2",
  "futures",
