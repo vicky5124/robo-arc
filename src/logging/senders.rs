@@ -544,14 +544,24 @@ pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
                         PermissionOverwriteType::Member(x) => {
                             let user = x.to_user(ctx).await.unwrap_or_default();
 
-                            fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
-                            fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            if !perm.allow.is_empty() {
+                                fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
+                            }
+
+                            if !perm.deny.is_empty() {
+                                fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            }
                         }
                         PermissionOverwriteType::Role(x) => {
                             let role = x.to_role_cached(ctx).await.unwrap();
 
-                            fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
-                            fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            if !perm.allow.is_empty() {
+                                fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
+                            }
+
+                            if !perm.deny.is_empty() {
+                                fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            }
                         }
                         _ => (),
                     }
@@ -588,14 +598,24 @@ pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
                         PermissionOverwriteType::Member(x) => {
                             let user = x.to_user(ctx).await.unwrap_or_default();
 
-                            fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
-                            fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            if !perm.allow.is_empty() {
+                                fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
+                            }
+
+                            if !perm.deny.is_empty() {
+                                fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            }
                         }
                         PermissionOverwriteType::Role(x) => {
                             let role = x.to_role_cached(ctx).await.unwrap();
 
-                            fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
-                            fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            if !perm.allow.is_empty() {
+                                fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
+                            }
+
+                            if !perm.deny.is_empty() {
+                                fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            }
                         }
                         _ => (),
                     }
@@ -671,14 +691,24 @@ pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
                         PermissionOverwriteType::Member(x) => {
                             let user = x.to_user(ctx).await.unwrap_or_default();
 
-                            fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
-                            fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            if !perm.allow.is_empty() {
+                                fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
+                            }
+
+                            if !perm.deny.is_empty() {
+                                fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            }
                         }
                         PermissionOverwriteType::Role(x) => {
                             let role = x.to_role_cached(ctx).await.unwrap();
 
-                            fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
-                            fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            if !perm.allow.is_empty() {
+                                fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
+                            }
+
+                            if !perm.deny.is_empty() {
+                                fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            }
                         }
                         _ => (),
                     }
@@ -715,14 +745,24 @@ pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
                         PermissionOverwriteType::Member(x) => {
                             let user = x.to_user(ctx).await.unwrap_or_default();
 
-                            fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
-                            fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            if !perm.allow.is_empty() {
+                                fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
+                            }
+
+                            if !perm.deny.is_empty() {
+                                fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            }
                         }
                         PermissionOverwriteType::Role(x) => {
                             let role = x.to_role_cached(ctx).await.unwrap();
 
-                            fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
-                            fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            if !perm.allow.is_empty() {
+                                fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
+                            }
+
+                            if !perm.deny.is_empty() {
+                                fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            }
                         }
                         _ => (),
                     }
@@ -798,14 +838,24 @@ pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
                         PermissionOverwriteType::Member(x) => {
                             let user = x.to_user(ctx).await.unwrap_or_default();
 
-                            fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
-                            fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            if !perm.allow.is_empty() {
+                                fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
+                            }
+
+                            if !perm.deny.is_empty() {
+                                fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            }
                         }
                         PermissionOverwriteType::Role(x) => {
                             let role = x.to_role_cached(ctx).await.unwrap();
 
-                            fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
-                            fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            if !perm.allow.is_empty() {
+                                fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
+                            }
+
+                            if !perm.deny.is_empty() {
+                                fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            }
                         }
                         _ => (),
                     }
@@ -842,14 +892,24 @@ pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
                         PermissionOverwriteType::Member(x) => {
                             let user = x.to_user(ctx).await.unwrap_or_default();
 
-                            fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
-                            fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            if !perm.allow.is_empty() {
+                                fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
+                            }
+
+                            if !perm.deny.is_empty() {
+                                fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            }
                         }
                         PermissionOverwriteType::Role(x) => {
                             let role = x.to_role_cached(ctx).await.unwrap();
 
-                            fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
-                            fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            if !perm.allow.is_empty() {
+                                fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
+                            }
+
+                            if !perm.deny.is_empty() {
+                                fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            }
                         }
                         _ => (),
                     }
