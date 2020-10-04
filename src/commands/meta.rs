@@ -20,8 +20,6 @@ use std::{
     time::Instant,
 };
 
-use sqlx;
-
 use serenity::{
     prelude::Context,
     model::{
@@ -55,32 +53,28 @@ use walkdir::WalkDir;
 // Optionally they may also take an Args type parameter for command arguments.
 // They must also return CommandResult.
 async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
-    // The shard manager is an interface for mutating, stopping, restarting, and
-    // retrieving information about shards.
-    let shard_manager = {
-        let data = ctx.data.read().await;
+    let now = Instant::now();
+    reqwest::get("https://discordapp.com/api/v6/gateway").await?;
+    let get_latency = now.elapsed().as_millis();
 
-        data.get::<ShardManagerContainer>().unwrap().clone()
-    };
+    let shard_latency = {
+        let shard_manager = {
+            let data_read = ctx.data.read().await;
+            data_read.get::<ShardManagerContainer>().unwrap().clone()
+        };
 
-    let manager = shard_manager.lock().await;
-    let runners = manager.runners.lock().await;
+        let manager = shard_manager.lock().await;
+        let runners = manager.runners.lock().await;
 
-    // Shards are backed by a "shard runner" responsible for processing events
-    // over the shard, so we'll get the information about the shard runner for
-    // the shard this command was sent over.
-    let runner = match runners.get(&ShardId(ctx.shard_id)) {
-        Some(runner) => runner,
-        None => {
-            msg.reply(ctx,  "No shard found").await?;
-
-            return Ok(());
-        },
-    };
-   
-    let shard_latency = match runner.latency {
-        Some(ms) => format!("{:.2}ms", ms.as_micros() as f32 / 1000.0),
-        _ => String::new(),
+        let runner_raw = runners.get(&ShardId(ctx.shard_id));
+        if let Some(runner) = runner_raw {
+            match runner.latency {
+                Some(ms) => format!("{}ms", ms.as_millis()),
+                _ => "?ms".to_string(),
+            }
+        } else {
+            "?ms".to_string()
+        }
     };
 
     let map = json!({"content" : "Calculating latency..."});
@@ -89,9 +83,6 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
     let mut message = ctx.http.send_message(msg.channel_id.0, &map).await?;
     let post_latency = now.elapsed().as_millis();
 
-    let now = Instant::now();
-    reqwest::get("https://discordapp.com/api/v6/gateway").await?;
-    let get_latency = now.elapsed().as_millis();
 
     message.edit(ctx, |m| {
         m.content("");
