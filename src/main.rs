@@ -101,7 +101,7 @@ use serenity::{
     async_trait,
     utils::Colour, // To change the embed help color
     client::{
-        Client, // To create a client that runs eveyrthing.
+        ClientBuilder, // To create a client that runs eveyrthing.
         bridge::gateway::GatewayIntents,
     },
     http::Http,
@@ -972,7 +972,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .group(&CONFIGURATION_GROUP) // Load `Configuration` command group
         .help(&MY_HELP); // Load the custom help command.
 
-    let mut client = Client::new(&bot_token)
+    let mut client = ClientBuilder::new(&bot_token)
         .event_handler(Handler {
             run_loops: Mutex::new(true),
         })
