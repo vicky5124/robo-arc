@@ -270,6 +270,16 @@ async fn now_playing(ctx: &Context, msg: &Message) -> CommandResult {
     if let Some(node) = lava_client.nodes.get(&msg.guild_id.unwrap().0) {
         let track = node.now_playing.as_ref();
         if let Some(x) = track {
+            let requester = if let Some(u) = x.requester {
+                u.to_serenity()
+                    .to_user(ctx)
+                    .await
+                    .unwrap_or_default()
+                    .name
+            } else {
+                "Unknown".to_string()
+            };
+
             let track_info = x.track.info.as_ref().unwrap();
             msg.channel_id.send_message(ctx, |m| {
                 m.content("Now playing:");
@@ -277,9 +287,18 @@ async fn now_playing(ctx: &Context, msg: &Message) -> CommandResult {
                     e.title(&track_info.title);
                     e.thumbnail(format!("https://i.ytimg.com/vi/{}/default.jpg", track_info.identifier));
                     e.url(&track_info.uri);
-                    e.footer(|f| f.text(format!("Submited by unknown")));
+                    e.footer(|f| f.text(format!("Submited by {}", &requester)));
                     e.field("Uploader", &track_info.author, true);
-                    e.field("Length", format!("{}:{}",
+                    e.field("Length", format!("{}:{} - {}:{}",
+                        track_info.position / 1000  % 3600 /  60,
+                        {
+                            let x = track_info.position / 1000 % 3600 % 60;
+                            if x < 10 {
+                                format!("0{}", x)
+                            } else {
+                                x.to_string()
+                            }
+                        },
                         track_info.length / 1000  % 3600 /  60,
                         {
                             let x = track_info.length / 1000 % 3600 % 60;
@@ -502,7 +521,9 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
         drop(lava_client);
 
-        LavalinkClient::play(guild_id, query_information.tracks[0].clone()).queue(Arc::clone(&lava_client_lock)).await?;
+        LavalinkClient::play(guild_id, query_information.tracks[0].clone())
+            .requester(msg.author.id)
+            .queue(Arc::clone(&lava_client_lock)).await?;
 
         msg.channel_id.send_message(ctx, |m| {
             m.content("Added to queue:");
@@ -599,7 +620,9 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
         drop(lava_client);
 
         for track in query_information.tracks {
-            LavalinkClient::play(guild_id, track.clone()).queue(Arc::clone(&lava_client_lock)).await?;
+            LavalinkClient::play(guild_id, track.clone())
+                .requester(msg.author.id)
+                .queue(Arc::clone(&lava_client_lock)).await?;
         }
         
         msg.channel_id.send_message(ctx, |m| {
