@@ -553,16 +553,9 @@ impl EventHandler for Handler {
         };
 
         // Obtain the "global" data in read mode
-        let (pool, annoyed_channels) = {
+        let annoyed_channels = {
             let data_read = &ctx.data.read().await;
-
-            let pool = data_read.get::<DatabasePool>().unwrap();
-            let annoyed_channels = data_read.get::<AnnoyedChannels>().unwrap();
-
-            (
-                pool.clone(),
-                annoyed_channels.clone(),
-            )
+            data_read.get::<AnnoyedChannels>().unwrap().clone()
         };
 
         let annoy = (annoyed_channels.read().await).contains(&msg.channel_id.0);
@@ -598,16 +591,8 @@ impl EventHandler for Handler {
                 // aka If you react with 🚫 on any message sent by the bot, it will get deleted.
                 // This is helpful for antispam and anti illegal content measures.
                 if s == "🚫" {
-                    let query = sqlx::query!("SELECT * FROM logging_channels WHERE channel_id = $1", add_reaction.channel_id.0 as i64)
-                        .fetch_optional(&pool)
-                        .await;
-
-                    if let Ok(query) = query {
-                        if query.is_none() {
-                            if msg.author.id == ctx.cache.current_user().await.id {
-                                let _ = msg.delete(&ctx).await;
-                            }
-                        }
+                    if msg.author.id == ctx.cache.current_user().await.id {
+                        let _ = msg.delete(&ctx).await;
                     }
                 }
             },
@@ -1034,7 +1019,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             let port = configuration.lavalink.port;
             let password = configuration.lavalink.password;
 
-            let mut lava_client = LavalinkClient::new(bot_id);
+            let mut lava_client = LavalinkClient::new(bot_id.0);
 
             lava_client.set_host(host.to_string());
             lava_client.set_password(password.to_string());

@@ -26,6 +26,7 @@ use serenity::{
     },
     model::id::RoleId,
     model::webhook::Webhook,
+    model::channel::Channel,
     framework::standard::{
         Args,
         Delimiter,
@@ -1063,20 +1064,36 @@ async fn toggle_anti_spam(ctx: &Context, msg: &Message) -> CommandResult {
 ///
 /// Usage: `configure channel logging 134217727`
 #[command]
+#[aliases("logs")]
+#[min_args(1)]
 async fn logging(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let digits = args.single::<u64>()?;
 
-    let pool = {
-        let data_read = ctx.data.read().await;
-        data_read.get::<DatabasePool>().unwrap().clone()
-    };
+    let channel = msg.channel(ctx).await.unwrap();
 
-    sqlx::query!("INSERT INTO logging_channels (guild_id, channel_id, bitwise) VALUES ($1, $2, $3)", msg.guild_id.unwrap().0 as i64, msg.channel_id.0 as i64, digits as i64)
-                        .execute(&pool)
-                        .await?;
+    if let Channel::Guild(channel) = channel {
+        let hook = match channel.create_webhook_with_avatar(ctx, "Robo Arc - Logging", ctx.cache.current_user().await.face().as_str()).await {
+            Err(why) => {
+                msg.reply(ctx, format!("Could not create a webhook, please provide the bot access to manage webhooks in this channel.\n{}", why)).await?;
+                return Ok(());
+            },
+            Ok(x) => x,
+        };
 
-    let events = LoggingEvents::from_bits_truncate(digits);
-    msg.reply(ctx, format!("Successfully added logging for this events:\n{:?}", events)).await?;
+        let pool = {
+            let data_read = ctx.data.read().await;
+            data_read.get::<DatabasePool>().unwrap().clone()
+        };
+
+        sqlx::query!("INSERT INTO logging_channels (guild_id, webhook_url, bitwise) VALUES ($1, $2, $3)", msg.guild_id.unwrap().0 as i64, hook.url(), digits as i64)
+                            .execute(&pool)
+                            .await?;
+
+        let events = LoggingEvents::from_bits_truncate(digits);
+        msg.reply(ctx, format!("Successfully added logging for this events:\n{:?}", events)).await?;
+    } else {
+        msg.reply(ctx, "Invalid Channel Type").await?;
+    }
 
     Ok(())
 }

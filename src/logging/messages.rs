@@ -6,13 +6,12 @@ use std::{
 };
 
 use darkredis::Connection;
-use futures::lock::MutexGuard;
-
 
 use tracing::{
     //info,
     warn,
     error,
+    instrument,
 };
 
 use serenity::{
@@ -26,6 +25,7 @@ use serenity::{
     prelude::Context,
 };
 
+#[instrument(skip(ctx))]
 pub async fn log_message(ctx: Arc<Context>, data: &MessageCreateEvent) {
     let message = &data.message;
 
@@ -37,29 +37,38 @@ pub async fn log_message(ctx: Arc<Context>, data: &MessageCreateEvent) {
     let channel_id = message.channel_id.0 as i64;
     let guild_id = message.guild_id.unwrap().0 as i64;
     let author_id = message.author.id.0 as i64;
+
+    let webhook_id = if let Some(x) = message.webhook_id {
+        Some(x.0 as i64)
+    } else {
+        None
+    };
     
-    let content = &message.content;
-    let attachments = message.attachments.iter().map(|i| i.proxy_url.to_string()).collect::<Vec<String>>();
-    let embeds = message.embeds.iter().map(|i| serde_json::to_string(i).unwrap()).collect::<Vec<String>>();
-    
-    let pinned = message.pinned;
-    //let kind = format!("{:?}", message.kind);
-    //let kind = message.kind;
-    
-    let timestamp = message.timestamp;
-    
-    let tts = message.tts;
-    let webhook_id = if let Some(x) = message.webhook_id { Some(x.0 as i64) } else { None };
+    let attachments = message.attachments
+        .iter()
+        .map(|i| i.proxy_url.to_string())
+        .collect::<Vec<String>>();
+
+    let embeds = message.embeds
+        .iter()
+        .map(|i| serde_json::to_string(i).unwrap())
+        .collect::<Vec<String>>();
 
     let pool = {
         let data_read = ctx.data.read().await;
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    if let Err(why) = sqlx::query!("INSERT INTO log_messages (id, channel_id, guild_id, author_id, content, attachments, embeds, pinned, creation_timestamp, tts, webhook_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+    if let Err(why) = sqlx::query!("
+        INSERT INTO log_messages
+        (id, channel_id, guild_id, author_id, content, attachments, embeds, pinned, creation_timestamp, tts, webhook_id)
+        VALUES
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ",
             message_id, channel_id, guild_id, author_id,
-            content, &attachments, &embeds,
-            pinned, timestamp, tts, webhook_id, //kind,
+            &message.content, &attachments, &embeds,
+            message.pinned, message.timestamp, message.tts,
+            webhook_id, //message.kind,
         )
         .execute(&pool)
         .await
@@ -68,7 +77,7 @@ pub async fn log_message(ctx: Arc<Context>, data: &MessageCreateEvent) {
     };
 }
 
-pub async fn anti_spam_message(ctx: Arc<Context>, data: &MessageCreateEvent, redis: &mut MutexGuard<'_, Connection>) {
+pub async fn anti_spam_message(ctx: Arc<Context>, data: &MessageCreateEvent, redis: &mut Connection) {
     let message = &data.message;
 
     if message.author.bot || message.guild_id.is_none() {

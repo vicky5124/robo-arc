@@ -1,6 +1,10 @@
 #![allow(non_upper_case_globals)]
 use bitflags::bitflags;
 
+use sqlx::PgPool;
+use serenity::model::id::GuildId;
+use tracing::error;
+
 bitflags! {
     pub struct LoggingEvents: u64 {
         const ChannelCreate              = 0b_000000000000000000000000001;
@@ -30,5 +34,32 @@ bitflags! {
         const VoiceStateUpdate           = 0b_001000000000000000000000000;
         const VoiceServerUpdate          = 0b_010000000000000000000000000;
         const WebhookUpdate              = 0b_100000000000000000000000000;
+    }
+}
+
+pub struct LoggingChannels {
+    pub guild_id: i64,
+    pub bitwise: i64,
+    pub webhook_url: String,
+}
+
+
+
+pub async fn guild_has_logging(pool: &PgPool, event: LoggingEvents, guild_id: impl Into<GuildId>) -> Option<LoggingChannels> {
+    let query = match sqlx::query_as!(LoggingChannels, "SELECT * FROM logging_channels WHERE guild_id = $1", guild_id.into().0 as i64)
+        .fetch_optional(pool)
+        .await {
+            Ok(x) => x,
+            Err(why) => {
+                error!("Error quering Database: {}", why);
+                return None;
+            }
+        }?;
+
+    let log_events = LoggingEvents::from_bits_truncate(query.bitwise as u64);
+    if log_events.contains(event) {
+        Some(query)
+    } else {
+        None
     }
 }
