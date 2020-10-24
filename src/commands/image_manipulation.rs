@@ -33,7 +33,7 @@ use tokio::task::block_in_place;
 async fn pride_image(image_vec: &[u8], name: String) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>>{
     let mut og_image = PhotonImage::new_from_byteslice(image_vec.to_vec());
     let pride_path = format!("pride/{}.png", name);
-    let mut pride_image = open_image(Box::leak(pride_path.into_boxed_str()));
+    let mut pride_image = open_image(Box::leak(pride_path.into_boxed_str()))?;
 
     let og_image_arc = Arc::new(RwLock::new(&mut og_image));
     let og_image_clone = Arc::clone(&og_image_arc);
