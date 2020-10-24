@@ -45,7 +45,7 @@ async fn example(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         "7" | "07" | "basic bot" | "bot structure" | "structure" =>
             msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e07_sample_bot_structure>").await?,
 
-        "8" | "08" | "logging" | "logs" | "log" =>
+        "8" | "08" | "logging" | "logs" | "log" | "tracing" =>
             msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e08_env_logging>").await?,
 
         "9" | "09" | "shard manager" =>
@@ -62,6 +62,10 @@ async fn example(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
         "13" | "intets" | "intent" =>
             msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e13_gateway_intents>").await?,
+        "14" | "global data" | "global_data" | "global" | "data" | "client data" | "ctx data" | "context data" =>
+            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e14_global_data>").await?,
+        "15" | "parallel loops" | "parallel_loops" | "task" | "tasks" | "concurrent loop" | "parallel operations" =>
+            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e15_parallel_loops>").await?,
 
         _ => msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples>").await?,
     };
@@ -102,8 +106,9 @@ async fn rtfm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
     //println!("done");
 
-    msg.channel_id.say(ctx, "Serenity Tokio: <https://docs.rs/serenity/0.9.0-rc.0/serenity/>
-Serenity ThreadPool: <https://docs.rs/serenity/0.8.7/serenity/>").await?;
+    msg.channel_id.say(ctx, "Serenity Tokio: <https://serenity-rs.github.io/serenity/current/serenity/>
+Serenity ThreadPool: <https://docs.rs/serenity/0.8.7/serenity/>
+Lavalink-rs: <https://docs.rs/lavalink-rs/0.3.0-alpha/lavalink_rs/>").await?;
 
     Ok(())
 }
