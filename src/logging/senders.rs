@@ -77,8 +77,6 @@ pub async fn send_message_update(ctx: &Context, data: &MessageUpdateEvent) {
                     e
                 });
 
-                dbg!(&embed);
-
                 let mut split = channel_data.webhook_url.split('/');
                 let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
                 let token = split.nth(0).unwrap();
