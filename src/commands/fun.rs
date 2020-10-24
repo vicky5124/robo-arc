@@ -232,7 +232,7 @@ async fn translate(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
             dest = format!("{}-{}", original[0], dest);
         } else {
             let langs = original.iter().map(|i| format!("`{}-{}`", i, dest)).collect::<Vec<_>>();
-            msg.reply(ctx, format!("A language could not be specified, please use one of the following:\n{}; as the laanguage argument", langs.join(", "))).await?;
+            msg.reply(ctx, format!("The source language could not be guessed, please use one of the following: {}\nas the language argument", langs.join(", "))).await?;
             return Ok(());
         }
     }
