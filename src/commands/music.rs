@@ -210,7 +210,7 @@ async fn queue(ctx: &Context, msg: &Message) -> CommandResult {
 
     let mut lava_client = lava_client_lock.lock().await;
     if let Some(node) = lava_client.nodes.get_mut(&msg.guild_id.unwrap().0) {
-        if !node.queue.len() <= 1 {
+        if node.queue.len() > 1 {
             let mut queue = String::from("```st\n");
             for (index, track) in node.queue.iter().skip(1).take(10).enumerate() {
                 queue +=  &format!("{}: {}\n", index + 1, track.track.info.as_ref().unwrap().title);
@@ -419,7 +419,14 @@ async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
             data_read.get::<Lavalink>().unwrap().clone()
         };
 
-        lava_client_lock.lock().await.destroy(guild_id).await?;
+        let mut lava_client = lava_client_lock.lock().await;
+
+        lava_client.destroy(guild_id).await?;
+        lava_client.nodes.remove(&guild_id.0);
+
+        if let Some(pos) = lava_client.loops.iter().position(|x| *x == guild_id.0) {
+            lava_client.loops.remove(pos);
+        }
 
         msg.react(ctx, '✅').await?;
     } else {

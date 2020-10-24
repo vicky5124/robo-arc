@@ -44,13 +44,13 @@
         },
         {
           "ordinal": 1,
-          "name": "channel_id",
+          "name": "bitwise",
           "type_info": "Int8"
         },
         {
           "ordinal": 2,
-          "name": "bitwise",
-          "type_info": "Int8"
+          "name": "webhook_url",
+          "type_info": "Text"
         }
       ],
       "parameters": {
@@ -269,28 +269,6 @@
       "nullable": []
     }
   },
-  "2c5cb9dca0af1ac3897727563c172cd8cd596ebf6df7325d1f3b70fc968b4970": {
-    "query": "INSERT INTO log_messages (id, channel_id, guild_id, author_id, content, attachments, embeds, pinned, creation_timestamp, tts, webhook_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int8",
-          "Int8",
-          "Int8",
-          "Text",
-          "TextArray",
-          "TextArray",
-          "Bool",
-          "Timestamptz",
-          "Bool",
-          "Int8"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "2e9dbe2ef234e5476f97b8ac56f1d476e2e3a370f3ef9c68405aabfd08e3ddda": {
     "query": "SELECT disallowed_commands FROM prefixes WHERE guild_id = $1",
     "describe": {
@@ -309,6 +287,20 @@
       "nullable": [
         true
       ]
+    }
+  },
+  "307fce2d5d3bcffd5aab37a34ea31a6efbabd0ac381e011e55e93e57e6c325d1": {
+    "query": "INSERT INTO logging_channels (guild_id, webhook_url, bitwise) VALUES ($1, $2, $3)",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Text",
+          "Int8"
+        ]
+      },
+      "nullable": []
     }
   },
   "3ad709a4fb5fb8ac43d350249485a76f7137317765fffab4ea92271b3934c2a8": {
@@ -947,20 +939,6 @@
       "nullable": []
     }
   },
-  "8d2ea0084240df5b96e01c27aaa06141c7f8f81427a6d379c85678df6e84ad86": {
-    "query": "INSERT INTO logging_channels (guild_id, channel_id, bitwise) VALUES ($1, $2, $3)",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int8",
-          "Int8"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "8f1494578cbf38fe3ef47766f3a2350042dac1d7469c9426f697b395cbda3c9f": {
     "query": "UPDATE best_bg SET best_girl = $1 WHERE user_id = $2",
     "describe": {
@@ -1135,6 +1113,28 @@
         true,
         true
       ]
+    }
+  },
+  "b4479b2f30537ec1c347e01f77e3e106966956a6044bd16f46bd494650842d8f": {
+    "query": "\n        INSERT INTO log_messages\n        (id, channel_id, guild_id, author_id, content, attachments, embeds, pinned, creation_timestamp, tts, webhook_id)\n        VALUES\n        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Int8",
+          "Int8",
+          "Text",
+          "TextArray",
+          "TextArray",
+          "Bool",
+          "Timestamptz",
+          "Bool",
+          "Int8"
+        ]
+      },
+      "nullable": []
     }
   },
   "b44b1e93b44aaa440af3b4fd55ff887502679e7e450a16258a6b60773e3fe42c": {
@@ -1457,38 +1457,6 @@
         ]
       },
       "nullable": []
-    }
-  },
-  "ebf9a3825ce3b75976ffbb138604a9096212f7b6e2ebb8c2e107c5f3a6a5561d": {
-    "query": "SELECT * FROM logging_channels WHERE channel_id = $1",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "guild_id",
-          "type_info": "Int8"
-        },
-        {
-          "ordinal": 1,
-          "name": "channel_id",
-          "type_info": "Int8"
-        },
-        {
-          "ordinal": 2,
-          "name": "bitwise",
-          "type_info": "Int8"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int8"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false
-      ]
     }
   },
   "f24b004b69fef4a29d8832c8da188af6eb7b6208e977aecf7198b7c1f2ab526c": {
