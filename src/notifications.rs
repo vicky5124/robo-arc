@@ -148,17 +148,17 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
                             let id = split.nth(5).unwrap().parse::<u64>()?;
                             let token = split.nth(0).unwrap();
 
-                            let hook = &ctx.http.get_webhook_with_token(id, token).await?;
-
                             let embed = Embed::fake(|e| {
                                 e.title("Original Post");
                                 e.url(format!("https://yande.re/post/show/{}", post.id));
                                 e.image(post.sample_url.clone())
                             });
-                            
-                            hook.execute(&ctx.http, false, |m|{
-                                m.embeds(vec![embed])
-                            }).await?;
+                                
+                            if let Ok(hook) = &ctx.http.get_webhook_with_token(id, token).await {
+                                hook.execute(&ctx.http, false, |m|{
+                                    m.embeds(vec![embed])
+                                }).await?;
+                            }
                         }
                     }
 
