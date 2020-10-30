@@ -1,8 +1,4 @@
-use crate::global_data::{
-    VoiceManager,
-    Lavalink,
-    VoiceGuildUpdate,
-};
+use crate::global_data::Lavalink;
 
 use std::{
     sync::Arc,
@@ -36,19 +32,21 @@ use failure::Fail;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 
-//use tracing::{
+use tracing::{
 //    //Log macros.
+    instrument,
 //    info,
 //    trace,
 //    debug,
 //    warn,
-//    error,
-//};
+    error,
+};
 
 #[derive(Debug, Fail)]
 #[fail(display = "Not in a voice channel.")]
 struct JoinError;
 
+#[instrument(skip(ctx))]
 pub async fn _join(ctx: &Context, msg: &Message) -> Result<String, Error> {
     let guild = msg.guild(&ctx.cache).await.unwrap();
     let guild_id = guild.id;
@@ -63,57 +61,26 @@ pub async fn _join(ctx: &Context, msg: &Message) -> Result<String, Error> {
             msg.reply(ctx, "You are not connected to a voice channel").await?;
 
             return Err(JoinError.into());
-
         }
     };
 
-    let manager_lock = {
-        let data_read = ctx.data.read().await;
-        data_read.get::<VoiceManager>().unwrap().clone()
-    };
+    let manager = songbird::get(ctx).await.unwrap().clone();
 
-    let mut manager = manager_lock.lock().await;
-    let has_joined = manager.join(guild_id, connect_to).is_some();
+    let (_, handler) = manager.join_gateway(guild_id, connect_to).await;
 
-    if has_joined {
-        drop(manager);
+    match handler {
+        Ok(connection_info) => {
+            let mut data = ctx.data.write().await;
+            let lava_client_lock = data.get_mut::<Lavalink>().expect("Expected a lavalink client in TypeMap");
+            lava_client_lock.lock().await.create_session(guild_id, &connection_info.recv_async().await?).await?;
 
-        loop {
-            let vgu_lock = {
-                let data_read = ctx.data.read().await;
-                data_read.get::<VoiceGuildUpdate>().unwrap().clone()
-            };
-
-            let mut vgu = vgu_lock.write().await;
-            if !vgu.contains(&guild_id) {
-                drop(vgu);
-                tokio::time::delay_for(Duration::from_millis(500)).await;
-            } else {
-                vgu.remove(&guild_id);
-                break;
-            }
+            Ok(connect_to.mention())
         }
-
-        let manager_lock = {
-            let data_read = ctx.data.read().await;
-            data_read.get::<VoiceManager>().unwrap().clone()
-        };
-
-        let manager = manager_lock.lock().await;
-
-        let lava_client_lock = {
-            let data_read = ctx.data.read().await;
-            data_read.get::<Lavalink>().unwrap().clone()
-        };
-
-        let handler = manager.get(guild_id).unwrap();
-        lava_client_lock.lock().await.create_session(guild_id, &handler).await?;
-
-        Ok(connect_to.mention())
-
-    } else {
-        msg.channel_id.say(ctx, "Error joining the channel").await?;
-        Err(JoinError.into())
+        Err(why) => {
+            error!("Error joining voice channel: {}", why);
+            msg.channel_id.say(ctx, "Error joining the channel").await?;
+            Err(JoinError.into())
+        }
     }
 }
 
@@ -401,31 +368,31 @@ async fn resume(ctx: &Context, msg: &Message) -> CommandResult {
 /// Disconnects me from the voice channel if im in one.
 #[command]
 async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
-    let guild_id = ctx.cache.guild_channel_field(msg.channel_id, |channel| channel.guild_id).await.unwrap();
+    let guild = msg.guild(&ctx.cache).await.unwrap();
+    let guild_id = guild.id;
 
-    let manager_lock = {
-        let data_read = ctx.data.read().await;
-        data_read.get::<VoiceManager>().unwrap().clone()
-    };
-
-    let mut manager = manager_lock.lock().await;
+    let manager = songbird::get(ctx).await.unwrap().clone();
     let has_handler = manager.get(guild_id).is_some();
 
     if has_handler {
-        manager.remove(guild_id);
+        if let Err(e) = manager.remove(guild_id).await {
+            msg.channel_id.say(&ctx.http, format!("Failed: {:?}", e)).await?;
+        }
 
-        let lava_client_lock = {
-            let data_read = ctx.data.read().await;
-            data_read.get::<Lavalink>().unwrap().clone()
-        };
+        {
+            let lava_client_lock = {
+                let data_read = ctx.data.read().await;
+                data_read.get::<Lavalink>().unwrap().clone()
+            };
 
-        let mut lava_client = lava_client_lock.lock().await;
+            let mut lava_client = lava_client_lock.lock().await;
 
-        lava_client.destroy(guild_id).await?;
-        lava_client.nodes.remove(&guild_id.0);
+            lava_client.destroy(guild_id).await?;
+            lava_client.nodes.remove(&guild_id.0);
 
-        if let Some(pos) = lava_client.loops.iter().position(|x| *x == guild_id.0) {
-            lava_client.loops.remove(pos);
+            if let Some(pos) = lava_client.loops.iter().position(|x| *x == guild_id.0) {
+                lava_client.loops.remove(pos);
+            }
         }
 
         msg.react(ctx, '✅').await?;
@@ -470,14 +437,9 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         },
     };
 
-    let manager_lock = {
-        let data_read = ctx.data.read().await;
-        data_read.get::<VoiceManager>().unwrap().clone()
-    };
+    let manager = songbird::get(ctx).await.unwrap().clone();
 
-    let mut manager = manager_lock.lock().await;
-
-    if let Some(_handler) = manager.get_mut(guild_id) {
+    if let Some(_handler_lock) = manager.get(guild_id) {
         let lava_client_lock = {
             let data_read = ctx.data.read().await;
             data_read.get::<Lavalink>().unwrap().clone()
@@ -594,14 +556,9 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
         },
     };
 
-    let manager_lock = {
-        let data_read = ctx.data.read().await;
-        data_read.get::<VoiceManager>().unwrap().clone()
-    };
+    let manager = songbird::get(ctx).await.unwrap().clone();
 
-    let mut manager = manager_lock.lock().await;
-
-    if let Some(_handler) = manager.get_mut(guild_id) {
+    if let Some(_handler_lock) = manager.get(guild_id) {
         let lava_client_lock = {
             let data_read = ctx.data.read().await;
             data_read.get::<Lavalink>().unwrap().clone()

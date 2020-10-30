@@ -64,7 +64,8 @@ features = ["full"]
 # https://github.com/serenity-rs/serenity
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"
-branch = "next"
+rev = "0b46b476cc84deae38bbfacb8c7d3d8070f93ccf"
+#branch = "next"
 #version = "0.9.0-rc.2"
 default-features = false
 features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "native_tls_backend", "absolute_ratelimits", "collector", "voice"]
@@ -94,12 +95,19 @@ features = ["serialize"]
 
 [dependencies.lavalink-rs]
 git = "https://gitlab.com/nitsuga5124/lavalink-rs/"
-branch = "master"
+branch = "songbird"
 #version = "0.1.1-alpha"
 
-[patch.crates-io.serenity]
-git = "https://github.com/serenity-rs/serenity"
-branch = "next"
+[dependencies.songbird]
+git = "https://github.com/serenity-rs/serenity/"
+rev = "0b46b476cc84deae38bbfacb8c7d3d8070f93ccf"
+#branch = "next"
+default-features = false
+features = ["serenity-native", "gateway"]
+
+#[patch.crates-io.serenity]
+#git = "https://github.com/serenity-rs/serenity"
+#branch = "next"
 
 # used for profiling for flamegraph
 # https://github.com/flamegraph-rs/flamegraph

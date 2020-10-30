@@ -17,12 +17,7 @@ use tokio::sync::{
 
 use serenity::{
     prelude::TypeMapKey,
-    client::bridge::{
-        gateway::ShardManager,
-        voice::ClientVoiceManager,
-    },
-
-    model::id::GuildId,
+    client::bridge::gateway::ShardManager,
 };
 
 use sqlx::PgPool; // PostgreSQL Pool Structure
@@ -39,11 +34,9 @@ pub struct Tokens; // For the configuration found on "config.toml"
 pub struct AnnoyedChannels; // This is a HashSet of all the channels the bot is allowed to be annoyed on.
 pub struct BooruList; // This is a HashSet of all the boorus found on "boorus.json"
 pub struct BooruCommands; // This is a HashSet of all the commands/aliases found on "boorus.json"
-pub struct VoiceManager; //  This is the struct for the voice manager.
 pub struct Lavalink; //  This is the struct for the lavalink client.
 pub struct SentTwitchStreams; //  This is the struct for the stream data that has already been sent.
 pub struct Uptime; //  This is for the startup time of the bot.
-pub struct VoiceGuildUpdate; //  This is for the startup time of the bot.
 
 impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
@@ -73,10 +66,6 @@ impl TypeMapKey for BooruCommands {
     type Value = Arc<HashSet<String>>;
 }
 
-impl TypeMapKey for VoiceManager {
-    type Value = Arc<Mutex<ClientVoiceManager>>;
-}
-
 impl TypeMapKey for Lavalink {
     type Value = Arc<Mutex<LavalinkClient>>;
 }
@@ -87,8 +76,4 @@ impl TypeMapKey for SentTwitchStreams {
 
 impl TypeMapKey for Uptime {
     type Value = Arc<Instant>;
-}
-
-impl TypeMapKey for VoiceGuildUpdate {
-    type Value = Arc<RwLock<HashSet<GuildId>>>;
 }

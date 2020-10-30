@@ -94,6 +94,7 @@ use lavalink_rs::{
     LavalinkClient,
     gateway::LavalinkEventHandler,
 };
+use songbird::SerenityInit;
 
 
 // Serenity! what make's the bot function. Discord API wrapper.
@@ -121,7 +122,6 @@ use serenity::{
             ChannelId,
             GuildId,
         },
-        event::VoiceServerUpdateEvent,
         guild::Member,
     },
     prelude::{
@@ -602,18 +602,6 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn voice_server_update(&self, ctx: Context, voice: VoiceServerUpdateEvent) {
-        if let Some(guild_id) = voice.guild_id {
-            let voice_server_lock = {
-                let data_read = ctx.data.read().await;
-                data_read.get::<VoiceGuildUpdate>().unwrap().clone()
-            };
-
-            let mut voice_server = voice_server_lock.write().await;
-            voice_server.insert(guild_id);
-        }
-    }
-
     async fn guild_member_addition(&self, ctx: Context, guild_id: GuildId, member: Member) {
         let pool = {
             let data_read = &ctx.data.read().await;
@@ -700,16 +688,9 @@ async fn before(ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
         }
 
         if cmd_name == "play" || cmd_name == "play_playlist" {
-            let manager_lock = {
-                let data_read = ctx.data.read().await;
-                data_read.get::<VoiceManager>().cloned().expect("Expected VoiceManager in ShareMap.").clone()
-            };
-
-            let manager = manager_lock.lock().await;
+            let manager = songbird::get(ctx).await.unwrap().clone();
 
             if manager.get(guild_id).is_none() {
-                drop(manager);
-
                 if let Err(why) =  _join(ctx, msg).await {
                     error!("While running command: {}", cmd_name);
                     error!("{:?}", why);
@@ -963,6 +944,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         })
         .raw_event_handler(logging::events::RawHandler)
         .framework(std_framework)
+        .register_songbird()
         .add_intent({
             let mut intents = GatewayIntents::all();
             //intents.remove(GatewayIntents::GUILD_PRESENCES);
@@ -990,11 +972,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             Arc::clone(&client.shard_manager)
         );
 
-        // Add the Voice Manager.
-        data.insert::<VoiceManager> (
-            Arc::clone(&client.voice_manager)
-        );
-
         // Add the tokens to the data.
         data.insert::<Tokens> (
             Arc::new(configuration.clone())
@@ -1007,10 +984,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         data.insert::<Uptime> (
             Arc::new(Instant::now())
-        );
-
-        data.insert::<VoiceGuildUpdate> (
-            Arc::new(RwLock::new(HashSet::new()))
         );
 
         {
