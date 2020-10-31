@@ -64,7 +64,7 @@ features = ["full"]
 # https://github.com/serenity-rs/serenity
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"
-rev = "0b46b476cc84deae38bbfacb8c7d3d8070f93ccf"
+rev = "29d639b6288c83df7aeb0a2ced9d2b77ec6c6241"
 #branch = "next"
 #version = "0.9.0-rc.2"
 default-features = false
@@ -100,13 +100,14 @@ branch = "songbird"
 
 [dependencies.songbird]
 git = "https://github.com/serenity-rs/serenity/"
-rev = "0b46b476cc84deae38bbfacb8c7d3d8070f93ccf"
+rev = "29d639b6288c83df7aeb0a2ced9d2b77ec6c6241"
 #branch = "next"
 default-features = false
 features = ["serenity-native", "gateway"]
 
 #[patch.crates-io.serenity]
 #git = "https://github.com/serenity-rs/serenity"
+#rev = "29d639b6288c83df7aeb0a2ced9d2b77ec6c6241"
 #branch = "next"
 
 # used for profiling for flamegraph
