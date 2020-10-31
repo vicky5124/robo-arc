@@ -1,3 +1,27 @@
+# 0.3.1-alpha
+
+### Dependencies
+- Switched music to Songbird Gateway.
+- Updated lavalink-rs to use Songbird.
+- Updated serenity to the last v6 commit of the next branch.
+- Updated photon-rs.
+- Updated twilight on eval.
+
+### Bugs
+- Missing webhooks no longer loop yandere posts.
+- Fixed empty messages failing to send webhooks on logs.
+- Typo on translate.
+- Fixed broken skip after the bot leaves and comes back.
+- All events now check if the guild wants that event logged.
+- Removed (empty) spam from channel logs.
+- Fixed deadlock on ping and about when being rate limited.
+- nHentai no longer sends an inaccurate error on 404.
+
+### Additions
+- Added missing examples to the serenity commands.
+- Switched logging to use webhooks!
+- Added submitter and time left to now_playing.
+
 # 0.3.0-alpha
 
 ###  Bugs:
