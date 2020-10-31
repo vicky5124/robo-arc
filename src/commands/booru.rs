@@ -941,11 +941,17 @@ pub async fn n_hentai(ctx: &Context, msg: &Message, args: Args) -> CommandResult
         }
     };
 
-    let resp = reqwest.get(&urls["api_url"])
+    let resp = match reqwest.get(&urls["api_url"])
         .send()
         .await?
         .json::<NHentaiSearchResult>()
-        .await?;
+        .await {
+            Ok(x) => x,
+            Err(_) => {
+                msg.reply(ctx, "Could not find anything.").await?;
+                return Ok(());
+            }
+        };
 
     let left = ReactionType::Unicode(String::from("⬅️"));
     let right = ReactionType::Unicode(String::from("➡️"));
