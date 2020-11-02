@@ -911,7 +911,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // This is what allows for easier and faster commaands.
     let std_framework = StandardFramework::new() // Create a new framework
         .configure(|c| c
-            //.prefixes(vec![".", "arc!"]) // Add a list of prefixes to be used to invoke commands.
+            .prefix("") // Remove the default prefix.
             .on_mention(Some(bot_id)) // Add a bot mention as a prefix.
             .dynamic_prefix(dynamic_prefix)
             .with_whitespace(true) // Allow a whitespace between the prefix and the command name.
