@@ -1,32 +1,21 @@
 use crate::{
-    utils::booru,
-    utils::booru::{
-        SAFE_BANLIST,
-        UNSAFE_BANLIST,
-    },
     global_data::Tokens,
+    utils::booru,
+    utils::booru::{SAFE_BANLIST, UNSAFE_BANLIST},
 };
 
 use std::borrow::Cow;
 
 use serenity::{
-    prelude::Context,
-    model::channel::Message,
+    framework::standard::{macros::command, Args, CommandResult},
     http::AttachmentType,
-    framework::standard::{
-        Args,
-        CommandResult,
-        macros::command,
-    },
+    model::channel::Message,
+    prelude::Context,
 };
 
-use serde::Deserialize;
 use rand::Rng;
-use reqwest::{
-    Client as ReqwestClient,
-    header::*,
-    Url,
-};
+use reqwest::{header::*, Client as ReqwestClient, Url};
+use serde::Deserialize;
 
 #[derive(Deserialize, PartialEq)]
 struct Tag {
@@ -51,7 +40,7 @@ struct SankakuData {
 pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let (login, pass) = {
         let data = ctx.data.read().await; // set inmutable global data.
-        let tokens = data.get::<Tokens>().unwrap(); 
+        let tokens = data.get::<Tokens>().unwrap();
 
         (
             tokens.sankaku.idol_login.to_string(),
@@ -60,7 +49,7 @@ pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     };
 
     let channel = ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
-    // Checks if the command was invoked on a DM
+                                                                 // Checks if the command was invoked on a DM
     let dm_channel = msg.guild_id == None;
 
     let raw_tags = {
@@ -73,32 +62,50 @@ pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         }
     };
 
-    let tags = raw_tags.iter().map(|x| format!("{} ", x)).collect::<String>();
+    let tags = raw_tags
+        .iter()
+        .map(|x| format!("{} ", x))
+        .collect::<String>();
 
     let reqwest = ReqwestClient::new();
     let mut headers = HeaderMap::new();
 
-    headers.insert(ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8".parse().unwrap());
-    headers.insert(USER_AGENT, "Mozilla/5.0 (X11; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0".parse().unwrap());
+    headers.insert(
+        ACCEPT,
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+            .parse()
+            .unwrap(),
+    );
+    headers.insert(
+        USER_AGENT,
+        "Mozilla/5.0 (X11; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0"
+            .parse()
+            .unwrap(),
+    );
 
-    let url = Url::parse_with_params("https://iapi.sankakucomplex.com/post/index.json",
-                                     &[
-                                        ("page", "1"),
-                                        ("limit", "50"),
-                                        ("tags", &tags),
-                                        ("login", &login),
-                                        ("password_hash", &pass),
-                                     ])?;
+    let url = Url::parse_with_params(
+        "https://iapi.sankakucomplex.com/post/index.json",
+        &[
+            ("page", "1"),
+            ("limit", "50"),
+            ("tags", &tags),
+            ("login", &login),
+            ("password_hash", &pass),
+        ],
+    )?;
 
-    let resp = reqwest.get(url)
+    let resp = reqwest
+        .get(url)
         .headers(headers.clone())
         .send()
         .await?
-        .json::<Vec::<SankakuData>>()
+        .json::<Vec<SankakuData>>()
         .await?;
 
     if resp.is_empty() {
-        msg.channel_id.say(ctx, "No posts match the provided tags.").await?;
+        msg.channel_id
+            .say(ctx, "No posts match the provided tags.")
+            .await?;
         return Ok(());
     }
 
@@ -114,7 +121,9 @@ pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 if channel.is_nsfw() || dm_channel {
                     let mut is_unsafe = false;
                     for tag in &x.tags {
-                        if UNSAFE_BANLIST.contains(&tag.name.as_ref().unwrap_or(&"gore".to_string()).as_str()) {
+                        if UNSAFE_BANLIST
+                            .contains(&tag.name.as_ref().unwrap_or(&"gore".to_string()).as_str())
+                        {
                             is_unsafe = true;
                         }
                     }
@@ -125,7 +134,10 @@ pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 } else {
                     let mut is_unsafe = false;
                     for tag in &x.tags {
-                        if SAFE_BANLIST.contains(&tag.name.as_ref().unwrap_or(&"gore".to_string()).as_str()) || &x.rating != "s" {
+                        if SAFE_BANLIST
+                            .contains(&tag.name.as_ref().unwrap_or(&"gore".to_string()).as_str())
+                            || &x.rating != "s"
+                        {
                             is_unsafe = true;
                         }
                     }
@@ -135,7 +147,7 @@ pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     }
                 }
             }
-            if y > (&resp.len()*2) {
+            if y > (&resp.len() * 2) {
                 msg.channel_id.say(ctx, "All the content matching the requested tags is either too large, unsafe or illegal to be sent.").await?;
                 return Ok(());
             }
@@ -144,7 +156,8 @@ pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     let sample_url = &format!("https:{}", &choice.sample_url).to_owned()[..];
     let file_url = &format!("https:{}", &choice.file_url).to_owned()[..];
-    let buf = reqwest.get(sample_url)
+    let buf = reqwest
+        .get(sample_url)
         .headers(headers.clone())
         .send()
         .await?
@@ -162,7 +175,7 @@ pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         filename: (*filename).to_string(),
     };
 
-    let rating = match &choice.rating[..]{
+    let rating = match &choice.rating[..] {
         "s" => "Safe".to_string(),
         "q" => "Questionable".to_string(),
         "e" => "Explicit".to_string(),
@@ -181,27 +194,46 @@ pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         fields.push(("Source", &source_md, true));
     }
 
-    msg.channel_id.send_message(ctx, |m| {
-        m.add_file(attachment);
-        m.embed(|e| {
-            e.image(format!("attachment://{}", filename));
-            e.title("Original Post");
-            e.description(format!("[Sample]({}) | [Full Size]({})", &sample_url, &file_url));
-            e.url(format!("https://idol.sankakucomplex.com/post/show/{}/", &choice.id));
-            e.fields(fields);
-            e
-        });
-        m
-    }).await?;
+    msg.channel_id
+        .send_message(ctx, |m| {
+            m.add_file(attachment);
+            m.embed(|e| {
+                e.image(format!("attachment://{}", filename));
+                e.title("Original Post");
+                e.description(format!(
+                    "[Sample]({}) | [Full Size]({})",
+                    &sample_url, &file_url
+                ));
+                e.url(format!(
+                    "https://idol.sankakucomplex.com/post/show/{}/",
+                    &choice.id
+                ));
+                e.fields(fields);
+                e
+            });
+            m
+        })
+        .await?;
 
     Ok(())
 }
 
 #[command]
-#[aliases(sankaku, complex, sc, sankakuchan, sankakublack, sankakuwhite, sankaku_chan, sankaku_black, sankaku_white, sankaku_complex)]
+#[aliases(
+    sankaku,
+    complex,
+    sc,
+    sankakuchan,
+    sankakublack,
+    sankakuwhite,
+    sankaku_chan,
+    sankaku_black,
+    sankaku_white,
+    sankaku_complex
+)]
 pub async fn chan(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let channel = ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
-    // Checks if the command was invoked on a DM
+                                                                 // Checks if the command was invoked on a DM
     let dm_channel = msg.guild_id == None;
 
     let raw_tags = {
@@ -214,28 +246,40 @@ pub async fn chan(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         }
     };
 
-    let mut tags = raw_tags.iter().map(|x| format!("{} ", x)).collect::<String>();
+    let mut tags = raw_tags
+        .iter()
+        .map(|x| format!("{} ", x))
+        .collect::<String>();
     tags.pop();
 
     let reqwest = ReqwestClient::new();
     let mut headers = HeaderMap::new();
 
-    headers.insert(ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8".parse().unwrap());
-    headers.insert(USER_AGENT, "Mozilla/5.0 (X11; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0".parse().unwrap());
+    headers.insert(
+        ACCEPT,
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+            .parse()
+            .unwrap(),
+    );
+    headers.insert(
+        USER_AGENT,
+        "Mozilla/5.0 (X11; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0"
+            .parse()
+            .unwrap(),
+    );
 
     //page=1&limit=50&tags={}
-    let url = Url::parse_with_params("https://capi-v2.sankakucomplex.com/posts",
-                                     &[
-                                        ("page", "1"),
-                                        ("limit", "50"),
-                                        ("tags", &tags),
-                                     ])?;
+    let url = Url::parse_with_params(
+        "https://capi-v2.sankakucomplex.com/posts",
+        &[("page", "1"), ("limit", "50"), ("tags", &tags)],
+    )?;
 
-    let raw_resp = reqwest.get(url)
+    let raw_resp = reqwest
+        .get(url)
         .headers(headers.clone())
         .send()
         .await?
-        .json::<Vec::<SankakuData>>()
+        .json::<Vec<SankakuData>>()
         .await;
 
     let resp = match raw_resp {
@@ -246,9 +290,10 @@ pub async fn chan(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         }
     };
 
-
     if resp.is_empty() {
-        msg.channel_id.say(ctx, "No posts match the provided tags.").await?;
+        msg.channel_id
+            .say(ctx, "No posts match the provided tags.")
+            .await?;
         return Ok(());
     }
 
@@ -264,7 +309,9 @@ pub async fn chan(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 if channel.is_nsfw() || dm_channel {
                     let mut is_unsafe = false;
                     for tag in &x.tags {
-                        if UNSAFE_BANLIST.contains(&tag.name.as_ref().unwrap_or(&"gore".to_string()).as_str()) {
+                        if UNSAFE_BANLIST
+                            .contains(&tag.name.as_ref().unwrap_or(&"gore".to_string()).as_str())
+                        {
                             is_unsafe = true;
                         }
                     }
@@ -275,7 +322,10 @@ pub async fn chan(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 } else {
                     let mut is_unsafe = false;
                     for tag in &x.tags {
-                        if SAFE_BANLIST.contains(&tag.name.as_ref().unwrap_or(&"gore".to_string()).as_str()) || x.rating != "s" {
+                        if SAFE_BANLIST
+                            .contains(&tag.name.as_ref().unwrap_or(&"gore".to_string()).as_str())
+                            || x.rating != "s"
+                        {
                             is_unsafe = true;
                         }
                     }
@@ -285,7 +335,7 @@ pub async fn chan(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     }
                 }
             }
-            if y > (&resp.len()*2) {
+            if y > (&resp.len() * 2) {
                 msg.channel_id.say(ctx, "All the content matching the requested tags is too big to be sent or illegal.").await?;
                 return Ok(());
             }
@@ -295,7 +345,8 @@ pub async fn chan(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let sample_url = &choice.sample_url;
     let file_url = &choice.file_url;
 
-    let buf = reqwest.get(sample_url)
+    let buf = reqwest
+        .get(sample_url)
         .headers(headers.clone())
         .send()
         .await?
@@ -303,7 +354,6 @@ pub async fn chan(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .await?
         .into_iter()
         .collect::<Vec<u8>>();
-
 
     let fullsize_tagless = &choice.file_url.split('?').next().unwrap();
     let fullsize_split = fullsize_tagless.split('/').collect::<Vec<&str>>();
@@ -336,24 +386,29 @@ pub async fn chan(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         }
     }
 
-
-    msg.channel_id.send_message(ctx, |m| {
-        m.add_file(attachment);
-        m.embed(|e| {
-            e.image(format!("attachment://{}", filename));
-            e.title("Original Post");
-            e.description(format!("[Sample]({}) | [Full Size]({})", &sample_url, &file_url));
-            e.url(format!("https://chan.sankakucomplex.com/post/show/{}/", &choice.id));
-            e.fields(fields);
-            e
-        });
-        m
-    }).await?;
+    msg.channel_id
+        .send_message(ctx, |m| {
+            m.add_file(attachment);
+            m.embed(|e| {
+                e.image(format!("attachment://{}", filename));
+                e.title("Original Post");
+                e.description(format!(
+                    "[Sample]({}) | [Full Size]({})",
+                    &sample_url, &file_url
+                ));
+                e.url(format!(
+                    "https://chan.sankakucomplex.com/post/show/{}/",
+                    &choice.id
+                ));
+                e.fields(fields);
+                e
+            });
+            m
+        })
+        .await?;
 
     Ok(())
 }
-
-
 
 /*
 https://iapi.sankakucomplex.com/post/index.json?page=1&limit=1&tags=rating:safe

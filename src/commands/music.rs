@@ -1,21 +1,10 @@
 use crate::global_data::Lavalink;
 
-use std::{
-    sync::Arc,
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
 
 use serenity::{
-    framework::{
-        standard::{
-            Args, CommandResult,
-            macros::command,
-        },
-    },
-    model::{
-        channel::Message,
-        misc::Mentionable
-    },
+    framework::standard::{macros::command, Args, CommandResult},
+    model::{channel::Message, misc::Mentionable},
     prelude::Context,
 };
 
@@ -23,8 +12,8 @@ use lavalink_rs::LavalinkClient;
 
 use tokio::process::Command;
 
-use serde_json;
 use regex::Regex;
+use serde_json;
 
 use failure::Error;
 use failure::Fail;
@@ -33,13 +22,13 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 
 use tracing::{
-//    //Log macros.
-    instrument,
-//    info,
-//    trace,
-//    debug,
-//    warn,
+    //    info,
+    //    trace,
+    //    debug,
+    //    warn,
     error,
+    //    //Log macros.
+    instrument,
 };
 
 #[derive(Debug, Fail)]
@@ -52,13 +41,15 @@ pub async fn _join(ctx: &Context, msg: &Message) -> Result<String, Error> {
     let guild_id = guild.id;
 
     let channel_id = guild
-        .voice_states.get(&msg.author.id)
+        .voice_states
+        .get(&msg.author.id)
         .and_then(|voice_state| voice_state.channel_id);
 
     let connect_to = match channel_id {
         Some(channel) => channel,
         None => {
-            msg.reply(ctx, "You are not connected to a voice channel").await?;
+            msg.reply(ctx, "You are not connected to a voice channel")
+                .await?;
 
             return Err(JoinError.into());
         }
@@ -71,8 +62,14 @@ pub async fn _join(ctx: &Context, msg: &Message) -> Result<String, Error> {
     match handler {
         Ok(connection_info) => {
             let mut data = ctx.data.write().await;
-            let lava_client_lock = data.get_mut::<Lavalink>().expect("Expected a lavalink client in TypeMap");
-            lava_client_lock.lock().await.create_session(guild_id, &connection_info.recv_async().await?).await?;
+            let lava_client_lock = data
+                .get_mut::<Lavalink>()
+                .expect("Expected a lavalink client in TypeMap");
+            lava_client_lock
+                .lock()
+                .await
+                .create_session(guild_id, &connection_info.recv_async().await?)
+                .await?;
 
             Ok(connect_to.mention())
         }
@@ -88,8 +85,10 @@ pub async fn _join(ctx: &Context, msg: &Message) -> Result<String, Error> {
 #[command]
 #[aliases("connect")]
 async fn join(ctx: &Context, msg: &Message) -> CommandResult {
-    let channel  = _join(ctx, msg).await?;
-    msg.channel_id.say(ctx, &format!("Joined {}", channel)).await?;
+    let channel = _join(ctx, msg).await?;
+    msg.channel_id
+        .say(ctx, &format!("Joined {}", channel))
+        .await?;
 
     Ok(())
 }
@@ -133,28 +132,34 @@ async fn skip(ctx: &Context, msg: &Message) -> CommandResult {
 
     if let Some(track) = lava_client.skip(msg.guild_id.unwrap()).await {
         let track_info = track.track.info.as_ref().unwrap();
-        msg.channel_id.send_message(ctx, |m| {
-            m.content("Skipped:");
-            m.embed(|e| {
-                e.title(&track_info.title);
-                e.thumbnail(format!("https://i.ytimg.com/vi/{}/default.jpg", &track_info.identifier));
-                e.url(&track_info.uri);
-                e.footer(|f| f.text(format!("Submited by unknown")));
-                e.field("Uploader", &track_info.author, true);
-                e.field("Length", format!("{}:{}",
-                    track_info.length / 1000  % 3600 /  60,
-                    {
-                        let x = track_info.length / 1000 % 3600 % 60;
-                        if x < 10 {
-                            format!("0{}", x)
-                        } else {
-                            x.to_string()
-                        }
-                    }),
-                true);
-                e
+        msg.channel_id
+            .send_message(ctx, |m| {
+                m.content("Skipped:");
+                m.embed(|e| {
+                    e.title(&track_info.title);
+                    e.thumbnail(format!(
+                        "https://i.ytimg.com/vi/{}/default.jpg",
+                        &track_info.identifier
+                    ));
+                    e.url(&track_info.uri);
+                    e.footer(|f| f.text(format!("Submited by unknown")));
+                    e.field("Uploader", &track_info.author, true);
+                    e.field(
+                        "Length",
+                        format!("{}:{}", track_info.length / 1000 % 3600 / 60, {
+                            let x = track_info.length / 1000 % 3600 % 60;
+                            if x < 10 {
+                                format!("0{}", x)
+                            } else {
+                                x.to_string()
+                            }
+                        }),
+                        true,
+                    );
+                    e
+                })
             })
-        }).await?;
+            .await?;
         let node = lava_client.nodes.get(&msg.guild_id.unwrap().0).unwrap();
         if node.queue.is_empty() && node.now_playing.is_none() {
             lava_client.stop(msg.guild_id.unwrap()).await?;
@@ -180,9 +185,13 @@ async fn queue(ctx: &Context, msg: &Message) -> CommandResult {
         if node.queue.len() > 1 {
             let mut queue = String::from("```st\n");
             for (index, track) in node.queue.iter().skip(1).take(10).enumerate() {
-                queue +=  &format!("{}: {}\n", index + 1, track.track.info.as_ref().unwrap().title);
+                queue += &format!(
+                    "{}: {}\n",
+                    index + 1,
+                    track.track.info.as_ref().unwrap().title
+                );
             }
-            
+
             if node.queue.len() > 10 {
                 queue += &format!("... {}", node.queue.len());
             }
@@ -216,7 +225,9 @@ async fn clear_queue(ctx: &Context, msg: &Message) -> CommandResult {
 
             msg.react(ctx, '✅').await?;
         } else {
-            msg.channel_id.say(ctx, "The queue is already empty.").await?;
+            msg.channel_id
+                .say(ctx, "The queue is already empty.")
+                .await?;
         }
     };
 
@@ -238,52 +249,62 @@ async fn now_playing(ctx: &Context, msg: &Message) -> CommandResult {
         let track = node.now_playing.as_ref();
         if let Some(x) = track {
             let requester = if let Some(u) = x.requester {
-                u.to_serenity()
-                    .to_user(ctx)
-                    .await
-                    .unwrap_or_default()
-                    .name
+                u.to_serenity().to_user(ctx).await.unwrap_or_default().name
             } else {
                 "Unknown".to_string()
             };
 
             let track_info = x.track.info.as_ref().unwrap();
-            msg.channel_id.send_message(ctx, |m| {
-                m.content("Now playing:");
-                m.embed(|e| {
-                    e.title(&track_info.title);
-                    e.thumbnail(format!("https://i.ytimg.com/vi/{}/default.jpg", track_info.identifier));
-                    e.url(&track_info.uri);
-                    e.footer(|f| f.text(format!("Submited by {}", &requester)));
-                    e.field("Uploader", &track_info.author, true);
-                    e.field("Length", format!("{}:{} - {}:{}",
-                        track_info.position / 1000  % 3600 /  60,
-                        {
-                            let x = track_info.position / 1000 % 3600 % 60;
-                            if x < 10 {
-                                format!("0{}", x)
-                            } else {
-                                x.to_string()
-                            }
-                        },
-                        track_info.length / 1000  % 3600 /  60,
-                        {
-                            let x = track_info.length / 1000 % 3600 % 60;
-                            if x < 10 {
-                                format!("0{}", x)
-                            } else {
-                                x.to_string()
-                            }
-                        }),
-                    true);
-                    e
+            msg.channel_id
+                .send_message(ctx, |m| {
+                    m.content("Now playing:");
+                    m.embed(|e| {
+                        e.title(&track_info.title);
+                        e.thumbnail(format!(
+                            "https://i.ytimg.com/vi/{}/default.jpg",
+                            track_info.identifier
+                        ));
+                        e.url(&track_info.uri);
+                        e.footer(|f| f.text(format!("Submited by {}", &requester)));
+                        e.field("Uploader", &track_info.author, true);
+                        e.field(
+                            "Length",
+                            format!(
+                                "{}:{} - {}:{}",
+                                track_info.position / 1000 % 3600 / 60,
+                                {
+                                    let x = track_info.position / 1000 % 3600 % 60;
+                                    if x < 10 {
+                                        format!("0{}", x)
+                                    } else {
+                                        x.to_string()
+                                    }
+                                },
+                                track_info.length / 1000 % 3600 / 60,
+                                {
+                                    let x = track_info.length / 1000 % 3600 % 60;
+                                    if x < 10 {
+                                        format!("0{}", x)
+                                    } else {
+                                        x.to_string()
+                                    }
+                                }
+                            ),
+                            true,
+                        );
+                        e
+                    })
                 })
-            }).await?;
+                .await?;
         } else {
-            msg.channel_id.say(ctx, "Nothing is playing at the moment.").await?;
+            msg.channel_id
+                .say(ctx, "Nothing is playing at the moment.")
+                .await?;
         }
     } else {
-        msg.channel_id.say(ctx, "Nothing is playing at the moment.").await?;
+        msg.channel_id
+            .say(ctx, "Nothing is playing at the moment.")
+            .await?;
     }
 
     Ok(())
@@ -294,8 +315,11 @@ async fn now_playing(ctx: &Context, msg: &Message) -> CommandResult {
 #[min_args(1)]
 #[aliases(jump_to, jumpto, scrub)]
 async fn seek(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let num = if let Ok(x) = args.single::<u64>() { x } else {
-        msg.reply(&ctx.http, "Provide a valid number of seconds.").await?;
+    let num = if let Ok(x) = args.single::<u64>() {
+        x
+    } else {
+        msg.reply(&ctx.http, "Provide a valid number of seconds.")
+            .await?;
         return Ok(());
     };
 
@@ -306,7 +330,9 @@ async fn seek(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
     let mut lava_client = lava_client_lock.lock().await;
 
-    lava_client.seek(msg.guild_id.unwrap(), Duration::from_secs(num)).await?;
+    lava_client
+        .seek(msg.guild_id.unwrap(), Duration::from_secs(num))
+        .await?;
 
     msg.react(ctx, '✅').await?;
 
@@ -376,7 +402,9 @@ async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
 
     if has_handler {
         if let Err(e) = manager.remove(guild_id).await {
-            msg.channel_id.say(&ctx.http, format!("Failed: {:?}", e)).await?;
+            msg.channel_id
+                .say(&ctx.http, format!("Failed: {:?}", e))
+                .await?;
         }
 
         {
@@ -421,9 +449,19 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     }
 
     if !embeded {
-        if let Err(_) = ctx.http.edit_message(msg.channel_id.0, msg.id.0, &serde_json::json!({"flags" : 4})).await  {
+        if let Err(_) = ctx
+            .http
+            .edit_message(
+                msg.channel_id.0,
+                msg.id.0,
+                &serde_json::json!({"flags" : 4}),
+            )
+            .await
+        {
             if query.starts_with("http") {
-                msg.channel_id.say(ctx, "Please, put the url between <> so it doesn't embed.").await?;
+                msg.channel_id
+                    .say(ctx, "Please, put the url between <> so it doesn't embed.")
+                    .await?;
             }
         }
     }
@@ -431,10 +469,12 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let guild_id = match ctx.cache.guild_channel(msg.channel_id).await {
         Some(channel) => channel.guild_id,
         None => {
-            msg.channel_id.say(ctx, "Error finding channel info").await?;
+            msg.channel_id
+                .say(ctx, "Error finding channel info")
+                .await?;
 
             return Ok(());
-        },
+        }
     };
 
     let manager = songbird::get(ctx).await.unwrap().clone();
@@ -477,7 +517,9 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                             continue;
                         }
                     }
-                    msg.channel_id.say(&ctx, "Could not find any video of the search query.").await?;
+                    msg.channel_id
+                        .say(&ctx, "Could not find any video of the search query.")
+                        .await?;
                     return Ok(());
                 }
             } else {
@@ -492,30 +534,53 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
         LavalinkClient::play(guild_id, query_information.tracks[0].clone())
             .requester(msg.author.id)
-            .queue(Arc::clone(&lava_client_lock)).await?;
+            .queue(Arc::clone(&lava_client_lock))
+            .await?;
 
-        msg.channel_id.send_message(ctx, |m| {
-            m.content("Added to queue:");
-            m.embed(|e| {
-                e.title(&query_information.tracks[0].info.as_ref().unwrap().title);
-                e.thumbnail(format!("https://i.ytimg.com/vi/{}/default.jpg", query_information.tracks[0].info.as_ref().unwrap().identifier));
-                e.url(&query_information.tracks[0].info.as_ref().unwrap().uri);
-                e.footer(|f| f.text(format!("Submited by {}", &msg.author.name)));
-                e.field("Uploader", &query_information.tracks[0].info.as_ref().unwrap().author, true);
-                e.field("Length", format!("{}:{}",
-                    query_information.tracks[0].info.as_ref().unwrap().length / 1000  % 3600 /  60,
-                    {
-                        let x = query_information.tracks[0].info.as_ref().unwrap().length / 1000 % 3600 % 60;
-                        if x < 10 {
-                            format!("0{}", x)
-                        } else {
-                            x.to_string()
-                        }
-                    }),
-                true);
-                e
+        msg.channel_id
+            .send_message(ctx, |m| {
+                m.content("Added to queue:");
+                m.embed(|e| {
+                    e.title(&query_information.tracks[0].info.as_ref().unwrap().title);
+                    e.thumbnail(format!(
+                        "https://i.ytimg.com/vi/{}/default.jpg",
+                        query_information.tracks[0]
+                            .info
+                            .as_ref()
+                            .unwrap()
+                            .identifier
+                    ));
+                    e.url(&query_information.tracks[0].info.as_ref().unwrap().uri);
+                    e.footer(|f| f.text(format!("Submited by {}", &msg.author.name)));
+                    e.field(
+                        "Uploader",
+                        &query_information.tracks[0].info.as_ref().unwrap().author,
+                        true,
+                    );
+                    e.field(
+                        "Length",
+                        format!(
+                            "{}:{}",
+                            query_information.tracks[0].info.as_ref().unwrap().length / 1000 % 3600
+                                / 60,
+                            {
+                                let x = query_information.tracks[0].info.as_ref().unwrap().length
+                                    / 1000
+                                    % 3600
+                                    % 60;
+                                if x < 10 {
+                                    format!("0{}", x)
+                                } else {
+                                    x.to_string()
+                                }
+                            }
+                        ),
+                        true,
+                    );
+                    e
+                })
             })
-        }).await?;
+            .await?;
     } else {
         msg.channel_id.say(ctx, "Please, connect the bot to the voice channel you are currently on first with the `join` command.").await?;
     }
@@ -540,9 +605,19 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
     }
 
     if !embeded {
-        if let Err(_) = ctx.http.edit_message(msg.channel_id.0, msg.id.0, &serde_json::json!({"flags" : 4})).await  {
+        if let Err(_) = ctx
+            .http
+            .edit_message(
+                msg.channel_id.0,
+                msg.id.0,
+                &serde_json::json!({"flags" : 4}),
+            )
+            .await
+        {
             if query.starts_with("http") {
-                msg.channel_id.say(ctx, "Please, put the url between <> so it doesn't embed.").await?;
+                msg.channel_id
+                    .say(ctx, "Please, put the url between <> so it doesn't embed.")
+                    .await?;
             }
         }
     }
@@ -550,10 +625,12 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
     let guild_id = match ctx.cache.guild_channel(msg.channel_id).await {
         Some(channel) => channel.guild_id,
         None => {
-            msg.channel_id.say(ctx, "Error finding channel info").await?;
+            msg.channel_id
+                .say(ctx, "Error finding channel info")
+                .await?;
 
             return Ok(());
-        },
+        }
     };
 
     let manager = songbird::get(ctx).await.unwrap().clone();
@@ -573,7 +650,9 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
 
             if res.tracks.is_empty() {
                 if iter == 5 {
-                    msg.channel_id.say(&ctx, "Could not find any video of the search query.").await?;
+                    msg.channel_id
+                        .say(&ctx, "Could not find any video of the search query.")
+                        .await?;
                     return Ok(());
                 }
             } else {
@@ -586,17 +665,20 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
         for track in query_information.tracks {
             LavalinkClient::play(guild_id, track.clone())
                 .requester(msg.author.id)
-                .queue(Arc::clone(&lava_client_lock)).await?;
+                .queue(Arc::clone(&lava_client_lock))
+                .await?;
         }
-        
-        msg.channel_id.send_message(ctx, |m| {
-            m.content("Added playlist to queue.");
-            m.embed(|e| {
-                e.title("Playlist link");
-                e.url(query);
-                e.footer(|f| f.text(format!("Submited by {}", &msg.author.name)))
+
+        msg.channel_id
+            .send_message(ctx, |m| {
+                m.content("Added playlist to queue.");
+                m.embed(|e| {
+                    e.title("Playlist link");
+                    e.url(query);
+                    e.footer(|f| f.text(format!("Submited by {}", &msg.author.name)))
+                })
             })
-        }).await?;
+            .await?;
     } else {
         msg.channel_id.say(ctx, "Please, connect the bot to the voice channel you are currently on first with the `join` command.").await?;
     }

@@ -1,39 +1,22 @@
-use crate::utils::booru::{
-    SAFE_BANLIST,
-    UNSAFE_BANLIST,
-};
+use crate::utils::booru::{SAFE_BANLIST, UNSAFE_BANLIST};
 
 use crate::global_data::*;
 
 use std::{
-    time::Duration,
     sync::Arc,
     //collections::HashMap,
+    time::Duration,
 };
 
-use sqlx;
+use reqwest::{header::*, Client as ReqwestClient, Url};
 use serde::Deserialize;
-use reqwest::{
-    Client as ReqwestClient,
-    Url,
-    header::*,
-};
+use sqlx;
 
-use tracing::{
-    info,
-    error,
-    debug,
-};
+use tracing::{debug, error, info};
 
 use serenity::{
-    prelude::{
-        Context,
-        RwLock,
-    },
-    model::{
-        id::ChannelId,
-        channel::Embed,
-    }
+    model::{channel::Embed, id::ChannelId},
+    prelude::{Context, RwLock},
 };
 
 #[derive(Deserialize)]
@@ -87,7 +70,6 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
         .fetch_all(&pool)
         .await?;
 
-
     for i in data {
         let base_url = i.booru_url;
         let tags = i.tags;
@@ -96,12 +78,11 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
         let mut md5s = i.sent_md5.unwrap_or(vec![]);
 
         if base_url == "yande.re" {
-            let url = Url::parse_with_params("https://yande.re/post/index.json",
-                                             &[("tags", &tags), ("limit", &"100".to_string())])?;
-            let resp = reqwest::get(url)
-                .await?
-                .json::<Vec<Post>>()
-                .await?;
+            let url = Url::parse_with_params(
+                "https://yande.re/post/index.json",
+                &[("tags", &tags), ("limit", &"100".to_string())],
+            )?;
+            let resp = reqwest::get(url).await?.json::<Vec<Post>>().await?;
 
             for post in resp {
                 if !md5s.contains(&post.md5) {
@@ -124,13 +105,16 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
                         }
 
                         if !is_unsafe {
-                            if let Err(why) = ChannelId(*channel as u64).send_message(&ctx, |m|{
-                                m.embed(|e| {
-                                    e.title("Original Post");
-                                    e.url(format!("https://yande.re/post/show/{}", post.id));
-                                    e.image(post.sample_url.clone())
+                            if let Err(why) = ChannelId(*channel as u64)
+                                .send_message(&ctx, |m| {
+                                    m.embed(|e| {
+                                        e.title("Original Post");
+                                        e.url(format!("https://yande.re/post/show/{}", post.id));
+                                        e.image(post.sample_url.clone())
+                                    })
                                 })
-                            }).await {
+                                .await
+                            {
                                 eprintln!("Error while sending message >>> {}", why);
                             };
                         }
@@ -153,11 +137,10 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
                                 e.url(format!("https://yande.re/post/show/{}", post.id));
                                 e.image(post.sample_url.clone())
                             });
-                                
+
                             if let Ok(hook) = &ctx.http.get_webhook_with_token(id, token).await {
-                                hook.execute(&ctx.http, false, |m|{
-                                    m.embeds(vec![embed])
-                                }).await?;
+                                hook.execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                                    .await?;
                             }
                         }
                     }
@@ -165,8 +148,12 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
                     &md5s.push(post.md5);
                     sqlx::query!(
                         "UPDATE new_posts SET sent_md5 = $1 WHERE booru_url = $2 AND tags = $3",
-                        &md5s, &base_url, &tags
-                    ).execute(&pool).await?;
+                        &md5s,
+                        &base_url,
+                        &tags
+                    )
+                    .execute(&pool)
+                    .await?;
                 }
             }
         }
@@ -175,7 +162,10 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
 }
 
 #[inline]
-async fn check_changes(data: &TwitchStreamData, sent_streams: Arc<RwLock<Vec<TwitchStreamData>>>) -> bool {
+async fn check_changes(
+    data: &TwitchStreamData,
+    sent_streams: Arc<RwLock<Vec<TwitchStreamData>>>,
+) -> bool {
     for i in sent_streams.read().await.iter() {
         if i.user_id == data.user_id && i != data {
             return true;
@@ -195,12 +185,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
         let token = tokens.twitch.to_string();
         let client_id = tokens.twitch_client_id.to_string();
 
-        (
-            pool.clone(),
-            sent_streams.clone(),
-            token,
-            client_id
-        )
+        (pool.clone(), sent_streams.clone(), token, client_id)
     };
 
     let data = sqlx::query!("SELECT * FROM streamers")
@@ -209,77 +194,100 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
 
     for i in data {
         let reqwest = ReqwestClient::new();
-        let url = Url::parse_with_params("https://api.twitch.tv/helix/streams", &[("user_login", &i.streamer)])?;
+        let url = Url::parse_with_params(
+            "https://api.twitch.tv/helix/streams",
+            &[("user_login", &i.streamer)],
+        )?;
         let mut headers = HeaderMap::new();
         headers.insert(AUTHORIZATION, format!("Bearer {}", token).parse().unwrap());
         headers.insert("Client-ID", format!("{}", client_id).parse().unwrap());
 
-        let resp = match reqwest.get(url)
+        let resp = match reqwest
+            .get(url)
             .headers(headers.clone())
             .send()
             .await?
             .json::<TwitchStreams>()
-            .await { 
-                Ok(x) => x,
-                Err(why) => {
-                    error!("Error quering Helix API: {}", &why);
-                    continue;
-                }
-            };
+            .await
+        {
+            Ok(x) => x,
+            Err(why) => {
+                error!("Error quering Helix API: {}", &why);
+                continue;
+            }
+        };
 
         let stream_data = resp.data;
         if !stream_data.is_empty() && i.is_live {
             if check_changes(&stream_data[0], Arc::clone(&sent_streams)).await {
-                let data = sqlx::query!("SELECT * FROM streamer_notification_channel WHERE streamer = $1", &i.streamer)
-                    .fetch_all(&pool)
-                    .await?;
+                let data = sqlx::query!(
+                    "SELECT * FROM streamer_notification_channel WHERE streamer = $1",
+                    &i.streamer
+                )
+                .fetch_all(&pool)
+                .await?;
 
                 for notification_place in data {
-                    let url = format!("https://api.twitch.tv/helix/games?id={}", stream_data[0].game_id);
-                    let game_resp = reqwest.get(&url)
+                    let url = format!(
+                        "https://api.twitch.tv/helix/games?id={}",
+                        stream_data[0].game_id
+                    );
+                    let game_resp = reqwest
+                        .get(&url)
                         .headers(headers.clone())
                         .send()
                         .await?
                         .json::<TwitchGameData>()
                         .await?;
 
-                    let url = format!("https://api.twitch.tv/helix/users?id={}", stream_data[0].user_id);
-                    let user_resp = reqwest.get(&url)
+                    let url = format!(
+                        "https://api.twitch.tv/helix/users?id={}",
+                        stream_data[0].user_id
+                    );
+                    let user_resp = reqwest
+                        .get(&url)
                         .headers(headers.clone())
                         .send()
                         .await?
                         .json::<TwitchUserData>()
                         .await?;
 
-                    let game_name = game_resp.data[0].name.clone().unwrap_or("No Game".to_string());
+                    let game_name = game_resp.data[0]
+                        .name
+                        .clone()
+                        .unwrap_or("No Game".to_string());
                     let streamer_name = notification_place.streamer.clone();
 
-                    if let Ok(mut message) = ctx.http.get_message(notification_place.channel_id.unwrap() as u64, notification_place.message_id.unwrap() as u64).await
+                    if let Ok(mut message) = ctx
+                        .http
+                        .get_message(
+                            notification_place.channel_id.unwrap() as u64,
+                            notification_place.message_id.unwrap() as u64,
+                        )
+                        .await
                     {
-                        let _ = message.edit(&*ctx, |m| {
-                            if let Some(role_id) = notification_place.role_id.to_owned() {
-                                m.content(format!("<@&{}>", role_id));
-                            }
-                            m.embed( |e| {
-                                if !notification_place.use_default {
-                                    e.description(notification_place.live_message.unwrap());
-                                } else {
-                                    e.description(i.live_message.clone().unwrap());
+                        let _ = message
+                            .edit(&*ctx, |m| {
+                                if let Some(role_id) = notification_place.role_id.to_owned() {
+                                    m.content(format!("<@&{}>", role_id));
                                 }
-                                e.author(|a| {
-                                    a.name(&i.streamer);
-                                    a.icon_url(&user_resp.data[0].profile_image_url);
-                                    a.url(format!("https://www.twitch.tv/{}", &i.streamer))
-                                });
-                                e.url(format!("https://www.twitch.tv/{}", &i.streamer));
-                                e.title(stream_data[0].title.to_string());
-                                e.field(
-                                    "Game",
-                                    game_name,
-                                    true,
-                                )
+                                m.embed(|e| {
+                                    if !notification_place.use_default {
+                                        e.description(notification_place.live_message.unwrap());
+                                    } else {
+                                        e.description(i.live_message.clone().unwrap());
+                                    }
+                                    e.author(|a| {
+                                        a.name(&i.streamer);
+                                        a.icon_url(&user_resp.data[0].profile_image_url);
+                                        a.url(format!("https://www.twitch.tv/{}", &i.streamer))
+                                    });
+                                    e.url(format!("https://www.twitch.tv/{}", &i.streamer));
+                                    e.title(stream_data[0].title.to_string());
+                                    e.field("Game", game_name, true)
+                                })
                             })
-                        }).await;
+                            .await;
                     }
 
                     let sent_stream_data = {
@@ -295,21 +303,32 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
                 }
             }
         } else if !stream_data.is_empty() && !i.is_live {
-            let data = sqlx::query!("SELECT * FROM streamer_notification_channel WHERE streamer = $1", &i.streamer)
-                .fetch_all(&pool)
-                .await?;
+            let data = sqlx::query!(
+                "SELECT * FROM streamer_notification_channel WHERE streamer = $1",
+                &i.streamer
+            )
+            .fetch_all(&pool)
+            .await?;
 
             for notification_place in data {
-                let url = format!("https://api.twitch.tv/helix/games?id={}", stream_data[0].game_id);
-                let game_resp = reqwest.get(&url)
+                let url = format!(
+                    "https://api.twitch.tv/helix/games?id={}",
+                    stream_data[0].game_id
+                );
+                let game_resp = reqwest
+                    .get(&url)
                     .headers(headers.clone())
                     .send()
                     .await?
                     .json::<TwitchGameData>()
                     .await?;
 
-                let url = format!("https://api.twitch.tv/helix/users?id={}", stream_data[0].user_id);
-                let user_resp = reqwest.get(&url)
+                let url = format!(
+                    "https://api.twitch.tv/helix/users?id={}",
+                    stream_data[0].user_id
+                );
+                let user_resp = reqwest
+                    .get(&url)
                     .headers(headers.clone())
                     .send()
                     .await?
@@ -324,30 +343,28 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
                 };
                 let streamer_name = notification_place.streamer.clone();
 
-                let message = ChannelId(notification_place.channel_id.unwrap() as u64).send_message(&ctx, |m| {
-                    if let Some(role_id) = notification_place.role_id {
-                        m.content(format!("<@&{}>", role_id));
-                    }
-                    m.embed( |e| {
-                        if !notification_place.use_default {
-                            e.description(notification_place.live_message.unwrap());
-                        } else {
-                            e.description(i.live_message.clone().unwrap());
+                let message = ChannelId(notification_place.channel_id.unwrap() as u64)
+                    .send_message(&ctx, |m| {
+                        if let Some(role_id) = notification_place.role_id {
+                            m.content(format!("<@&{}>", role_id));
                         }
-                        e.author(|a| {
-                            a.name(&i.streamer);
-                            a.icon_url(&user_resp.data[0].profile_image_url);
-                            a.url(format!("https://www.twitch.tv/{}", &i.streamer))
-                        });
-                        e.url(format!("https://www.twitch.tv/{}", &i.streamer));
-                        e.title(stream_data[0].title.to_string());
-                        e.field(
-                            "Game",
-                            game_name,
-                            true,
-                        )
+                        m.embed(|e| {
+                            if !notification_place.use_default {
+                                e.description(notification_place.live_message.unwrap());
+                            } else {
+                                e.description(i.live_message.clone().unwrap());
+                            }
+                            e.author(|a| {
+                                a.name(&i.streamer);
+                                a.icon_url(&user_resp.data[0].profile_image_url);
+                                a.url(format!("https://www.twitch.tv/{}", &i.streamer))
+                            });
+                            e.url(format!("https://www.twitch.tv/{}", &i.streamer));
+                            e.title(stream_data[0].title.to_string());
+                            e.field("Game", game_name, true)
+                        })
                     })
-                }).await;
+                    .await;
                 if let Ok(message_ok) = message {
                     sqlx::query!("UPDATE streamer_notification_channel SET message_id = $1 WHERE channel_id = $2 AND streamer = $3", message_ok.id.as_u64().to_owned() as i64, message_ok.channel_id.0 as i64, &i.streamer)
                         .execute(&pool)
@@ -366,45 +383,60 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
                 sent_streams.write().await.push(stream_data[0].clone());
             }
 
-            sqlx::query!("UPDATE streamers SET is_live = true WHERE streamer = $1", &i.streamer)
-                .execute(&pool)
-                .await?;
-
-
+            sqlx::query!(
+                "UPDATE streamers SET is_live = true WHERE streamer = $1",
+                &i.streamer
+            )
+            .execute(&pool)
+            .await?;
         } else if stream_data.is_empty() && i.is_live {
-            let data = sqlx::query!("SELECT * FROM streamer_notification_channel WHERE streamer = $1", i.streamer)
-                .fetch_all(&pool)
-                .await?;
+            let data = sqlx::query!(
+                "SELECT * FROM streamer_notification_channel WHERE streamer = $1",
+                i.streamer
+            )
+            .fetch_all(&pool)
+            .await?;
 
             for notification_place in data {
-                if let Ok(mut message) = ctx.http.get_message(notification_place.channel_id.unwrap_or(0) as u64, notification_place.message_id.unwrap_or(0) as u64).await
+                if let Ok(mut message) = ctx
+                    .http
+                    .get_message(
+                        notification_place.channel_id.unwrap_or(0) as u64,
+                        notification_place.message_id.unwrap_or(0) as u64,
+                    )
+                    .await
                 {
-                    let _ = message.edit(&*ctx, |m| {
-                        if let Some(role_id) = notification_place.role_id.to_owned() {
-                            m.content(format!("<@&{}>", role_id));
-                        }
-                        m.embed( |e| {
-                            if !notification_place.use_default {
-                                e.description(notification_place.not_live_message.unwrap());
-                            } else {
-                                e.description(i.not_live_message.clone().unwrap());
+                    let _ = message
+                        .edit(&*ctx, |m| {
+                            if let Some(role_id) = notification_place.role_id.to_owned() {
+                                m.content(format!("<@&{}>", role_id));
                             }
-                            e.author(|a| {
-                                a.name(&i.streamer);
-                                a.url(format!("https://www.twitch.tv/{}", &i.streamer))
-                            });
-                            e.url(format!("https://www.twitch.tv/{}", &i.streamer));
-                            e.title("No longer live.")
+                            m.embed(|e| {
+                                if !notification_place.use_default {
+                                    e.description(notification_place.not_live_message.unwrap());
+                                } else {
+                                    e.description(i.not_live_message.clone().unwrap());
+                                }
+                                e.author(|a| {
+                                    a.name(&i.streamer);
+                                    a.url(format!("https://www.twitch.tv/{}", &i.streamer))
+                                });
+                                e.url(format!("https://www.twitch.tv/{}", &i.streamer));
+                                e.title("No longer live.")
+                            })
                         })
-                    }).await;
+                        .await;
                 }
             }
-            sqlx::query!("UPDATE streamers SET is_live = false WHERE streamer = $1", i.streamer)
-                .execute(&pool)
-                .await?;
+            sqlx::query!(
+                "UPDATE streamers SET is_live = false WHERE streamer = $1",
+                i.streamer
+            )
+            .execute(&pool)
+            .await?;
         }
     }
-    
+
     Ok(())
 }
 
@@ -451,21 +483,32 @@ async fn reminder_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Err
 
     for row in reminders {
         if row.date < chrono::offset::Utc::now() {
-            let _ = ChannelId(row.channel_id as u64).send_message(&ctx, |m| {
-                m.content(format!("<@!{}>: Reminder!", row.user_id));
-                m.embed(|e| {
-                    e.description(if let Some(x) = &row.message { x } else { "No Message." });
-                    e.field("Original Message", format!("[Jump](https://discord.com/channels/{}/{}/{})",
-                        if row.guild_id == 0 {
-                            "@me".to_string()
+            let _ = ChannelId(row.channel_id as u64)
+                .send_message(&ctx, |m| {
+                    m.content(format!("<@!{}>: Reminder!", row.user_id));
+                    m.embed(|e| {
+                        e.description(if let Some(x) = &row.message {
+                            x
                         } else {
-                            row.guild_id.to_string()
-                        },
-                        &row.channel_id,
-                        &row.message_id,
-                    ), true)
+                            "No Message."
+                        });
+                        e.field(
+                            "Original Message",
+                            format!(
+                                "[Jump](https://discord.com/channels/{}/{}/{})",
+                                if row.guild_id == 0 {
+                                    "@me".to_string()
+                                } else {
+                                    row.guild_id.to_string()
+                                },
+                                &row.channel_id,
+                                &row.message_id,
+                            ),
+                            true,
+                        )
+                    })
                 })
-            }).await;
+                .await;
 
             sqlx::query!("DELETE FROM reminders WHERE id = $1", row.id)
                 .execute(&pool)
@@ -487,15 +530,27 @@ async fn unmute_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error
 
     for row in muted_members {
         if row.date < chrono::offset::Utc::now() {
-            let mut member = if let Ok(x) = ctx.http.get_member(row.guild_id as u64, row.user_id as u64).await { x } else {
-                let _ = ChannelId(row.channel_id as u64).say(&ctx, format!("Unable to unmute <@{}> from temporal mute.", row.user_id));
+            let mut member = if let Ok(x) = ctx
+                .http
+                .get_member(row.guild_id as u64, row.user_id as u64)
+                .await
+            {
+                x
+            } else {
+                let _ = ChannelId(row.channel_id as u64).say(
+                    &ctx,
+                    format!("Unable to unmute <@{}> from temporal mute.", row.user_id),
+                );
                 return Ok(());
             };
 
             let role_id = {
-                let role_row = sqlx::query!("SELECT role_id FROM muted_roles WHERE guild_id = $1", row.guild_id)
-                    .fetch_optional(&pool)
-                    .await?;
+                let role_row = sqlx::query!(
+                    "SELECT role_id FROM muted_roles WHERE guild_id = $1",
+                    row.guild_id
+                )
+                .fetch_optional(&pool)
+                .await?;
 
                 if let Some(role_row) = role_row {
                     role_row.role_id as u64
@@ -506,25 +561,39 @@ async fn unmute_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error
             };
 
             if let Err(_) = member.remove_role(&ctx, role_id).await {
-                let _ = ChannelId(row.channel_id as u64).say(&ctx, format!("Unable to unmute <@{}> from temporal mute.", row.user_id));
+                let _ = ChannelId(row.channel_id as u64).say(
+                    &ctx,
+                    format!("Unable to unmute <@{}> from temporal mute.", row.user_id),
+                );
                 return Ok(());
             }
 
-            let _ = ChannelId(row.channel_id as u64).send_message(&ctx, |m| {
-                m.content(format!("<@!{}> has been unmuted.", row.user_id));
-                m.embed(|e| {
-                    e.description(if let Some(x) = &row.message { format!("Mute Reason: {}", x) } else { "No Message.".to_string() });
-                    e.field("Original Message", format!("[Jump](https://discord.com/channels/{}/{}/{})",
-                        if row.guild_id == 0 {
-                            "@me".to_string()
+            let _ = ChannelId(row.channel_id as u64)
+                .send_message(&ctx, |m| {
+                    m.content(format!("<@!{}> has been unmuted.", row.user_id));
+                    m.embed(|e| {
+                        e.description(if let Some(x) = &row.message {
+                            format!("Mute Reason: {}", x)
                         } else {
-                            row.guild_id.to_string()
-                        },
-                        &row.channel_id,
-                        &row.message_id,
-                    ), true)
+                            "No Message.".to_string()
+                        });
+                        e.field(
+                            "Original Message",
+                            format!(
+                                "[Jump](https://discord.com/channels/{}/{}/{})",
+                                if row.guild_id == 0 {
+                                    "@me".to_string()
+                                } else {
+                                    row.guild_id.to_string()
+                                },
+                                &row.channel_id,
+                                &row.message_id,
+                            ),
+                            true,
+                        )
+                    })
                 })
-            }).await;
+                .await;
 
             sqlx::query!("DELETE FROM muted_members WHERE id = $1", row.id)
                 .execute(&pool)
@@ -546,7 +615,10 @@ pub async fn notification_loop(ctx: Arc<Context>) {
             tokio::spawn(async move {
                 if let Err(why) = check_new_posts(Arc::clone(&ctx1)).await {
                     error!("check_new_posts :: {}", why);
-                    eprintln!("An error occurred while running check_new_posts() >>> {}", why);
+                    eprintln!(
+                        "An error occurred while running check_new_posts() >>> {}",
+                        why
+                    );
                 }
             });
 
@@ -554,7 +626,10 @@ pub async fn notification_loop(ctx: Arc<Context>) {
             tokio::spawn(async move {
                 if let Err(why) = check_twitch_livestreams(Arc::clone(&ctx2)).await {
                     error!("check_twitch_livestreams :: {}", why);
-                    eprintln!("An error occurred while running check_twitch_livestreams() >>> {}", why);
+                    eprintln!(
+                        "An error occurred while running check_twitch_livestreams() >>> {}",
+                        why
+                    );
                 }
             });
 
@@ -577,7 +652,10 @@ pub async fn notification_loop(ctx: Arc<Context>) {
             tokio::spawn(async move {
                 if let Err(why) = reminder_check(Arc::clone(&ctx1)).await {
                     error!("remider_check :: {}", why);
-                    eprintln!("An error occurred while running reminder_check() >>> {}", why);
+                    eprintln!(
+                        "An error occurred while running reminder_check() >>> {}",
+                        why
+                    );
                 }
             });
 
@@ -592,4 +670,3 @@ pub async fn notification_loop(ctx: Arc<Context>) {
         }
     });
 }
-

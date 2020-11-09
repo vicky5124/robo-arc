@@ -1,6 +1,6 @@
 #![feature(core_intrinsics)]
 #![feature(async_closure)]
-#![type_length_limit="1331829"]
+#![type_length_limit = "1331829"]
 //! This is a discord bot made with `serenity.rs` as a Rust learning project.
 //! If you see a lot of different ways to do the same thing, specially with error handling,
 //! this is indentional, as it helps me remember the concepts that rust provides, so they can be
@@ -8,143 +8,103 @@
 //!
 //! This is lisenced with the copyleft license Mozilla Public License Version 2.0
 
-mod utils; // Load the utils module
 mod commands; // Load the commands module
-mod notifications;
-mod logging;
 mod global_data;
+mod logging;
+mod notifications;
+mod utils; // Load the utils module
 
 // Import this 2 commands in specific with a different name
 // as they interfere with the configuration commands that are also being imported.
-use commands::booru::{
-    BEST_BOY_COMMAND as BG_COMMAND,
-    BEST_GIRL_COMMAND as BB_COMMAND,
-};
+use commands::booru::{BEST_BOY_COMMAND as BG_COMMAND, BEST_GIRL_COMMAND as BB_COMMAND};
 use commands::meta::PREFIX_COMMAND as PREFIXES_COMMAND;
 
 use crate::global_data::*;
 use crate::notifications::notification_loop;
 
 use commands::booru::*; // Import everything from the booru module.
-use commands::sankaku::*; // Import everything from the sankaku booru module.
-use commands::osu::*; // Import everything from the osu module.
-use commands::meta::*; // Import everything from the meta module.
-use commands::image_manipulation::*; // Import everything from the image manipulation module.
+use commands::configuration::*; // Import everything from the configuration module.
+use commands::dictionary::*; // Import everything from the dictionary module.
 use commands::fun::*; // Import everything from the fun module.
 use commands::games::*; // Import everything from the games module.
+use commands::image_manipulation::*; // Import everything from the image manipulation module.
+use commands::meta::*; // Import everything from the meta module.
 use commands::moderation::*; // Import everything from the moderation module.
-use commands::configuration::*; // Import everything from the configuration module.
 use commands::music::*; // Import everything from the configuration module.
-use commands::dictionary::*; // Import everything from the dictionary module.
+use commands::osu::*; // Import everything from the osu module.
+use commands::sankaku::*; // Import everything from the sankaku booru module.
 use commands::serenity_docs::*; // Import everything from the serenity_docs module.
 
-use utils::database::*; // Obtain the get_database function from the utilities.
-use utils::basic_functions::capitalize_first; // Obtain the capitalize_first function from the utilities.
+use utils::basic_functions::capitalize_first;
+use utils::database::*; // Obtain the get_database function from the utilities. // Obtain the capitalize_first function from the utilities.
 
 use std::{
     collections::HashSet, // Low cost indexable lists.
+    convert::TryInto,
     // For saving / reading files
     fs::File,
     io::prelude::*,
 
-    // For having refferences between threads
-    sync::Arc,
-    convert::TryInto,
-    time::Instant,
-
     net::SocketAddr,
     str::FromStr,
+    // For having refferences between threads
+    sync::Arc,
+    time::Instant,
 };
 
 use tokio::sync::Mutex;
 
 use dotenv;
 use tracing::{
-    // Log macros.
-    info,
     debug,
     error,
 
+    // Log macros.
+    info,
+    instrument,
     // Others
     Level,
-    instrument
 };
 
-use tracing_subscriber::{
-    FmtSubscriber,
-    EnvFilter,
-};
 use tracing_log::LogTracer;
+use tracing_subscriber::{EnvFilter, FmtSubscriber};
 //use tracing_futures::Instrument;
 //use log;
 
-use serde_json; // To parse the data of .json files (where's serde_toml smh)
 use serde::{
     Deserialize, // To deserialize data into structures
     Serialize,
 };
+use serde_json; // To parse the data of .json files (where's serde_toml smh)
 
-use warp::{
-    Filter,
-    reply::json,
-    reply::Json
-};
+use warp::{reply::json, reply::Json, Filter};
 
-use lavalink_rs::{
-    LavalinkClient,
-    gateway::LavalinkEventHandler,
-};
+use lavalink_rs::{gateway::LavalinkEventHandler, LavalinkClient};
 use songbird::SerenityInit;
-
 
 // Serenity! what make's the bot function. Discord API wrapper.
 use serenity::{
     async_trait,
-    utils::Colour, // To change the embed help color
     client::{
-        ClientBuilder, // To create a client that runs eveyrthing.
         bridge::gateway::GatewayIntents,
+        ClientBuilder, // To create a client that runs eveyrthing.
+    },
+    framework::standard::{
+        help_commands,
+        macros::{group, help, hook},
+        Args, CommandGroup, CommandResult, Delimiter, DispatchError, HelpOptions, Reason,
+        StandardFramework,
     },
     http::Http,
     model::{
-        channel::{
-            Message,
-            Reaction,
-            ReactionType,
-        },
-        gateway::{
-            Ready,
-            Activity,
-        },
-        user::OnlineStatus,
-        id::{
-            UserId,
-            ChannelId,
-            GuildId,
-        },
+        channel::{Message, Reaction, ReactionType},
+        gateway::{Activity, Ready},
         guild::Member,
+        id::{ChannelId, GuildId, UserId},
+        user::OnlineStatus,
     },
-    prelude::{
-        EventHandler,
-        Context,
-        RwLock,
-    },
-    framework::standard::{
-        Args,
-        Delimiter,
-        CommandResult,
-        CommandGroup,
-        DispatchError,
-        HelpOptions,
-        help_commands,
-        StandardFramework,
-        Reason,
-        macros::{
-            group,
-            help,
-            hook,
-        },
-    },
+    prelude::{Context, EventHandler, RwLock},
+    utils::Colour, // To change the embed help color
 };
 
 // Defining a structure to deserialize "boorus.json" into
@@ -154,8 +114,8 @@ use serenity::{
 #[derive(Debug, Deserialize, Default, Clone)]
 pub struct Booru {
     names: Vec<String>, // Default Vec<String>[String::new()]
-    url: String, // String::new()
-    typ: u8, // 0
+    url: String,        // String::new()
+    typ: u8,            // 0
     post_url: String,
 }
 
@@ -219,14 +179,37 @@ pub struct IBMConfig {
 }
 
 #[group("Master")]
-#[sub_groups(Meta, Sankaku, Osu, Fun, Music, AllBoorus, ImageManipulation, Mod, SerenityDocs, Games)]
+#[sub_groups(
+    Meta,
+    Sankaku,
+    Osu,
+    Fun,
+    Music,
+    AllBoorus,
+    ImageManipulation,
+    Mod,
+    SerenityDocs,
+    Games
+)]
 struct Master;
 
 // The basic commands group is being defined here.
 // this group includes the commands that basically every bot has, nothing really special.
 #[group("Meta")]
 #[description = "All the basic commands that basically every bot has."]
-#[commands(ping, test, invite, source, todo, prefixes, about, changelog, terms_of_service, issues, eval)]
+#[commands(
+    ping,
+    test,
+    invite,
+    source,
+    todo,
+    prefixes,
+    about,
+    changelog,
+    terms_of_service,
+    issues,
+    eval
+)]
 struct Meta;
 
 // The SankakuComplex command group.
@@ -270,7 +253,19 @@ struct ImageManipulation;
 // Where all the random commands go into lol
 #[group("Fun")]
 #[description = "All the random and fun commands."]
-#[commands(profile, qr, urban, dictionary, translate, duck_duck_go, encrypt, decrypt, calculator, remind_me, uwufy)]
+#[commands(
+    profile,
+    qr,
+    urban,
+    dictionary,
+    translate,
+    duck_duck_go,
+    encrypt,
+    decrypt,
+    calculator,
+    remind_me,
+    uwufy
+)]
 struct Fun;
 
 // The FUN command group.
@@ -283,14 +278,37 @@ struct Games;
 // The moderation command group.
 #[group("Moderation")]
 #[description = "All the moderation related commands."]
-#[commands(kick, clear, ban, permanent_ban, permanent_mute, temporal_mute, permanent_self_mute, temporal_self_mute)]
+#[commands(
+    kick,
+    clear,
+    ban,
+    permanent_ban,
+    permanent_mute,
+    temporal_mute,
+    permanent_self_mute,
+    temporal_self_mute
+)]
 struct Mod;
 
 // The music command group.
 #[group("Music")]
 #[description = "All the voice and music related commands."]
 #[only_in("guilds")]
-#[commands(join, leave, play, play_playlist, pause, resume, stop, skip, seek, shuffle, queue, clear_queue, now_playing)]
+#[commands(
+    join,
+    leave,
+    play,
+    play_playlist,
+    pause,
+    resume,
+    stop,
+    skip,
+    seek,
+    shuffle,
+    queue,
+    clear_queue,
+    now_playing
+)]
 struct Music;
 
 #[group("Serenity Documentation")]
@@ -349,18 +367,16 @@ async fn my_help(
     args: Args,
     help_options: &'static HelpOptions,
     groups: &[&'static CommandGroup],
-    owners: HashSet<UserId>
+    owners: HashSet<UserId>,
 ) -> CommandResult {
     let mut ho = help_options.clone();
     // Changing the color of the embed sidebar, because the default one is ugly :P
     ho.embed_error_colour = Colour::from_rgb(255, 30, 30);
-    ho.embed_success_colour= Colour::from_rgb(141, 91, 255);
+    ho.embed_success_colour = Colour::from_rgb(141, 91, 255);
 
     let _ = help_commands::with_embeds(ctx, msg, args, &ho, groups, owners).await;
     Ok(())
 }
-
-
 
 struct LavalinkHandler;
 
@@ -375,16 +391,12 @@ struct Handler {
 
 async fn is_on_guild(guild_id: u64, ctx: Arc<Context>) -> Result<Json, warp::Rejection> {
     let cache = &ctx.cache;
-    let guilds = cache.guilds()
-        .await
-        .iter()
-        .map(|i| i.0)
-        .collect::<Vec<_>>();
+    let guilds = cache.guilds().await.iter().map(|i| i.0).collect::<Vec<_>>();
 
     let data = Allow {
-        allowed: guilds.contains(&guild_id.clone())
+        allowed: guilds.contains(&guild_id.clone()),
     };
-    
+
     Ok(json(&data))
 }
 
@@ -407,8 +419,7 @@ impl EventHandler for Handler {
             let ctx_clone = Arc::clone(&ctx);
             let ctx_clone2 = Arc::clone(&ctx);
 
-            let notification_loop = tokio::spawn(async move {notification_loop(ctx_clone).await});
-
+            let notification_loop = tokio::spawn(async move { notification_loop(ctx_clone).await });
 
             tokio::spawn(async move {
                 let routes = warp::path::param()
@@ -419,10 +430,8 @@ impl EventHandler for Handler {
                 let port = web_server_info.server_port;
 
                 warp::serve(routes)
-                    .run(SocketAddr::from_str(
-                        format!("{}:{}", ip, port).as_str()
-                    ).unwrap()
-                ).await;
+                    .run(SocketAddr::from_str(format!("{}:{}", ip, port).as_str()).unwrap())
+                    .await;
             });
 
             let _ = notification_loop.await;
@@ -440,20 +449,20 @@ impl EventHandler for Handler {
         };
 
         if info.play_or_listen == "playing" {
-            ctx.set_presence(
-                Some(Activity::playing(&info.status)),
-                OnlineStatus::Online
-            ).await;
+            ctx.set_presence(Some(Activity::playing(&info.status)), OnlineStatus::Online)
+                .await;
         } else if info.play_or_listen == "listening" {
             ctx.set_presence(
                 Some(Activity::listening(&info.status)),
-                OnlineStatus::Online
-            ).await;
+                OnlineStatus::Online,
+            )
+            .await;
         } else if info.play_or_listen == "competing" {
             ctx.set_presence(
                 Some(Activity::competing(&info.status)),
-                OnlineStatus::Online
-            ).await;
+                OnlineStatus::Online,
+            )
+            .await;
         }
 
         info!("Bot is READY");
@@ -479,17 +488,18 @@ impl EventHandler for Handler {
             // NO U
             if msg.content == "no u" {
                 let _ = msg.reply(&ctx, "no u").await; // reply pings the user
-            // AYY LMAO
+                                                       // AYY LMAO
             } else if msg.content == "ayy" {
                 let _ = msg.channel_id.say(&ctx, "lmao").await; // say just send the message
-
             }
         }
 
-        if msg.content.contains("discordapp.com/channels/") || msg.content.contains("discord.com/channels/") {
+        if msg.content.contains("discordapp.com/channels/")
+            || msg.content.contains("discord.com/channels/")
+        {
             let mut splits = msg.content.split('/');
             if splits.clone().count() == 7 {
-                let channel_id  = splits.nth(5).unwrap_or("0").parse::<u64>().expect("NaN");
+                let channel_id = splits.nth(5).unwrap_or("0").parse::<u64>().expect("NaN");
                 if let Ok(chan) = ChannelId(channel_id).to_channel(&ctx).await {
                     if chan.is_nsfw() {
                         let _ = msg.react(&ctx, '🇳').await;
@@ -511,7 +521,6 @@ impl EventHandler for Handler {
                 pif.len()
             };
 
-
             let mut correct = true;
 
             for i in 0..l {
@@ -530,9 +539,13 @@ impl EventHandler for Handler {
 
         if msg.guild_id.unwrap_or_default().0 == 159686161219059712 {
             if msg.content.to_lowercase().contains("ping me on nsfw!") {
-                let _ = ChannelId(354294536198946817).say(&ctx, format!("<@{}>", msg.author.id)).await;
+                let _ = ChannelId(354294536198946817)
+                    .say(&ctx, format!("<@{}>", msg.author.id))
+                    .await;
             } else if msg.content.to_lowercase().contains("ping him on nsfw!") {
-                let _ = ChannelId(354294536198946817).say(&ctx, "<@299624139633721345>").await;
+                let _ = ChannelId(354294536198946817)
+                    .say(&ctx, "<@299624139633721345>")
+                    .await;
             }
         }
     }
@@ -546,10 +559,15 @@ impl EventHandler for Handler {
         }
 
         // gets the message the reaction happened on
-        let msg = if let Ok(x) = ctx.http.as_ref()
+        let msg = if let Ok(x) = ctx
+            .http
+            .as_ref()
             .get_message(add_reaction.channel_id.0, add_reaction.message_id.0)
-            .await { x } else {
-                return;
+            .await
+        {
+            x
+        } else {
+            return;
         };
 
         // Obtain the "global" data in read mode
@@ -562,28 +580,37 @@ impl EventHandler for Handler {
 
         match add_reaction.emoji {
             // Matches custom emojis.
-            ReactionType::Custom{id, ..} => {
+            ReactionType::Custom { id, .. } => {
                 // If the emote is the GW version of slof, React back.
                 // This also shows a couple ways to do error handling.
                 if id.0 == 375_459_870_524_047_361 {
-                    
                     if let Err(why) = msg.react(&ctx, add_reaction.emoji).await {
                         error!("There was an error adding a reaction: {}", why);
                     }
 
                     if annoy {
-                        let _ = msg.channel_id.say(&ctx, format!("<@{}>: qt", add_reaction.user_id.unwrap().0)).await;
+                        let _ = msg
+                            .channel_id
+                            .say(&ctx, format!("<@{}>: qt", add_reaction.user_id.unwrap().0))
+                            .await;
                     }
                 }
-            },
+            }
             // Matches unicode emojis.
             ReactionType::Unicode(s) => {
                 if annoy {
                     // This will not be kept here for long, as i see it being very annoying eventually.
                     if s == "🤔" {
-                        let _ = msg.channel_id.say(&ctx,
-                            format!("<@{}>: What ya thinking so much about", add_reaction.user_id.unwrap().0)
-                        ).await;
+                        let _ = msg
+                            .channel_id
+                            .say(
+                                &ctx,
+                                format!(
+                                    "<@{}>: What ya thinking so much about",
+                                    add_reaction.user_id.unwrap().0
+                                ),
+                            )
+                            .await;
                     }
                 }
 
@@ -595,10 +622,10 @@ impl EventHandler for Handler {
                         let _ = msg.delete(&ctx).await;
                     }
                 }
-            },
+            }
             // Ignore the rest of the cases.
             _ => (), // complete code
-            //_ => {}, // incomplete code / may be longer in the future
+                     //_ => {}, // incomplete code / may be longer in the future
         }
     }
 
@@ -608,22 +635,39 @@ impl EventHandler for Handler {
             data_read.get::<DatabasePool>().unwrap().clone()
         };
 
-        let data = sqlx::query!("SELECT banner_user_id FROM permanent_bans WHERE guild_id = $1 AND user_id = $2", guild_id.0 as i64, member.user.id.0 as i64)
-            .fetch_optional(&pool)
-            .await
-            .unwrap();
+        let data = sqlx::query!(
+            "SELECT banner_user_id FROM permanent_bans WHERE guild_id = $1 AND user_id = $2",
+            guild_id.0 as i64,
+            member.user.id.0 as i64
+        )
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
 
         if let Some(row) = data {
-            if let Err(_) = member.ban_with_reason(&ctx, 0, &format!("User ID {} has been banned PERMANENTLY by {}", member.user.id.0, row.banner_user_id)).await {
-                if let Some(channel) = guild_id.to_guild_cached(&ctx).await.unwrap().system_channel_id {
+            if let Err(_) = member
+                .ban_with_reason(
+                    &ctx,
+                    0,
+                    &format!(
+                        "User ID {} has been banned PERMANENTLY by {}",
+                        member.user.id.0, row.banner_user_id
+                    ),
+                )
+                .await
+            {
+                if let Some(channel) = guild_id
+                    .to_guild_cached(&ctx)
+                    .await
+                    .unwrap()
+                    .system_channel_id
+                {
                     let _ = channel.say(&ctx, format!("I was unable to reban the permanently banned user <@{}>, originally banned by <@{}>", member.user.id.0, row.banner_user_id)).await;
                 }
             };
         }
     }
 }
-
-
 
 // This is for errors that happen before command execution.
 #[hook]
@@ -633,17 +677,20 @@ async fn on_dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
         // inssufficient arguments.
         DispatchError::NotEnoughArguments { min, given } => {
             let s = {
-                if given == 0  && min == 1{
+                if given == 0 && min == 1 {
                     format!("I need an argument to run this command")
                 } else if given == 0 {
                     format!("I need atleast {} arguments to run this command", min)
                 } else {
-                    format!("I need {} arguments to run this command, but i was only given {}.", min, given)
+                    format!(
+                        "I need {} arguments to run this command, but i was only given {}.",
+                        min, given
+                    )
                 }
             };
             // Send the message, but supress any errors that may occur.
             let _ = msg.channel_id.say(ctx, s).await;
-        },
+        }
         //DispatchError::IgnoredBot {} => {
         //    return;
         //},
@@ -651,9 +698,17 @@ async fn on_dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
             if let Reason::User(r) = reason {
                 let _ = msg.channel_id.say(ctx, r).await;
             }
-        },
+        }
         DispatchError::Ratelimited(x) => {
-            let _ = msg.reply(ctx, format!("You can't run this command for {} more seconds.", x.as_secs())).await;
+            let _ = msg
+                .reply(
+                    ctx,
+                    format!(
+                        "You can't run this command for {} more seconds.",
+                        x.as_secs()
+                    ),
+                )
+                .await;
         }
         // eprint prints to stderr rather than stdout.
         _ => {
@@ -673,15 +728,23 @@ async fn before(ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
             data_read.get::<DatabasePool>().unwrap().clone()
         };
 
-        let disallowed_commands = sqlx::query!("SELECT disallowed_commands FROM prefixes WHERE guild_id = $1", guild_id.0 as i64)
-            .fetch_optional(&pool)
-            .await
-            .unwrap();
+        let disallowed_commands = sqlx::query!(
+            "SELECT disallowed_commands FROM prefixes WHERE guild_id = $1",
+            guild_id.0 as i64
+        )
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
 
         if let Some(x) = disallowed_commands {
             if let Some(disallowed_commands) = x.disallowed_commands {
                 if disallowed_commands.contains(&cmd_name.to_string()) {
-                    let _ = msg.reply(ctx, "This command has been disabled by an administrtor of this guild.").await;
+                    let _ = msg
+                        .reply(
+                            ctx,
+                            "This command has been disabled by an administrtor of this guild.",
+                        )
+                        .await;
                     return false;
                 }
             }
@@ -691,7 +754,7 @@ async fn before(ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
             let manager = songbird::get(ctx).await.unwrap().clone();
 
             if manager.get(guild_id).is_none() {
-                if let Err(why) =  _join(ctx, msg).await {
+                if let Err(why) = _join(ctx, msg).await {
                     error!("While running command: {}", cmd_name);
                     error!("{:?}", why);
                     return false;
@@ -717,7 +780,10 @@ async fn after(ctx: &Context, msg: &Message, cmd_name: &str, error: CommandResul
 
         //let err = why.0.to_string();
         if let Err(_) = msg.channel_id.say(ctx, &why).await {
-            error!("Unable to send messages on channel id {}", &msg.channel_id.0);
+            error!(
+                "Unable to send messages on channel id {}",
+                &msg.channel_id.0
+            );
         };
     }
 }
@@ -732,30 +798,32 @@ async fn unrecognised_command(ctx: &Context, msg: &Message, command_name: &str) 
         let commands = data_read.get::<BooruCommands>().unwrap();
         let boorus = data_read.get::<BooruList>().unwrap();
 
-        (
-            pool.clone(),
-            commands.clone(),
-            boorus.clone(),
-        )
+        (pool.clone(), commands.clone(), boorus.clone())
     };
 
     if let Some(guild_id) = msg.guild_id {
-
-        let disallowed_commands = sqlx::query!("SELECT disallowed_commands FROM prefixes WHERE guild_id = $1", guild_id.0 as i64)
-            .fetch_optional(&pool)
-            .await
-            .unwrap();
+        let disallowed_commands = sqlx::query!(
+            "SELECT disallowed_commands FROM prefixes WHERE guild_id = $1",
+            guild_id.0 as i64
+        )
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
 
         if let Some(x) = disallowed_commands {
             if let Some(disallowed_commands) = x.disallowed_commands {
                 if disallowed_commands.contains(&"booru_command".to_string()) {
-                    let _ = msg.reply(ctx, "This command has been disabled by an administrtor of this guild.").await;
+                    let _ = msg
+                        .reply(
+                            ctx,
+                            "This command has been disabled by an administrtor of this guild.",
+                        )
+                        .await;
                     return;
                 }
             }
         }
     }
-
 
     if commands.contains(command_name) {
         let booru: Booru = {
@@ -779,15 +847,23 @@ async fn unrecognised_command(ctx: &Context, msg: &Message, command_name: &str) 
         if let Err(why) = booru_result {
             // Handle any error that may occur.
             let why = why.to_string();
-            let reason = format!("There was an error executing the command {}: {}", &booru.names[0], capitalize_first(&why));
+            let reason = format!(
+                "There was an error executing the command {}: {}",
+                &booru.names[0],
+                capitalize_first(&why)
+            );
             error!("{}", reason);
-            let _ = msg.channel_id.say(ctx, format!("There was an error running {}", command_name)).await;
+            let _ = msg
+                .channel_id
+                .say(ctx, format!("There was an error running {}", command_name))
+                .await;
         }
     }
 }
 
 #[hook]
-async fn dynamic_prefix(ctx: &Context, msg: &Message) -> Option<String> { // Custom per guild prefixes.
+async fn dynamic_prefix(ctx: &Context, msg: &Message) -> Option<String> {
+    // Custom per guild prefixes.
     //info!("Dynamic prefix call.");
     // obtain the guild id of the command message.
     let guild_id = &msg.guild_id;
@@ -809,20 +885,20 @@ async fn dynamic_prefix(ctx: &Context, msg: &Message) -> Option<String> { // Cus
         // Obtain the configured prefix from the database
         match sqlx::query!("SELECT prefix FROM prefixes WHERE guild_id = $1", gid)
             .fetch_optional(&pool)
-            .await {
-                Err(why) => {
-                    error!("Could not query database: {}", why);
-                    p = ".".to_string();
-                },
-                Ok(db_prefix) => {
-                    p = if let Some(result) = db_prefix {
-                        result.prefix.unwrap_or(".".to_string()).to_string()
-                    } else {
-                        ".".to_string()
-                    };
-                }
+            .await
+        {
+            Err(why) => {
+                error!("Could not query database: {}", why);
+                p = ".".to_string();
             }
-
+            Ok(db_prefix) => {
+                p = if let Some(result) = db_prefix {
+                    result.prefix.unwrap_or(".".to_string()).to_string()
+                } else {
+                    ".".to_string()
+                };
+            }
+        }
 
     // If the command was invoked on a dm
     } else {
@@ -833,13 +909,11 @@ async fn dynamic_prefix(ctx: &Context, msg: &Message) -> Option<String> { // Cus
     Some(p)
 }
 
-
-
 // The main function!
 // Here's where everything starts.
 // This main function is a little special, as it returns Result
 // which allows ? to be used for error handling.
-#[tokio::main(core_threads=8)]
+#[tokio::main(core_threads = 8)]
 #[instrument]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Opens the config.toml file and reads it's content
@@ -847,10 +921,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
 
-
     // gets the data from the config.toml file
     let configuration = toml::from_str::<ConfigurationData>(&contents).unwrap();
-    
+
     if configuration.enable_tracing {
         LogTracer::init()?;
 
@@ -872,12 +945,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .finish();
             tracing::subscriber::set_global_default(subscriber)?;
         } else {
-            let subscriber = FmtSubscriber::builder()
-                .with_max_level(level)
-                .finish();
+            let subscriber = FmtSubscriber::builder().with_max_level(level).finish();
             tracing::subscriber::set_global_default(subscriber)?;
         };
-
 
         info!("Subscriber initialized.");
     }
@@ -886,11 +956,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let bot_token = configuration.discord.to_string();
     // Defines a client with the token obtained from the config.toml file.
     // This also starts up the Event Handler structure defined earlier.
-    
+
     let http = Http::new_with_token(&bot_token);
 
     // Obtains and defines the owner/owners of the Bot Application
-    // and the bot id. 
+    // and the bot id.
     let (owners, bot_id) = match http.get_current_application_info().await {
         Ok(info) => {
             let mut owners = HashSet::new();
@@ -900,30 +970,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 owners.insert(info.owner.id);
             }
 
-
             (owners, info.id)
-        },
+        }
         Err(why) => panic!("Could not access application info: {:?}", why),
     };
 
     // Time to configure the Command Framework!
     // This is what allows for easier and faster commaands.
     let std_framework = StandardFramework::new() // Create a new framework
-        .configure(|c| c
-            .prefix("") // Remove the default prefix.
-            .on_mention(Some(bot_id)) // Add a bot mention as a prefix.
-            .dynamic_prefix(dynamic_prefix)
-            .with_whitespace(true) // Allow a whitespace between the prefix and the command name.
-            .owners(owners) // Defines the owners, this can be later used to make owner specific commands.
-            .case_insensitivity(true) // Makes the prefix and command be case insensitive.
-            .blocked_users(vec![UserId(135423120268984330)].into_iter().collect())
-        )
+        .configure(|c| {
+            c.prefix("") // Remove the default prefix.
+                .on_mention(Some(bot_id)) // Add a bot mention as a prefix.
+                .dynamic_prefix(dynamic_prefix)
+                .with_whitespace(true) // Allow a whitespace between the prefix and the command name.
+                .owners(owners) // Defines the owners, this can be later used to make owner specific commands.
+                .case_insensitivity(true) // Makes the prefix and command be case insensitive.
+                .blocked_users(vec![UserId(135423120268984330)].into_iter().collect())
+        })
         .on_dispatch_error(on_dispatch_error)
         .unrecognised_command(unrecognised_command)
         .before(before)
         .after(after)
-        .bucket("permanent_ban", |b| b.delay(30).time_span(30).limit(1)).await
-
+        .bucket("permanent_ban", |b| b.delay(30).time_span(30).limit(1))
+        .await
         .group(&META_GROUP) // Load `Meta` command group
         .group(&FUN_GROUP) // Load `Fun` command group
         .group(&MUSIC_GROUP) // Load `music` command group
@@ -967,23 +1036,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         data.insert::<CachePool>(redis_pool);
 
         // Add the shard manager to the data.
-        data.insert::<ShardManagerContainer> (
-            Arc::clone(&client.shard_manager)
-        );
+        data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
 
         // Add the tokens to the data.
-        data.insert::<Tokens> (
-            Arc::new(configuration.clone())
-        );
+        data.insert::<Tokens>(Arc::new(configuration.clone()));
 
         // Add the sent streams.
-        data.insert::<SentTwitchStreams> (
-            Arc::new(RwLock::new(Vec::new()))
-        );
+        data.insert::<SentTwitchStreams>(Arc::new(RwLock::new(Vec::new())));
 
-        data.insert::<Uptime> (
-            Arc::new(Instant::now())
-        );
+        data.insert::<Uptime>(Arc::new(Instant::now()));
 
         {
             // T 0 D 0: get the real shard amount.
@@ -1009,8 +1070,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             file.read_to_string(&mut raw_data).unwrap();
 
             // Serialize the json string into a BooruRaw struct.
-            let boorus: BooruRaw = serde_json::from_str(&raw_data.as_str())
-                .expect("JSON was not well-formatted");
+            let boorus: BooruRaw =
+                serde_json::from_str(&raw_data.as_str()).expect("JSON was not well-formatted");
 
             // Add every command on the data to a HashSet
             let mut all_names = HashSet::new();
@@ -1021,12 +1082,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             }
 
             // Add the json file struct and the HashSet of all the commands to the data.
-            data.insert::<BooruList> (
-                Arc::new(boorus.boorus)
-            );
-            data.insert::<BooruCommands> (
-                Arc::new(all_names)
-            );
+            data.insert::<BooruList>(Arc::new(boorus.boorus));
+            data.insert::<BooruCommands>(Arc::new(all_names));
         }
 
         {
@@ -1046,12 +1103,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             };
 
             // Insert the HashSet of annoyed channels to the data.
-            data.insert::<AnnoyedChannels> (
-                Arc::new(RwLock::new(annoyed_channels))
-            );
+            data.insert::<AnnoyedChannels>(Arc::new(RwLock::new(annoyed_channels)));
         }
     }
-
 
     // start listening for events by starting a single shard
     if let Err(why) = client.start_autosharded().await {

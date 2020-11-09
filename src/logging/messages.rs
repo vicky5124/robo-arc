@@ -1,26 +1,20 @@
 use crate::global_data::DatabasePool;
 
-use std::{
-    collections::HashMap,
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
 use darkredis::Connection;
 
 use tracing::{
-    //info,
-    warn,
     error,
     instrument,
+    //info,
+    warn,
 };
 
 use serenity::{
     model::{
-        id::{
-            ChannelId,
-            MessageId,
-        },
         event::*,
+        id::{ChannelId, MessageId},
     },
     prelude::Context,
 };
@@ -43,13 +37,15 @@ pub async fn log_message(ctx: Arc<Context>, data: &MessageCreateEvent) {
     } else {
         None
     };
-    
-    let attachments = message.attachments
+
+    let attachments = message
+        .attachments
         .iter()
         .map(|i| i.proxy_url.to_string())
         .collect::<Vec<String>>();
 
-    let embeds = message.embeds
+    let embeds = message
+        .embeds
         .iter()
         .map(|i| serde_json::to_string(i).unwrap())
         .collect::<Vec<String>>();
@@ -77,7 +73,11 @@ pub async fn log_message(ctx: Arc<Context>, data: &MessageCreateEvent) {
     };
 }
 
-pub async fn anti_spam_message(ctx: Arc<Context>, data: &MessageCreateEvent, redis: &mut Connection) {
+pub async fn anti_spam_message(
+    ctx: Arc<Context>,
+    data: &MessageCreateEvent,
+    redis: &mut Connection,
+) {
     let message = &data.message;
 
     if message.author.bot || message.guild_id.is_none() {
@@ -89,23 +89,36 @@ pub async fn anti_spam_message(ctx: Arc<Context>, data: &MessageCreateEvent, red
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    let data = match sqlx::query!("SELECT enabled FROM anti_spam WHERE guild_id = $1", message.guild_id.unwrap().0 as i64)
-        .fetch_optional(&pool)
-        .await {
-            Err(why) => {
-                error!("Error quering database for anti_spam: {}", why);
-                return;
-            },
-            Ok(x) => x
+    let data = match sqlx::query!(
+        "SELECT enabled FROM anti_spam WHERE guild_id = $1",
+        message.guild_id.unwrap().0 as i64
+    )
+    .fetch_optional(&pool)
+    .await
+    {
+        Err(why) => {
+            error!("Error quering database for anti_spam: {}", why);
+            return;
+        }
+        Ok(x) => x,
     };
 
     if let Some(row) = data {
         if row.enabled {
-            if let Err(why) = redis.append(message.author.id.0.to_string(), format!("{}|{},", message.id.0, message.channel_id.0)).await {
+            if let Err(why) = redis
+                .append(
+                    message.author.id.0.to_string(),
+                    format!("{}|{},", message.id.0, message.channel_id.0),
+                )
+                .await
+            {
                 error!("Error sending data to redis: {}", why);
             }
 
-            if let Err(why) = redis.expire_seconds(message.author.id.0.to_string(), 5).await {
+            if let Err(why) = redis
+                .expire_seconds(message.author.id.0.to_string(), 5)
+                .await
+            {
                 error!("Error setting expire date to redis: {}", why);
             }
 
@@ -133,7 +146,8 @@ pub async fn anti_spam_message(ctx: Arc<Context>, data: &MessageCreateEvent, red
                             }
 
                             for (channel, message_ids) in bad_messages.iter() {
-                                let _ = ChannelId(*channel).delete_messages(&ctx, message_ids).await;
+                                let _ =
+                                    ChannelId(*channel).delete_messages(&ctx, message_ids).await;
                             }
 
                             let _ = message.reply(&*ctx, "No spamming.").await;
@@ -169,7 +183,7 @@ pub async fn log_edit(ctx: Arc<Context>, data: &MessageUpdateEvent) {
             },
             Ok(x) => if let Some(y) = x { y } else { return },
     };
-    
+
     let content = if let Some(x) = &data.content {
         if let Some(x) = old_message.content.clone() {
             if let Some(ref mut old_contents) = old_message.content_history {
@@ -189,14 +203,27 @@ pub async fn log_edit(ctx: Arc<Context>, data: &MessageUpdateEvent) {
         if let Some(x) = old_message.attachments.clone() {
             if let Some(ref mut old_attachments) = old_message.attachments_history {
                 // Serialize the data, because sqlx does not support 2D arrays.
-                old_attachments.push(x.iter().map(|i| i.to_string()).collect::<Vec<String>>().join("|"));
+                old_attachments.push(
+                    x.iter()
+                        .map(|i| i.to_string())
+                        .collect::<Vec<String>>()
+                        .join("|"),
+                );
                 old_attachments.dedup();
             } else {
-                old_message.attachments_history = Some(vec![x.iter().map(|i| i.to_string()).collect::<Vec<String>>().join("|")])
+                old_message.attachments_history = Some(vec![x
+                    .iter()
+                    .map(|i| i.to_string())
+                    .collect::<Vec<String>>()
+                    .join("|")])
             }
         }
 
-        Some(x.iter().map(|i| i.proxy_url.to_string()).collect::<Vec<String>>())
+        Some(
+            x.iter()
+                .map(|i| i.proxy_url.to_string())
+                .collect::<Vec<String>>(),
+        )
     } else {
         old_message.attachments
     };
@@ -204,18 +231,31 @@ pub async fn log_edit(ctx: Arc<Context>, data: &MessageUpdateEvent) {
     let embeds = if let Some(x) = &data.embeds {
         if let Some(x) = old_message.embeds.clone() {
             if let Some(ref mut old_embeds) = old_message.embeds_history {
-                old_embeds.push(x.iter().map(|i| i.to_string()).collect::<Vec<String>>().join("|"));
+                old_embeds.push(
+                    x.iter()
+                        .map(|i| i.to_string())
+                        .collect::<Vec<String>>()
+                        .join("|"),
+                );
                 old_embeds.dedup();
             } else {
-                old_message.embeds_history = Some(vec![x.iter().map(|i| i.to_string()).collect::<Vec<String>>().join("|")])
+                old_message.embeds_history = Some(vec![x
+                    .iter()
+                    .map(|i| i.to_string())
+                    .collect::<Vec<String>>()
+                    .join("|")])
             }
         }
 
-        Some(x.iter().map(|i| serde_json::to_string(i).unwrap()).collect::<Vec<String>>())
+        Some(
+            x.iter()
+                .map(|i| serde_json::to_string(i).unwrap())
+                .collect::<Vec<String>>(),
+        )
     } else {
         old_message.embeds
     };
-    
+
     let (pinned, was_pinned) = if let Some(x) = data.pinned {
         if x {
             (true, Some(true))
@@ -227,7 +267,7 @@ pub async fn log_edit(ctx: Arc<Context>, data: &MessageUpdateEvent) {
     };
 
     let timestamp = data.edited_timestamp;
-    
+
     if let Err(why) = sqlx::query!("UPDATE log_messages SET content=$2, content_history=$3, attachments=$4, attachments_history=$5, embeds=$6, embeds_history=$7, pinned=$8, was_pinned=$9, edited_timestamp=$10 WHERE id = $1",
             message_id,
             content.as_deref(), old_message.content_history.as_deref(),

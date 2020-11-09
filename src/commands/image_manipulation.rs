@@ -1,36 +1,28 @@
 use image;
 use photon_rs::{
-    PhotonImage,
-    native::open_image,
     multiple::blend,
-    transform::{
-        resize,
-        SamplingFilter,
-    },
+    native::open_image,
+    transform::{resize, SamplingFilter},
+    PhotonImage,
 };
 
 //use std::fs::File;
 //use std::io::Write;
 use std::borrow::Cow;
-use std::sync::{
-    Arc,
-    Mutex,
-    RwLock,
-};
+use std::sync::{Arc, Mutex, RwLock};
 
 use serenity::{
-    prelude::Context,
-    model::channel::Message,
+    framework::standard::{macros::command, Args, CommandResult},
     http::AttachmentType,
-    framework::standard::{
-        Args,
-        CommandResult,
-        macros::command,
-    },
+    model::channel::Message,
+    prelude::Context,
 };
 use tokio::task::block_in_place;
 
-async fn pride_image(image_vec: &[u8], name: String) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>>{
+async fn pride_image(
+    image_vec: &[u8],
+    name: String,
+) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
     let mut og_image = PhotonImage::new_from_byteslice(image_vec.to_vec());
     let pride_path = format!("pride/{}.png", name);
     let mut pride_image = open_image(Box::leak(pride_path.into_boxed_str()))?;
@@ -62,15 +54,13 @@ async fn pride_image(image_vec: &[u8], name: String) -> Result<Vec<u8>, Box<dyn 
     image::DynamicImage::ImageRgba8(img_buffer)
         .write_to(&mut result, image::ImageOutputFormat::Jpeg(255))?;
 
-
     //save_image(result, "lol_test_overlay.png");
     Ok(result)
 }
 
-async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>>{
+async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
     // Load the image as a buffer.
-    let mut imgbuf = image::load_from_memory(&image_vec)?
-        .into_rgba();
+    let mut imgbuf = image::load_from_memory(&image_vec)?.into_rgba();
 
     let gray_bytes = Arc::new(Mutex::new(Vec::new()));
     let gray_bytes_clone = Arc::clone(&gray_bytes);
@@ -85,7 +75,7 @@ async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Erro
             let g = (pixel.0[1] as f32 * 0.587 as f32).abs() as u8;
             let b = (pixel.0[2] as f32 * 0.114 as f32).abs() as u8;
 
-            let gray = r+g+b;
+            let gray = r + g + b;
 
             *pixel = image::Rgba([gray, gray, gray, pixel.0[3]]);
         }
@@ -93,7 +83,10 @@ async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Erro
         // Save the image as “fractal.png”, the format is deduced from the path
         // imgbuf.save("grayscale.png")?;
         image::DynamicImage::ImageRgba8(imgbuf)
-            .write_to(&mut *gray_bytes_clone.lock().unwrap(), image::ImageOutputFormat::Jpeg(255))
+            .write_to(
+                &mut *gray_bytes_clone.lock().unwrap(),
+                image::ImageOutputFormat::Jpeg(255),
+            )
             .expect("There was an error writing the image.");
     });
 
@@ -119,12 +112,12 @@ async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             let dimensions = x.dimensions();
 
             // if the dimensions is None, it means it's not an image, but a normal file, so we respond acordingly.
-            if dimensions == None { 
+            if dimensions == None {
                 let err_message = "The provided file is not a valid image.".to_string();
                 (err_message, vec![0])
             // else we download the image. Download returns a Result Vec<u8>
             } else {
-                if dimensions.unwrap().0 > 7680 || dimensions.unwrap().1 >  4320 {
+                if dimensions.unwrap().0 > 7680 || dimensions.unwrap().1 > 4320 {
                     msg.reply(ctx, "The provided image is too large").await?;
                     return Ok(());
                 }
@@ -137,9 +130,9 @@ async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
                 (x.url.to_owned(), bytes)
             }
-        },
+        }
         // else say that an image was not provided.
-        None => ("No image was provided.".to_string(), vec![0])
+        None => ("No image was provided.".to_string(), vec![0]),
     };
 
     // if an error was returned from the previous checks, say the error and finish the command.
@@ -157,16 +150,18 @@ async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     };
 
     // Sends an embed with a link to the original image ~~and the prided image attached~~.
-    msg.channel_id.send_message(ctx, |m| {
-        m.add_file(attachment);
-        m.embed(|e| {
-            e.title("Original Image");
-            e.url(image_url);
-            e.image(format!("attachment://{}", filename));
-            e
-        });
-        m
-    }).await?;
+    msg.channel_id
+        .send_message(ctx, |m| {
+            m.add_file(attachment);
+            m.embed(|e| {
+                e.title("Original Image");
+                e.url(image_url);
+                e.image(format!("attachment://{}", filename));
+                e
+            });
+            m
+        })
+        .await?;
 
     Ok(())
 }
@@ -216,7 +211,11 @@ async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 /// - transgender_gradient
 #[command]
 async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let arg = if let Ok(x) = args.single::<String>() { x } else { "gay_gradient".to_string() };
+    let arg = if let Ok(x) = args.single::<String>() {
+        x
+    } else {
+        "gay_gradient".to_string()
+    };
     let first_attachment = &msg.attachments.get(0);
     let mut filename = &String::new();
 
@@ -227,12 +226,12 @@ async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             let dimensions = x.dimensions();
 
             // if the dimensions is None, it means it's not an image, but a normal file, so we respond acordingly.
-            if dimensions == None { 
+            if dimensions == None {
                 let err_message = "The provided file is not a valid image.".to_string();
                 (err_message, vec![0])
             // else we download the image. Download returns a Result Vec<u8>
             } else {
-                if dimensions.unwrap().0 > 7680 || dimensions.unwrap().1 >  4320 {
+                if dimensions.unwrap().0 > 7680 || dimensions.unwrap().1 > 4320 {
                     msg.reply(ctx, "The provided image is too large").await?;
                     return Ok(());
                 }
@@ -245,9 +244,9 @@ async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
                 (x.url.to_owned(), bytes)
             }
-        },
+        }
         // else say that an image was not provided.
-        None => ("No image was provided.".to_string(), vec![0])
+        None => ("No image was provided.".to_string(), vec![0]),
     };
 
     // if an error was returned from the previous checks, say the error and finish the command.
@@ -265,25 +264,43 @@ async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     };
 
     // Sends an embed with a link to the original image ~~and the prided image attached~~.
-    msg.channel_id.send_message(ctx, |m| {
-        m.add_file(attachment);
-        m.embed(|e| {
-            e.title("Original Image");
-            e.url(image_url);
-            e.image(format!("attachment://{}", filename));
-            e
-        });
-        m
-    }).await?;
+    msg.channel_id
+        .send_message(ctx, |m| {
+            m.add_file(attachment);
+            m.embed(|e| {
+                e.title("Original Image");
+                e.url(image_url);
+                e.image(format!("attachment://{}", filename));
+                e
+            });
+            m
+        })
+        .await?;
 
     Ok(())
 }
 
 /// Same as `pride`, but it grayscales the image before applying the filter.
 #[command]
-#[aliases(pridegray, pride_gray, pride_grayscale, pridegrayscale, pg, pride_g, prideg, pgray, p_gray, p_grayscale, pgrayscale)]
+#[aliases(
+    pridegray,
+    pride_gray,
+    pride_grayscale,
+    pridegrayscale,
+    pg,
+    pride_g,
+    prideg,
+    pgray,
+    p_gray,
+    p_grayscale,
+    pgrayscale
+)]
 async fn pride_pre_grayscaled(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let arg = if let Ok(x) = args.single::<String>() { x } else { "gay_gradient".to_string() };
+    let arg = if let Ok(x) = args.single::<String>() {
+        x
+    } else {
+        "gay_gradient".to_string()
+    };
     let first_attachment = &msg.attachments.get(0);
     let mut filename = &String::new();
 
@@ -294,12 +311,12 @@ async fn pride_pre_grayscaled(ctx: &Context, msg: &Message, mut args: Args) -> C
             let dimensions = x.dimensions();
 
             // if the dimensions is None, it means it's not an image, but a normal file, so we respond acordingly.
-            if dimensions == None { 
+            if dimensions == None {
                 let err_message = "The provided file is not a valid image.".to_string();
                 (err_message, vec![0])
             // else we download the image. Download returns a Result Vec<u8>
             } else {
-                if dimensions.unwrap().0 > 7680 || dimensions.unwrap().1 >  4320 {
+                if dimensions.unwrap().0 > 7680 || dimensions.unwrap().1 > 4320 {
                     msg.reply(ctx, "The provided image is too large").await?;
                     return Ok(());
                 }
@@ -312,9 +329,9 @@ async fn pride_pre_grayscaled(ctx: &Context, msg: &Message, mut args: Args) -> C
 
                 (x.url.to_owned(), bytes)
             }
-        },
+        }
         // else say that an image was not provided.
-        None => ("No image was provided.".to_string(), vec![0])
+        None => ("No image was provided.".to_string(), vec![0]),
     };
 
     // if an error was returned from the previous checks, say the error and finish the command.
@@ -333,16 +350,18 @@ async fn pride_pre_grayscaled(ctx: &Context, msg: &Message, mut args: Args) -> C
     };
 
     // Sends an embed with a link to the original image ~~and the prided image attached~~.
-    msg.channel_id.send_message(ctx, |m| {
-        m.add_file(attachment);
-        m.embed(|e| {
-            e.title("Original Image");
-            e.url(image_url);
-            e.image(format!("attachment://{}", filename));
-            e
-        });
-        m
-    }).await?;
+    msg.channel_id
+        .send_message(ctx, |m| {
+            m.add_file(attachment);
+            m.embed(|e| {
+                e.title("Original Image");
+                e.url(image_url);
+                e.image(format!("attachment://{}", filename));
+                e
+            });
+            m
+        })
+        .await?;
 
     Ok(())
 }

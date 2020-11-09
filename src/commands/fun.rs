@@ -1,59 +1,36 @@
 use crate::{
-    global_data::{
-        Tokens,
-        DatabasePool,
-    },
+    global_data::{DatabasePool, Tokens},
     utils::basic_functions::string_to_seconds,
 };
 
-use std::{
-    time::Duration,
-    collections::HashMap,
-};
+use std::{collections::HashMap, time::Duration};
 
 use serenity::{
-    prelude::Context,
+    framework::standard::{macros::command, Args, CommandResult},
     model::channel::Message,
-    model::id::UserId,
     model::id::GuildId,
-    framework::standard::{
-        Args,
-        CommandResult,
-        macros::command,
-    },
+    model::id::UserId,
+    prelude::Context,
 };
 
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use qrcode::{render::unicode, QrCode};
+use reqwest::{Client as ReqwestClient, Url};
+use serde::{Deserialize, Serialize};
 use tracing::error;
-use qrcode::{
-    QrCode,
-    render::unicode,
-};
-use reqwest::{
-    Client as ReqwestClient,
-    Url,
-};
 
+use crypto::buffer::{BufferResult, ReadBuffer, WriteBuffer};
+use crypto::{aes, blockmodes, buffer, symmetriccipher};
 use hex;
-use crypto::{
-    symmetriccipher,
-    buffer,
-    aes,
-    blockmodes
-};
-use crypto::buffer::{
-    ReadBuffer,
-    WriteBuffer,
-    BufferResult
-};
 
 use fasteval::error::Error;
 
-static KEY: [u8; 32] =  [244, 129, 85, 125, 252, 92, 208, 68, 29, 125, 160, 4, 146, 245, 193, 135, 12, 68, 162, 84, 202, 123, 90, 165, 194, 126, 12, 117, 87, 195, 9, 202];
-static IV: [u8; 16] =  [41, 61, 154, 40, 255, 51, 217, 146, 228, 10, 58, 62, 217, 128, 96, 7];
+static KEY: [u8; 32] = [
+    244, 129, 85, 125, 252, 92, 208, 68, 29, 125, 160, 4, 146, 245, 193, 135, 12, 68, 162, 84, 202,
+    123, 90, 165, 194, 126, 12, 117, 87, 195, 9, 202,
+];
+static IV: [u8; 16] = [
+    41, 61, 154, 40, 255, 51, 217, 146, 228, 10, 58, 62, 217, 128, 96, 7,
+];
 
 // Struct used to deserialize the output of the urban dictionary api call...
 #[derive(Deserialize, Clone)]
@@ -71,7 +48,7 @@ struct UrbanDict {
 // But it returns a list, so we use this for the request.
 #[derive(Deserialize)]
 struct UrbanList {
-    list: Vec<UrbanDict>
+    list: Vec<UrbanDict>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -104,54 +81,81 @@ async fn qr(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let words = args.message();
 
     let code = QrCode::new(words).unwrap();
-    let image = code.render::<unicode::Dense1x2>()
+    let image = code
+        .render::<unicode::Dense1x2>()
         .dark_color(unicode::Dense1x2::Light)
         .light_color(unicode::Dense1x2::Dark)
         .build();
 
-    msg.channel_id.say(ctx, format!(">>> ```{}```", image)).await?;
+    msg.channel_id
+        .say(ctx, format!(">>> ```{}```", image))
+        .await?;
     Ok(())
 }
 
 /// Defines a term, using the urban dictionary.
 /// Usage: `urban lmao`
 #[command]
-#[aliases(udic, udefine, define_urban, defineurban, udict, udictonary, urban_dictionary, u_dictionary, u_define, urban_define, define_urban)]
+#[aliases(
+    udic,
+    udefine,
+    define_urban,
+    defineurban,
+    udict,
+    udictonary,
+    urban_dictionary,
+    u_dictionary,
+    u_define,
+    urban_define,
+    define_urban
+)]
 async fn urban(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let term = args.message();
-    let url = Url::parse_with_params("http://api.urbandictionary.com/v0/define", &[("term", term)])?;
+    let url = Url::parse_with_params(
+        "http://api.urbandictionary.com/v0/define",
+        &[("term", term)],
+    )?;
 
     let reqwest = ReqwestClient::new();
-    let resp = reqwest.get(url)
-        .send()
-        .await?
-        .json::<UrbanList>()
-        .await?;
+    let resp = reqwest.get(url).send().await?.json::<UrbanList>().await?;
 
     if resp.list.is_empty() {
-        msg.channel_id.say(ctx, format!("The term '{}' has no Urban Definitions", term.replace("@", ""))).await?;
+        msg.channel_id
+            .say(
+                ctx,
+                format!(
+                    "The term '{}' has no Urban Definitions",
+                    term.replace("@", "")
+                ),
+            )
+            .await?;
     } else {
         let choice = &resp.list[0];
         let parsed_definition = &choice.definition.replace("[", "").replace("]", "");
         let parsed_example = &choice.example.replace("[", "").replace("]", "");
-        let mut fields = vec![
-            ("Definition", parsed_definition, false),
-        ];
+        let mut fields = vec![("Definition", parsed_definition, false)];
         if parsed_example != &"".to_string() {
             fields.push(("Example", parsed_example, false));
         }
 
-        if let Err(why) = msg.channel_id.send_message(ctx, |m| {
-            m.embed(|e| {
-                e.title(&choice.word);
-                e.url(&choice.permalink);
-                e.description(format!("submitted by **{}**\n\n:thumbsup: **{}** ┇ **{}** :thumbsdown:\n", &choice.author, &choice.thumbs_up, &choice.thumbs_down));
-                e.fields(fields);
-                e.timestamp(choice.clone().written_on);
-                e
-            });
-            m
-        }).await {
+        if let Err(why) = msg
+            .channel_id
+            .send_message(ctx, |m| {
+                m.embed(|e| {
+                    e.title(&choice.word);
+                    e.url(&choice.permalink);
+                    e.description(format!(
+                        "submitted by **{}**\n\n:thumbsup: **{}** ┇ **{}** :thumbsdown:\n",
+                        &choice.author, &choice.thumbs_up, &choice.thumbs_down
+                    ));
+                    e.fields(fields);
+                    e.timestamp(choice.clone().written_on);
+                    e
+                });
+                m
+            })
+            .await
+        {
             if "Embed too large." == why.to_string() {
                 msg.channel_id.say(ctx, &choice.permalink).await?;
             } else {
@@ -184,10 +188,7 @@ async fn translate(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
     let (token, url) = {
         let data_read = ctx.data.read().await;
         let tokens = data_read.get::<Tokens>().unwrap();
-        (
-            tokens.ibm.token.to_string(),
-            tokens.ibm.url.to_string(),
-        )
+        (tokens.ibm.token.to_string(), tokens.ibm.url.to_string())
     };
 
     let mut dest = args.single_quoted::<String>()?;
@@ -209,7 +210,8 @@ async fn translate(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
 
         let identify_url = format!("{}/v3/identify?version=2018-05-01", url);
 
-        let resp = reqwest.post(&identify_url)
+        let resp = reqwest
+            .post(&identify_url)
             .basic_auth("apikey", Some(&token))
             .body(text.to_string())
             .send()
@@ -217,13 +219,17 @@ async fn translate(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
             .json::<TranslateIdentify>()
             .await?;
 
-        let original = resp.languages.iter().filter_map(|i| {
-            if i.confidence > 0.1 {
-                Some(i.language.to_string())
-            } else {
-                None
-            }
-        }).collect::<Vec<_>>();
+        let original = resp
+            .languages
+            .iter()
+            .filter_map(|i| {
+                if i.confidence > 0.1 {
+                    Some(i.language.to_string())
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
 
         if original.is_empty() {
             msg.reply(ctx, format!("The source language could not be detected, please use `lang-{}` on the command, where lang is the short for the original language used", dest)).await?;
@@ -231,7 +237,10 @@ async fn translate(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
         } else if original.len() == 1 {
             dest = format!("{}-{}", original[0], dest);
         } else {
-            let langs = original.iter().map(|i| format!("`{}-{}`", i, dest)).collect::<Vec<_>>();
+            let langs = original
+                .iter()
+                .map(|i| format!("`{}-{}`", i, dest))
+                .collect::<Vec<_>>();
             msg.reply(ctx, format!("The source language could not be guessed, please use one of the following: {}\nas the language argument", langs.join(", "))).await?;
             return Ok(());
         }
@@ -243,7 +252,8 @@ async fn translate(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
     map.insert("text", text);
     map.insert("model_id", dest);
 
-    let resp = reqwest.post(&translate_url)
+    let resp = reqwest
+        .post(&translate_url)
         .basic_auth("apikey", Some(&token))
         .json(&map)
         .send()
@@ -262,17 +272,25 @@ async fn translate(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
 
     let fields = vec![
         ("Original Text", map["text"].to_string() + "\n", false),
-        ("Translation", resp.translations[0].translation.to_string(), false),
+        (
+            "Translation",
+            resp.translations[0].translation.to_string(),
+            false,
+        ),
     ];
 
     let mut dest = map["model_id"].splitn(2, "-");
 
-    msg.channel_id.send_message(ctx, |m| {
-        m.content(format!("From **{}** to **{}**", dest.next().unwrap(), dest.next().unwrap()));
-        m.embed(|e| {
-            e.fields(fields)
+    msg.channel_id
+        .send_message(ctx, |m| {
+            m.content(format!(
+                "From **{}** to **{}**",
+                dest.next().unwrap(),
+                dest.next().unwrap()
+            ));
+            m.embed(|e| e.fields(fields))
         })
-    }).await?;
+        .await?;
     Ok(())
 }
 
@@ -283,19 +301,15 @@ async fn translate(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
 #[min_args(1)]
 #[aliases(ddg, duck, duckduckgo, search, better_than_google, betterthangoogle)]
 async fn duck_duck_go(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let url = Url::parse_with_params("https://lmddgtfy.net/",
-                                     &[("q", args.message())])?;
+    let url = Url::parse_with_params("https://lmddgtfy.net/", &[("q", args.message())])?;
     msg.channel_id.say(ctx, url).await?;
 
     Ok(())
 }
 
 fn encrypt_bytes(data: &[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError> {
-    let mut encryptor = aes::cbc_encryptor(
-            aes::KeySize::KeySize256,
-            &KEY,
-            &IV,
-            blockmodes::PkcsPadding);
+    let mut encryptor =
+        aes::cbc_encryptor(aes::KeySize::KeySize256, &KEY, &IV, blockmodes::PkcsPadding);
 
     let mut final_result = Vec::<u8>::new();
     let mut read_buffer = buffer::RefReadBuffer::new(data);
@@ -304,7 +318,13 @@ fn encrypt_bytes(data: &[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCiphe
 
     loop {
         let result = encryptor.encrypt(&mut read_buffer, &mut write_buffer, true)?;
-        final_result.extend(write_buffer.take_read_buffer().take_remaining().iter().map(|&i| i));
+        final_result.extend(
+            write_buffer
+                .take_read_buffer()
+                .take_remaining()
+                .iter()
+                .map(|&i| i),
+        );
 
         match result {
             BufferResult::BufferUnderflow => break,
@@ -316,11 +336,8 @@ fn encrypt_bytes(data: &[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCiphe
 }
 
 fn decrypt_bytes(encrypted_data: &[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCipherError> {
-    let mut decryptor = aes::cbc_decryptor(
-            aes::KeySize::KeySize256,
-            &KEY,
-            &IV,
-            blockmodes::PkcsPadding);
+    let mut decryptor =
+        aes::cbc_decryptor(aes::KeySize::KeySize256, &KEY, &IV, blockmodes::PkcsPadding);
 
     let mut final_result = Vec::<u8>::new();
     let mut read_buffer = buffer::RefReadBuffer::new(encrypted_data);
@@ -329,7 +346,13 @@ fn decrypt_bytes(encrypted_data: &[u8]) -> Result<Vec<u8>, symmetriccipher::Symm
 
     loop {
         let result = decryptor.decrypt(&mut read_buffer, &mut write_buffer, true)?;
-        final_result.extend(write_buffer.take_read_buffer().take_remaining().iter().map(|&i| i));
+        final_result.extend(
+            write_buffer
+                .take_read_buffer()
+                .take_remaining()
+                .iter()
+                .map(|&i| i),
+        );
 
         match result {
             BufferResult::BufferUnderflow => break,
@@ -340,10 +363,9 @@ fn decrypt_bytes(encrypted_data: &[u8]) -> Result<Vec<u8>, symmetriccipher::Symm
     Ok(final_result)
 }
 
-
 /// Encrypts a message.
 /// You can decrypt the message with `decrypt {hex_hash}`
-/// 
+///
 /// Usage: `encrypt Jaxtar is Cute!`
 #[command]
 #[min_args(1)]
@@ -353,7 +375,9 @@ async fn encrypt(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let encrypted_data = encrypt_bytes(message.as_bytes()).ok().unwrap();
     let encrypted_data_text = hex::encode(encrypted_data.to_vec());
 
-    msg.channel_id.say(ctx, format!("`{}`", encrypted_data_text)).await?;
+    msg.channel_id
+        .say(ctx, format!("`{}`", encrypted_data_text))
+        .await?;
     Ok(())
 }
 
@@ -369,17 +393,23 @@ async fn decrypt(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         Ok(ok) => ok,
         Err(why) => {
             error!("{:?}", why);
-            msg.channel_id.say(ctx, format!("An invalid hash was provided. `{:?}`", why)).await?;
+            msg.channel_id
+                .say(ctx, format!("An invalid hash was provided. `{:?}`", why))
+                .await?;
             return Ok(());
-        },
+        }
     };
 
     let decrypted_data_text = String::from_utf8(decrypted_data_bytes)?;
 
-    msg.channel_id.send_message(ctx, |m| m.embed(|e| {
-        e.title(format!("From `{}`", message));
-        e.description(decrypted_data_text)
-    })).await?;
+    msg.channel_id
+        .send_message(ctx, |m| {
+            m.embed(|e| {
+                e.title(format!("From `{}`", message));
+                e.description(decrypted_data_text)
+            })
+        })
+        .await?;
     Ok(())
 }
 
@@ -394,25 +424,35 @@ async fn profile(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
         msg.author.clone()
     };
 
-    msg.channel_id.send_message(ctx, |m| {
-        m.embed(|e| {
-            if user.bot {
-                e.title(format!("[BOT] {}", user.tag(),));
-            } else {
-                e.title(user.tag());
-            }
+    msg.channel_id
+        .send_message(ctx, |m| {
+            m.embed(|e| {
+                if user.bot {
+                    e.title(format!("[BOT] {}", user.tag(),));
+                } else {
+                    e.title(user.tag());
+                }
 
-            e.field("ID:", user.id.0, false);
-            e.field("Created at:", format!("{}UTC\n({} ago)", user.created_at().to_rfc2822().replace("+0000", ""), {
-                let date = chrono::Utc::now();
-                let time = date.timestamp() - user.created_at().timestamp();
-                let duration = Duration::from_secs(time as u64);
-                humantime::format_duration(duration)
-            }), false);
+                e.field("ID:", user.id.0, false);
+                e.field(
+                    "Created at:",
+                    format!(
+                        "{}UTC\n({} ago)",
+                        user.created_at().to_rfc2822().replace("+0000", ""),
+                        {
+                            let date = chrono::Utc::now();
+                            let time = date.timestamp() - user.created_at().timestamp();
+                            let duration = Duration::from_secs(time as u64);
+                            humantime::format_duration(duration)
+                        }
+                    ),
+                    false,
+                );
 
-            e.image(user.face())
+                e.image(user.face())
+            })
         })
-    }).await?;
+        .await?;
 
     Ok(())
 }
@@ -440,11 +480,11 @@ async fn profile(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
 /// ---------------
 ///
 /// Integers: 1, 2, 10, 100, 1001
-/// 
+///
 /// Decimals: 1.0, 1.23456, 0.000001
-/// 
+///
 /// Exponents: 1e3, 1E3, 1e-3, 1E-3, 1.2345e100
-/// 
+///
 /// Suffix:
 /// 1.23p       = 0.00000000000123
 /// 1.23n       = 0.00000000123
@@ -506,17 +546,17 @@ async fn calculator(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         operation_without_markdown = operation_without_markdown.replace(i, &format!(r"\{}", i));
     }
 
-    let mut cb = |name:&str, args:Vec<f64>| -> Option<f64> {
+    let mut cb = |name: &str, args: Vec<f64>| -> Option<f64> {
         match name {
             "sqrt" => {
                 let a = args.get(0);
                 if let Some(x) = a {
                     let l = x.log10();
-                    Some(10.0_f64.powf(l/2.0))
+                    Some(10.0_f64.powf(l / 2.0))
                 } else {
                     None
                 }
-            },
+            }
             _ => None,
         }
     };
@@ -542,20 +582,28 @@ async fn calculator(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 _ => format!("An unhandled error occurred:\n{:#?}", &why),
             };
 
-            msg.channel_id.send_message(ctx, |m| m.embed(|e| {
-                e.title("ERROR");
-                e.description(text);
-                e.field("Operation", &operation_without_markdown, true);
-                e.footer(|f| f.text(format!("Submitted by: {}", msg.author.tag())))
-            })).await?;
-        },
+            msg.channel_id
+                .send_message(ctx, |m| {
+                    m.embed(|e| {
+                        e.title("ERROR");
+                        e.description(text);
+                        e.field("Operation", &operation_without_markdown, true);
+                        e.footer(|f| f.text(format!("Submitted by: {}", msg.author.tag())))
+                    })
+                })
+                .await?;
+        }
         Ok(res) => {
-            msg.channel_id.send_message(ctx, |m| m.embed(|e| {
-                e.title("Result");
-                e.description(res);
-                e.field("Operation", &operation_without_markdown, true);
-                e.footer(|f| f.text(format!("Submitted by: {}", msg.author.tag())))
-            })).await?;
+            msg.channel_id
+                .send_message(ctx, |m| {
+                    m.embed(|e| {
+                        e.title("Result");
+                        e.description(res);
+                        e.field("Operation", &operation_without_markdown, true);
+                        e.footer(|f| f.text(format!("Submitted by: {}", msg.author.tag())))
+                    })
+                })
+                .await?;
         }
     }
     Ok(())
@@ -589,11 +637,7 @@ async fn remind_me(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
     let unformatted_time = args.single_quoted::<String>()?;
     let text = args.rest();
 
-    let message = if text.is_empty() {
-        None
-    } else {
-        Some(text)
-    };
+    let message = if text.is_empty() { None } else { Some(text) };
 
     let seconds = string_to_seconds(unformatted_time);
 
@@ -642,7 +686,7 @@ async fn uwufy(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             "cute" => words.push("cwute".to_string()),
             _ => {
                 if word.len() > 2 {
-                    let mut w = word.to_string(); 
+                    let mut w = word.to_string();
                     w = w.replace("our", "\u{200b}w");
 
                     w = w.replace("r", "w");
@@ -650,8 +694,6 @@ async fn uwufy(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
                     w = w.replace("l", "w");
                     w = w.replace("L", "W");
-
-
 
                     w = w.replace("ar", " ");
                     w = w.replace("ai", "+");
@@ -685,7 +727,7 @@ async fn uwufy(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     w = w.replace(" ", "gu");
                     w = w.replace("+", "qu");
                     w = w.replace("=", "ouw");
-                    
+
                     if !word.starts_with("A") {
                         w = w.replace("A", "WA");
                     } else {
@@ -723,7 +765,6 @@ async fn uwufy(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 } else {
                     words.push(word.to_string());
                 }
-
             }
         }
     }

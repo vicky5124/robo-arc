@@ -1,49 +1,30 @@
 use crate::{
-    global_data::{
-        ShardManagerContainer,
-        DatabasePool,
-    },
-    utils::{
-        basic_functions::seconds_to_days,
-    },
-    Uptime,
-    Tokens,
+    global_data::{DatabasePool, ShardManagerContainer},
+    utils::basic_functions::seconds_to_days,
+    Tokens, Uptime,
 };
 use std::{
-    fs::{
-        File,
-        read_to_string,
-        OpenOptions,
-    },
+    fs::{read_to_string, File, OpenOptions},
     io::prelude::*,
     process::id,
     time::Instant,
 };
 
+use num_format::{Locale, ToFormattedString};
+use serde_json::json;
 use serenity::{
-    prelude::Context,
+    client::bridge::gateway::ShardId,
+    framework::standard::{macros::command, Args, CommandResult},
     model::{
         channel::Message,
         Permissions,
         //channel::ReactionType,
     },
-    client::bridge::gateway::ShardId,
-    framework::standard::{
-        Args,
-        CommandResult,
-        macros::command,
-    },
+    prelude::Context,
 };
-use num_format::{
-    Locale,
-    ToFormattedString,
-};
-use toml::Value;
 use tokio::process::Command;
-use serde_json::json;
+use toml::Value;
 use walkdir::WalkDir;
-
-
 
 #[command] // Sets up a command
 #[aliases("pong", "latency")] // Sets up aliases to that command.
@@ -83,14 +64,18 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
     let mut message = ctx.http.send_message(msg.channel_id.0, &map).await?;
     let post_latency = now.elapsed().as_millis();
 
-
-    message.edit(ctx, |m| {
-        m.content("");
-        m.embed(|e| {
-            e.title("Latency");
-            e.description(format!("Gateway: {}\nREST GET: {}ms\nREST POST: {}ms", shard_latency, get_latency, post_latency))
+    message
+        .edit(ctx, |m| {
+            m.content("");
+            m.embed(|e| {
+                e.title("Latency");
+                e.description(format!(
+                    "Gateway: {}\nREST GET: {}ms\nREST POST: {}ms",
+                    shard_latency, get_latency, post_latency
+                ))
+            })
         })
-    }).await?;
+        .await?;
 
     Ok(())
 }
@@ -120,7 +105,13 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
 
     // Creates the invite link for the bot with the permissions specified earlier.
     // Error handling in rust i so nice.
-    let url = match ctx.cache.current_user().await.invite_url(ctx, permissions).await {
+    let url = match ctx
+        .cache
+        .current_user()
+        .await
+        .invite_url(ctx, permissions)
+        .await
+    {
         Ok(v) => v,
         Err(why) => {
             println!("Error creating invite url: {:?}", why);
@@ -128,7 +119,7 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
             return Ok(()); // Prematurely finish the command function.
         }
     };
-    
+
     msg.channel_id.send_message(ctx, |m| {
         m.embed( |e| {
             e.title("Invite Link");
@@ -164,8 +155,8 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[help_available(false)] // makes it not show up on the help menu
 #[owners_only] // to only allow the owner of the bot to use this command
-//#[min_args(3)] // Sets the minimum ammount of arguments the command requires to be ran. This is used to trigger the `NotEnoughArguments` error.
-// Testing command, please ignore.
+               //#[min_args(3)] // Sets the minimum ammount of arguments the command requires to be ran. This is used to trigger the `NotEnoughArguments` error.
+               // Testing command, please ignore.
 async fn test(_ctx: &Context, _msg: &Message, _args: Args) -> CommandResult {
     //if let Ok(channels) = _msg.guild_id.unwrap().channels(_ctx).await {
     //    let channels_stream = stream::iter(channels.iter());
@@ -196,7 +187,9 @@ async fn test(_ctx: &Context, _msg: &Message, _args: Args) -> CommandResult {
 /// Sends the source code url to the bot.
 #[command]
 async fn source(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(ctx, "<https://gitlab.com/nitsuga5124/robo-arc/>").await?;
+    msg.channel_id
+        .say(ctx, "<https://gitlab.com/nitsuga5124/robo-arc/>")
+        .await?;
     Ok(())
 }
 
@@ -239,7 +232,9 @@ async fn prefix(ctx: &Context, msg: &Message) -> CommandResult {
         prefix = ".".to_string();
     }
 
-    msg.channel_id.say(ctx, format!("Current prefix:\n`{}`", &prefix)).await?;
+    msg.channel_id
+        .say(ctx, format!("Current prefix:\n`{}`", &prefix))
+        .await?;
 
     Ok(())
 }
@@ -287,17 +282,17 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
     let pid = id().to_string();
 
     let full_stdout = Command::new("sh")
-            .arg("-c")
-            .arg(format!("./full_memory.sh {}", &pid).as_str())
-            .output()
-            .await
-            .expect("failed to execute process");
+        .arg("-c")
+        .arg(format!("./full_memory.sh {}", &pid).as_str())
+        .output()
+        .await
+        .expect("failed to execute process");
     let reasonable_stdout = Command::new("sh")
-            .arg("-c")
-            .arg(format!("./reasonable_memory.sh {}", &pid).as_str())
-            .output()
-            .await
-            .expect("failed to execute process");
+        .arg("-c")
+        .arg(format!("./reasonable_memory.sh {}", &pid).as_str())
+        .output()
+        .await
+        .expect("failed to execute process");
 
     let mut full_mem = String::from_utf8(full_stdout.stdout).unwrap();
     let mut reasonable_mem = String::from_utf8(reasonable_stdout.stdout).unwrap();
@@ -321,19 +316,10 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
         let app_info = ctx.http.get_current_application_info().await?;
 
         if let Some(t) = app_info.team {
-            (
-                t.id.to_string(),
-                t.members[0].user.tag(),
-                t.owner_user_id,
-            )
+            (t.id.to_string(), t.members[0].user.tag(), t.owner_user_id)
         } else {
-            (
-                "None".to_string(),
-                app_info.owner.tag(),
-                app_info.owner.id,
-            )
+            ("None".to_string(), app_info.owner.tag(), app_info.owner.id)
         }
-
     };
 
     let current_user = ctx.cache.current_user().await;
@@ -399,7 +385,12 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
 /// Sends the bot changelog.
 #[command]
 async fn changelog(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(ctx, "<https://gitlab.com/nitsuga5124/robo-arc/-/blob/master/CHANGELOG.md>").await?;
+    msg.channel_id
+        .say(
+            ctx,
+            "<https://gitlab.com/nitsuga5124/robo-arc/-/blob/master/CHANGELOG.md>",
+        )
+        .await?;
     Ok(())
 }
 
@@ -423,10 +414,15 @@ If you still don't want to have this data stored, contact nitsuga5124#2207, and 
 #[command]
 #[aliases(features, bugs, report, reports, suggest, suggestions)]
 async fn issues(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(ctx, "
+    msg.channel_id
+        .say(
+            ctx,
+            "
 You are free to submit issues, bug reports and new features to the issues page:
 <https://gitlab.com/nitsuga5124/robo-arc/-/issues>
-").await?;
+",
+        )
+        .await?;
     Ok(())
 }
 
@@ -444,9 +440,9 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let raw_eval_code = args.message();
 
     let eval_code = if raw_eval_code.starts_with("```rs") && raw_eval_code.ends_with("```") {
-        raw_eval_code[5..raw_eval_code.len()-3].to_string() + ";"
+        raw_eval_code[5..raw_eval_code.len() - 3].to_string() + ";"
     } else if raw_eval_code.starts_with("```") && raw_eval_code.ends_with("```") {
-        raw_eval_code[3..raw_eval_code.len()-3].to_string() + ";"
+        raw_eval_code[3..raw_eval_code.len() - 3].to_string() + ";"
     } else {
         raw_eval_code.to_string() + ";"
     };
@@ -457,7 +453,8 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .create(true)
         .open("eval/src/main.rs")?;
 
-    let code = format!(r#####"
+    let code = format!(
+        r#####"
 #![allow(unused_variables)]
 #![allow(redundant_semicolons)]
 use std::error::Error;
@@ -476,7 +473,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {{
 
     Ok(())
 }}
-"#####, token, message, eval_code);
+"#####,
+        token, message, eval_code
+    );
 
     file.set_len(0)?;
     write!(file, "{}", code)?;
@@ -493,16 +492,24 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {{
     let stderr = String::from_utf8(output.stderr).unwrap();
 
     if !stdout.is_empty() {
-        msg.channel_id.send_message(ctx, |m| m.embed(|e| {
-            e.title("Rust Eval (stdout)");
-            e.description(format!("```rs\n{}\n```", stdout))
-        })).await?;
+        msg.channel_id
+            .send_message(ctx, |m| {
+                m.embed(|e| {
+                    e.title("Rust Eval (stdout)");
+                    e.description(format!("```rs\n{}\n```", stdout))
+                })
+            })
+            .await?;
     }
     if !stderr.is_empty() {
-        msg.channel_id.send_message(ctx, |m| m.embed(|e| {
-            e.title("Rust Eval (stderr)");
-            e.description(format!("```rs\n{}\n```", stderr))
-        })).await?;
+        msg.channel_id
+            .send_message(ctx, |m| {
+                m.embed(|e| {
+                    e.title("Rust Eval (stderr)");
+                    e.description(format!("```rs\n{}\n```", stderr))
+                })
+            })
+            .await?;
     }
 
     Ok(())

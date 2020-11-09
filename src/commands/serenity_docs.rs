@@ -4,13 +4,9 @@
 //use walkdir::WalkDir;
 
 use serenity::{
-    prelude::Context,
+    framework::standard::{macros::command, Args, CommandResult},
     model::channel::Message,
-    framework::standard::{
-        Args,
-        CommandResult,
-        macros::command,
-    },
+    prelude::Context,
 };
 
 /// Sends you a link to the serenity example on the specific topic.
@@ -76,7 +72,7 @@ async fn example(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[aliases(rtfd, rtfw, rtm, rtd, rtw)]
 async fn rtfm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     //let query = args.message();
-    
+
     //let path = std::path::Path::new(".");
     //let cache = racer::FileCache::default();
     //let session = racer::Session::new(&cache, Some(path));
@@ -106,10 +102,14 @@ async fn rtfm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
     //println!("done");
 
-    msg.channel_id.say(ctx, "Serenity Tokio: <https://serenity-rs.github.io/serenity/current/serenity/>
+    msg.channel_id
+        .say(
+            ctx,
+            "Serenity Tokio: <https://serenity-rs.github.io/serenity/current/serenity/>
 Serenity ThreadPool: <https://docs.rs/serenity/0.8.7/serenity/>
-Lavalink-rs: <https://docs.rs/lavalink-rs/0.3.0-alpha/lavalink_rs/>").await?;
+Lavalink-rs: <https://docs.rs/lavalink-rs/0.3.0-alpha/lavalink_rs/>",
+        )
+        .await?;
 
     Ok(())
 }
-

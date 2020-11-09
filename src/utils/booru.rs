@@ -1,9 +1,40 @@
-use serenity::framework::standard::Args;
 use rand::Rng;
+use serenity::framework::standard::Args;
 
-pub static SAFE_BANLIST: [&str; 12] = ["swastika", "gore", "guro", "smoking", "jailbait", "extreme_content", "extremely_large_filesize", "pussy", "dick", "nude", "partial_nude", "tagme"];
+pub static SAFE_BANLIST: [&str; 12] = [
+    "swastika",
+    "gore",
+    "guro",
+    "smoking",
+    "jailbait",
+    "extreme_content",
+    "extremely_large_filesize",
+    "pussy",
+    "dick",
+    "nude",
+    "partial_nude",
+    "tagme",
+];
 
-pub static UNSAFE_BANLIST: [&str; 17] = ["loli", "lolicon", "shota", "shotacon", "swastika", "gore", "guro", "smoking", "underage", "underaged", "jailbait", "extreme_content", "extremely_large_filesize", "contentious_content", "cub", "young", "tagme"];
+pub static UNSAFE_BANLIST: [&str; 17] = [
+    "loli",
+    "lolicon",
+    "shota",
+    "shotacon",
+    "swastika",
+    "gore",
+    "guro",
+    "smoking",
+    "underage",
+    "underaged",
+    "jailbait",
+    "extreme_content",
+    "extremely_large_filesize",
+    "contentious_content",
+    "cub",
+    "young",
+    "tagme",
+];
 
 // This function parses the arguments on the booru commands and returns a list of the tags.
 pub async fn obtain_tags_unsafe(raw_args: Args) -> Vec<String> {
@@ -32,7 +63,7 @@ pub async fn obtain_tags_unsafe(raw_args: Args) -> Vec<String> {
                 let choice = choices[r];
                 // and push that random item to the tags.
                 tags.push(choice)
-            },
+            }
             // Every other tag that doesn't match any of the flags will be passed as is.
             _ => tags.push(arg),
         }
@@ -45,7 +76,7 @@ pub async fn obtain_tags_unsafe(raw_args: Args) -> Vec<String> {
 pub async fn obtain_tags_safe(raw_args: Args) -> Vec<String> {
     // transform the arguments into a Vec<&str> for easier management.
     let args = raw_args.raw_quoted().collect::<Vec<&str>>();
-    // Since this will only allow safe tags, we add rating:Safe to the tags by default 
+    // Since this will only allow safe tags, we add rating:Safe to the tags by default
     let mut tags = vec!["rating:Safe"];
 
     // Iterate over every argument
@@ -69,7 +100,7 @@ pub async fn illegal_check_unsafe(tags: &mut Vec<String>) -> Vec<String> {
     let mut new_tags = Vec::new();
 
     // iterate over every tag
-    for tag in tags{
+    for tag in tags {
         // and add them to a new list if they don't match any of the blacklisted tags.
         if !UNSAFE_BANLIST.contains(&tag.as_str()) {
             new_tags.push(tag.to_owned());
@@ -83,7 +114,7 @@ pub async fn illegal_check_safe(tags: &mut Vec<String>) -> Vec<String> {
     // This is a list of tags that are banable when sent outside nsfw channels.
     let mut new_tags = Vec::new();
     // Add the tags that don't match any of the blacklist tags to a new tags vector.
-    for tag in tags{
+    for tag in tags {
         if !SAFE_BANLIST.contains(&tag.as_str()) {
             new_tags.push(tag.to_owned());
         }
