@@ -445,7 +445,9 @@ pub async fn send_guild_member_update(ctx: &Context, data: &GuildMemberUpdateEve
             if let Some(nick) = &data.nick {
                 e.field("Nickname", nick, false);
             }
-            e.field("Roles", &data.roles.iter().map(|i| format!("<@&{}>", i.0)).collect::<Vec<_>>().join(" | "), false);
+            if data.roles.len() > 1 {
+                e.field("Roles", &data.roles.iter().map(|i| format!("<@&{}>", i.0)).collect::<Vec<_>>().join(" | "), false);
+            }
             e.timestamp(&chrono::offset::Utc::now());
             e.footer(|f| {
                 f.text("Updated")
