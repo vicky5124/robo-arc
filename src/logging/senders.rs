@@ -22,6 +22,7 @@ use serenity::{
         },
     },
     prelude::Context,
+    prelude::Mentionable,
 };
 
 #[instrument(skip(ctx))]
@@ -43,26 +44,29 @@ pub async fn send_message_update(ctx: &Context, data: &MessageUpdateEvent) {
 
                 let embed = Embed::fake(|e| {
                     e.title("Message Updated");
-                    e.description(format!("[Jump](https://discord.com/channels/{}/{}/{})", data.guild_id.unwrap().0, data.channel_id.0, data.id.0));
 
-                    let content = old_message_content.unwrap_or(&String::from("- Unknown Content.")).to_owned() + "\u{200b}";
+                    e.field("Message ID", &data.id.0, false);
+
+                    let content = old_message_content.unwrap_or(&String::from("- Unknown Content.")).to_owned();
                     if content.len() > 1000 {
                         e.field("Original Content (1)", &content[..content.len()/2], false);
                         e.field("Original Content (2)", &content[content.len()/2..], false);
-                    } else {
+                    } else if !content.is_empty() {
                         e.field("Original Content", &content, false);
                     }
 
-                    let content = data.content.as_ref().unwrap_or(&String::from("- Unknown Content.")).to_owned() + "\u{200b}";
+
+                    let content = data.content.as_ref().unwrap_or(&String::from("- Unknown Content.")).to_owned();
 
                     if content.len() > 1000 {
                         e.field("New Content (1)", &content[..content.len()/2], false);
                         e.field("New Content (2)", &content[content.len()/2..], false);
-                    } else {
+                    } else if !content.is_empty() {
                         e.field("New Content", &content, false);
                     }
 
                     if let Some(author) = &data.author {
+                        e.description(format!("[This](https://discord.com/channels/{}/{}/{}) message was sent by {}", data.guild_id.unwrap().0, data.channel_id.0, data.id.0, author.mention()));
                         e.author(|a| {
                             a.icon_url(author.face());
                             a.name(author.tag())
