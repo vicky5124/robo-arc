@@ -1060,7 +1060,7 @@ async fn toggle_anti_spam(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
-/// Configures logging for the channel.
+/// WIP: Configures logging for the channel.
 ///
 /// Usage: `configure channel logging 134217727`
 #[command]

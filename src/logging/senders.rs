@@ -489,61 +489,51 @@ pub async fn send_reaction_add(ctx: &Context, data: &ReactionAddEvent) {
 
     if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::ReactionAdd, data.reaction.guild_id.unwrap()).await {
         let reaction = &data.reaction;
+        
+        if let ReactionType::Custom { animated, id, name } = &reaction.emoji {
+            let embed = Embed::fake(|e| {
+                e.title("Reaction Added");
+                e.description(format!("Reaction on <#{0}> in [this message](https://discord.com/channels/{1}/{0}/{2}) by <@!{3}>", reaction.channel_id.0, reaction.guild_id.unwrap().0, reaction.message_id.0, reaction.user_id.unwrap().0));
+                e.field("User ID", reaction.user_id.unwrap().0, false);
 
-        let embed = Embed::fake(|e| {
-            e.title("Reaction Added");
-            e.description(format!("Reaction on <#{0}> in [this message](https://discord.com/channels/{1}/{0}/{2}) by <@!{3}>", reaction.channel_id.0, reaction.guild_id.unwrap().0, reaction.message_id.0, reaction.user_id.unwrap().0));
-            e.field("User ID", reaction.user_id.unwrap().0, false);
+                e.field("Emoji", {
+                    if *animated {
+                        format!("<a:{}:{}>", name.as_ref().unwrap(), id.0)
+                    } else {
+                        format!("<:{}:{}>", name.as_ref().unwrap(), id.0)
+                    }
+                }, false);
 
-            let mut id = 0;
-
-            e.field("Emoji", {
-                match &reaction.emoji {
-                    ReactionType::Custom{
-                        animated: x,
-                        id: y,
-                        name: z
-                    } => {
-                        id = y.0;
-
-                        if *x {
-                            format!("<a:{}:{}>", z.as_ref().unwrap(), y.0)
-                        } else {
-                            format!("<:{}:{}>", z.as_ref().unwrap(), y.0)
-                        }
-                    },
-                    ReactionType::Unicode(x) => x.to_string(),
-                    _ => String::new(),
+                if *animated {
+                    e.image(format!("https://cdn.discordapp.com/emojis/{}.gif", id));
+                } else {
+                    e.image(format!("https://cdn.discordapp.com/emojis/{}.png", id));
                 }
-            }, false);
 
-            if id != 0 {
-                e.image(format!("https://cdn.discordapp.com/emojis/{}.png", id));
-            }
+                e.timestamp(&chrono::offset::Utc::now());
+                e.footer(|f| {
+                    f.text("Added")
+                });
 
-            e.timestamp(&chrono::offset::Utc::now());
-            e.footer(|f| {
-                f.text("Added")
+                e
             });
-
-            e
-        });
-        
-        let mut split = channel_data.webhook_url.split('/');
-        let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-        let token = split.nth(0).unwrap();
-        
-        match &ctx.http.get_webhook_with_token(id, token).await {
-            Ok(hook) => {
-                if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                    m.embeds(vec![embed])
-                }).await {
-                    error!("Error Sending Hook: {}", why)
+            
+            let mut split = channel_data.webhook_url.split('/');
+            let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
+            let token = split.nth(0).unwrap();
+            
+            match &ctx.http.get_webhook_with_token(id, token).await {
+                Ok(hook) => {
+                    if let Err(why) = hook.execute(&ctx.http, false, |m| {
+                        m.embeds(vec![embed])
+                    }).await {
+                        error!("Error Sending Hook: {}", why)
+                    }
                 }
-            }
-            Err(why) => {
-                error!("Error Obtaining Hook: {}", why);
-                return
+                Err(why) => {
+                    error!("Error Obtaining Hook: {}", why);
+                    return
+                }
             }
         }
     }
@@ -559,60 +549,50 @@ pub async fn send_reaction_remove(ctx: &Context, data: &ReactionRemoveEvent) {
     if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::ReactionRemove, data.reaction.guild_id.unwrap()).await {
         let reaction = &data.reaction;
 
-        let embed = Embed::fake(|e| {
-            e.title("Reaction Removed");
-            e.description(format!("Reaction on <#{0}> in [this message](https://discord.com/channels/{1}/{0}/{2}) by <@!{3}>", reaction.channel_id.0, reaction.guild_id.unwrap().0, reaction.message_id.0, reaction.user_id.unwrap().0));
-            e.field("User ID", reaction.user_id.unwrap().0, false);
+        if let ReactionType::Custom { animated, id, name } = &reaction.emoji {
+            let embed = Embed::fake(|e| {
+                e.title("Reaction Added");
+                e.description(format!("Reaction on <#{0}> in [this message](https://discord.com/channels/{1}/{0}/{2}) by <@!{3}>", reaction.channel_id.0, reaction.guild_id.unwrap().0, reaction.message_id.0, reaction.user_id.unwrap().0));
+                e.field("User ID", reaction.user_id.unwrap().0, false);
 
-            let mut id = 0;
+                e.field("Emoji", {
+                    if *animated {
+                        format!("<a:{}:{}>", name.as_ref().unwrap(), id.0)
+                    } else {
+                        format!("<:{}:{}>", name.as_ref().unwrap(), id.0)
+                    }
+                }, false);
 
-            e.field("Emoji", {
-                match &reaction.emoji {
-                    ReactionType::Custom{
-                        animated: x,
-                        id: y,
-                        name: z
-                    } => {
-                        id = y.0;
-
-                        if *x {
-                            format!("<a:{}:{}>", z.as_ref().unwrap(), y.0)
-                        } else {
-                            format!("<:{}:{}>", z.as_ref().unwrap(), y.0)
-                        }
-                    },
-                    ReactionType::Unicode(x) => x.to_string(),
-                    _ => String::new(),
+                if *animated {
+                    e.image(format!("https://cdn.discordapp.com/emojis/{}.gif", id));
+                } else {
+                    e.image(format!("https://cdn.discordapp.com/emojis/{}.png", id));
                 }
-            }, false);
 
-            if id != 0 {
-                e.image(format!("https://cdn.discordapp.com/emojis/{}.png", id));
-            }
+                e.timestamp(&chrono::offset::Utc::now());
+                e.footer(|f| {
+                    f.text("Removed")
+                });
 
-            e.timestamp(&chrono::offset::Utc::now());
-            e.footer(|f| {
-                f.text("Removed")
+                e
             });
-
-            e
-        });
-        
-        let mut split = channel_data.webhook_url.split('/');
-        let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-        let token = split.nth(0).unwrap();
-        
-        match &ctx.http.get_webhook_with_token(id, token).await {
-            Ok(hook) => {
-                if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                    m.embeds(vec![embed])
-                }).await {
-                    error!("Error Sending Hook: {}", why)
+            
+            let mut split = channel_data.webhook_url.split('/');
+            let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
+            let token = split.nth(0).unwrap();
+            
+            match &ctx.http.get_webhook_with_token(id, token).await {
+                Ok(hook) => {
+                    if let Err(why) = hook.execute(&ctx.http, false, |m| {
+                        m.embeds(vec![embed])
+                    }).await {
+                        error!("Error Sending Hook: {}", why)
+                    }
                 }
-            }
-            Err(why) => {
-                error!("Error Obtaining Hook: {}", why);
-                return
+                Err(why) => {
+                    error!("Error Obtaining Hook: {}", why);
+                    return
+                }
             }
         }
     }
