@@ -986,7 +986,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         );
 
         {
-            // TODO: get the real shard amount.
+            // T O D O: get the real shard amount.
             let host = configuration.lavalink.host;
             let port = configuration.lavalink.port;
             let password = configuration.lavalink.password;

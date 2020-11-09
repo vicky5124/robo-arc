@@ -167,8 +167,6 @@ struct PostsE621 {
 
 // Function to get the booru data and send it.
 pub async fn get_booru(ctx: &Context, msg: &Message, booru: &Booru, args: Args) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // TODO: behoimi needs login.
-
     let channel = ctx.http.get_channel(msg.channel_id.0).await?; // Gets the channel object to be used for the nsfw check.
     // Checks if the command was invoked on a DM
     let dm_channel = msg.guild_id == None;
