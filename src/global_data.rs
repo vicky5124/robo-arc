@@ -1,29 +1,14 @@
-use crate::{
-    ConfigurationData,
-    Booru,
-    notifications::TwitchStreamData,
-};
+use crate::{notifications::TwitchStreamData, Booru, ConfigurationData};
 
-use std::{
-    sync::Arc,
-    collections::HashSet,
-    time::Instant,
-};
+use std::{collections::HashSet, sync::Arc, time::Instant};
 
-use tokio::sync::{
-    RwLock,
-    Mutex,
-};
+use tokio::sync::{Mutex, RwLock};
 
-use serenity::{
-    prelude::TypeMapKey,
-    client::bridge::gateway::ShardManager,
-};
+use serenity::{client::bridge::gateway::ShardManager, prelude::TypeMapKey};
 
-use sqlx::PgPool; // PostgreSQL Pool Structure
 use darkredis::ConnectionPool as RedisPool;
 use lavalink_rs::LavalinkClient;
-
+use sqlx::PgPool; // PostgreSQL Pool Structure
 
 // Defining the structures to be used for "global" data
 // this data is not really global, it's just shared with Context.data

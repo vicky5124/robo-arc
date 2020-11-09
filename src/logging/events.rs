@@ -1,5 +1,5 @@
-use crate::logging::*;
 use crate::global_data::CachePool;
+use crate::logging::*;
 
 use std::sync::Arc;
 
@@ -11,10 +11,7 @@ use std::sync::Arc;
 use serenity::{
     async_trait,
     model::event::Event,
-    prelude::{
-        RawEventHandler,
-        Context,
-    },
+    prelude::{Context, RawEventHandler},
 };
 
 pub struct RawHandler; // Defines the raw handler to be used for logging.
@@ -148,7 +145,7 @@ impl RawEventHandler for RawHandler {
                     senders::send_guild_integrations_update(&ctx, &data).await;
                 }
 
-                _ => ()
+                _ => (),
             }
         });
     }

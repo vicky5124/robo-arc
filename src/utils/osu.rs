@@ -8,7 +8,6 @@ fn max(x: f64, y: f64) -> f64 {
     x.max(y)
 }
 
-
 #[derive(Debug, Default)]
 pub struct PpCalculation {
     pub score_mods: Vec<String>,
@@ -74,13 +73,13 @@ impl PpCalculation {
         }
 
         self.compute_real_accuracy();
-    
+
         let aim_value = self.compute_aim_value();
         let speed_value = self.compute_speed_value();
         let accuracy_value = self.compute_accuracy_value();
 
         let mut multiplier = 1.12_f64;
-    
+
         if self.score_mods.contains(&"NF".to_string()) {
             multiplier *= 0.90;
         }
@@ -88,13 +87,17 @@ impl PpCalculation {
             multiplier *= 0.95;
         }
 
-        let total_value = ((aim_value.powf(1.1) + speed_value.powf(1.1) + accuracy_value.powf(1.1)).powf(1.0 / 1.1)) * multiplier;
+        let total_value =
+            ((aim_value.powf(1.1) + speed_value.powf(1.1) + accuracy_value.powf(1.1))
+                .powf(1.0 / 1.1))
+                * multiplier;
 
         total_value
     }
 
     pub fn compute_aim_value(&self) -> f64 {
-        let mut aim_value = (5.0 * max(1.0, self.map_aim_strain / 0.0675) - 4.0).powf(3.0) / 100000.0;
+        let mut aim_value =
+            (5.0 * max(1.0, self.map_aim_strain / 0.0675) - 4.0).powf(3.0) / 100000.0;
 
         aim_value *= self.length_bonus;
         aim_value *= self.miss_penality;
@@ -103,7 +106,18 @@ impl PpCalculation {
         aim_value *= self.hd_bonus;
 
         if self.score_mods.contains(&"FL".to_string()) {
-            aim_value *= 1.0 + 0.35 * min(1.0, self.total_hits / 200.0) + (if self.total_hits > 200.0 { 0.3 * min(1.0, (self.total_hits - 200.0) / 300.0) + (if self.total_hits > 50.00 { (self.total_hits - 500.0) / 1200.0 } else { 0.0 }) } else { 0.0 });
+            aim_value *= 1.0
+                + 0.35 * min(1.0, self.total_hits / 200.0)
+                + (if self.total_hits > 200.0 {
+                    0.3 * min(1.0, (self.total_hits - 200.0) / 300.0)
+                        + (if self.total_hits > 50.00 {
+                            (self.total_hits - 500.0) / 1200.0
+                        } else {
+                            0.0
+                        })
+                } else {
+                    0.0
+                });
         }
 
         aim_value *= 0.5 + self.score_accuracy / 2.0;
@@ -113,7 +127,8 @@ impl PpCalculation {
     }
 
     pub fn compute_speed_value(&self) -> f64 {
-        let mut speed_value = (5.0 * max(1.0, self.map_speed_strain / 0.0675) - 4.0).powf(3.0) / 100000.0;
+        let mut speed_value =
+            (5.0 * max(1.0, self.map_speed_strain / 0.0675) - 4.0).powf(3.0) / 100000.0;
 
         speed_value *= self.length_bonus;
         speed_value *= self.miss_penality;
@@ -147,15 +162,24 @@ impl PpCalculation {
     }
 
     pub fn compute_real_accuracy(&mut self) {
-        self.score_accuracy = self.acc_math(self.score_great, self.score_good, self.score_meh, self.score_miss);
+        self.score_accuracy = self.acc_math(
+            self.score_great,
+            self.score_good,
+            self.score_meh,
+            self.score_miss,
+        );
         self.real_acc = self.score_accuracy;
 
         if self.score_mods.contains(&"V2".to_string()) {
             self.map_circles = self.map_hit_count;
         } else {
             self.real_acc = self.acc_math(
-                self.score_great - (self.map_sliders * self.progress / 100.0) - (self.map_spinners * self.progress / 100.0),
-                self.score_good, self.score_meh, self.score_miss
+                self.score_great
+                    - (self.map_sliders * self.progress / 100.0)
+                    - (self.map_spinners * self.progress / 100.0),
+                self.score_good,
+                self.score_meh,
+                self.score_miss,
             );
 
             self.real_acc = max(0.0, self.real_acc);
@@ -203,7 +227,6 @@ impl PpCalculation {
 
         if arms > AR5_MS {
             self.map_ar = (AR0_MS - arms) / AR_MS_STEP1
-
         } else {
             self.map_ar = 5.0 + (AR5_MS - arms) / AR_MS_STEP2
         }
@@ -217,7 +240,13 @@ impl PpCalculation {
         self.map_od = (OD0_MS - odms) / OD_MS_STEP;
     }
 
-    pub fn acc_math(&self, score_great: f64, score_good: f64, score_meh: f64, score_miss: f64) -> f64 {
+    pub fn acc_math(
+        &self,
+        score_great: f64,
+        score_good: f64,
+        score_meh: f64,
+        score_miss: f64,
+    ) -> f64 {
         let h = score_great + score_good + score_meh + score_miss;
         (score_meh * 50.0 + score_good * 100.0 + score_great * 300.0) / (h * 300.0)
     }
@@ -501,7 +530,7 @@ class diff_calc:
 pub mod bitwhise_mods {
     #![allow(non_upper_case_globals)]
     use bitflags::bitflags;
-    
+
     bitflags! {
         pub struct LongMods: u32 {
             const None           = 0;

@@ -12,7 +12,9 @@ pub fn capitalize_first(input: &str) -> String {
 
 pub fn pacman(value: &str) -> String {
     let mod_value = value.to_owned() + "000";
-    let x = mod_value.split('.').nth(1).unwrap()[..3].parse::<u32>().unwrap();
+    let x = mod_value.split('.').nth(1).unwrap()[..3]
+        .parse::<u32>()
+        .unwrap();
     let tm = x / 50;
 
     let mut s = "".to_string();
@@ -48,31 +50,31 @@ pub fn string_to_seconds(text: impl ToString) -> u64 {
 
     for i in words {
         if i.ends_with("s") {
-            let num = &i[.. i.len() - 1];
+            let num = &i[..i.len() - 1];
             seconds += num.parse::<u64>().unwrap_or(0);
         }
         if i.ends_with("m") {
-            let num = &i[.. i.len() - 1];
+            let num = &i[..i.len() - 1];
             seconds += num.parse::<u64>().unwrap_or(0) * 60;
         }
         if i.ends_with("h") {
-            let num = &i[.. i.len() - 1];
+            let num = &i[..i.len() - 1];
             seconds += num.parse::<u64>().unwrap_or(0) * 3600;
         }
         if i.ends_with("D") {
-            let num = &i[.. i.len() - 1];
+            let num = &i[..i.len() - 1];
             seconds += num.parse::<u64>().unwrap_or(0) * 86_400;
         }
         if i.ends_with("W") {
-            let num = &i[.. i.len() - 1];
+            let num = &i[..i.len() - 1];
             seconds += num.parse::<u64>().unwrap_or(0) * 604_800;
         }
         if i.ends_with("M") {
-            let num = &i[.. i.len() - 1];
+            let num = &i[..i.len() - 1];
             seconds += num.parse::<u64>().unwrap_or(0) * 2_628_288;
         }
         if i.ends_with("Y") {
-            let num = &i[.. i.len() - 1];
+            let num = &i[..i.len() - 1];
             seconds += num.parse::<u64>().unwrap_or(0) * 31_536_000;
         }
     }

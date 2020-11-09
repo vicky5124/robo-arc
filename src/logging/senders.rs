@@ -1,25 +1,17 @@
 use crate::global_data::DatabasePool;
-use crate::utils::logging::{
-    guild_has_logging,
-    LoggingEvents,
-};
+use crate::utils::logging::{guild_has_logging, LoggingEvents};
 
 use tracing::{
+    error,
     //warn,
     instrument,
-    error,
 };
 
 use serenity::{
     model::{
+        channel::{Channel, Embed, PermissionOverwriteType, ReactionType},
         event::*,
         id::UserId,
-        channel::{
-            PermissionOverwriteType,
-            ReactionType,
-            Channel,
-            Embed,
-        },
     },
     prelude::Context,
     prelude::Mentionable,
@@ -32,41 +24,62 @@ pub async fn send_message_update(ctx: &Context, data: &MessageUpdateEvent) {
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::MessageUpdate, data.guild_id.unwrap()).await {
-        let old_message = sqlx::query!("SELECT content_history FROM log_messages WHERE id = $1", data.id.0 as i64)
-            .fetch_optional(&pool)
-            .await;
+    if let Some(channel_data) =
+        guild_has_logging(&pool, LoggingEvents::MessageUpdate, data.guild_id.unwrap()).await
+    {
+        let old_message = sqlx::query!(
+            "SELECT content_history FROM log_messages WHERE id = $1",
+            data.id.0 as i64
+        )
+        .fetch_optional(&pool)
+        .await;
 
         if let Ok(Some(old_message)) = old_message {
             if let Some(old_message) = old_message.content_history {
-                let old_message_content = old_message.get(old_message.len().checked_sub(1).unwrap_or(0));
-                if old_message_content.clone().unwrap_or(&String::new()) == &data.content.clone().unwrap_or_default() { return }
+                let old_message_content =
+                    old_message.get(old_message.len().checked_sub(1).unwrap_or(0));
+                if old_message_content.clone().unwrap_or(&String::new())
+                    == &data.content.clone().unwrap_or_default()
+                {
+                    return;
+                }
 
                 let embed = Embed::fake(|e| {
                     e.title("Message Updated");
 
                     e.field("Message ID", &data.id.0, false);
 
-                    let content = old_message_content.unwrap_or(&String::from("- Unknown Content.")).to_owned();
+                    let content = old_message_content
+                        .unwrap_or(&String::from("- Unknown Content."))
+                        .to_owned();
                     if content.len() > 1000 {
-                        e.field("Original Content (1)", &content[..content.len()/2], false);
-                        e.field("Original Content (2)", &content[content.len()/2..], false);
+                        e.field("Original Content (1)", &content[..content.len() / 2], false);
+                        e.field("Original Content (2)", &content[content.len() / 2..], false);
                     } else if !content.is_empty() {
                         e.field("Original Content", &content, false);
                     }
 
-
-                    let content = data.content.as_ref().unwrap_or(&String::from("- Unknown Content.")).to_owned();
+                    let content = data
+                        .content
+                        .as_ref()
+                        .unwrap_or(&String::from("- Unknown Content."))
+                        .to_owned();
 
                     if content.len() > 1000 {
-                        e.field("New Content (1)", &content[..content.len()/2], false);
-                        e.field("New Content (2)", &content[content.len()/2..], false);
+                        e.field("New Content (1)", &content[..content.len() / 2], false);
+                        e.field("New Content (2)", &content[content.len() / 2..], false);
                     } else if !content.is_empty() {
                         e.field("New Content", &content, false);
                     }
 
                     if let Some(author) = &data.author {
-                        e.description(format!("[This](https://discord.com/channels/{}/{}/{}) message was sent by {}", data.guild_id.unwrap().0, data.channel_id.0, data.id.0, author.mention()));
+                        e.description(format!(
+                            "[This](https://discord.com/channels/{}/{}/{}) message was sent by {}",
+                            data.guild_id.unwrap().0,
+                            data.channel_id.0,
+                            data.id.0,
+                            author.mention()
+                        ));
                         e.author(|a| {
                             a.icon_url(author.face());
                             a.name(author.tag())
@@ -74,9 +87,7 @@ pub async fn send_message_update(ctx: &Context, data: &MessageUpdateEvent) {
                     }
 
                     e.timestamp(&chrono::offset::Utc::now());
-                    e.footer(|f| {
-                        f.text("Updated")
-                    });
+                    e.footer(|f| f.text("Updated"));
 
                     e
                 });
@@ -87,15 +98,16 @@ pub async fn send_message_update(ctx: &Context, data: &MessageUpdateEvent) {
 
                 match &ctx.http.get_webhook_with_token(id, token).await {
                     Ok(hook) => {
-                        if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                            m.embeds(vec![embed])
-                        }).await {
+                        if let Err(why) = hook
+                            .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                            .await
+                        {
                             error!("Error Sending Hook: {}", why)
                         }
                     }
                     Err(why) => {
                         error!("Error Obtaining Hook: {}", why);
-                        return
+                        return;
                     }
                 }
             }
@@ -110,7 +122,9 @@ pub async fn send_message_delete(ctx: &Context, data: &MessageDeleteEvent) {
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::MessageDelete, data.guild_id.unwrap()).await {
+    if let Some(channel_data) =
+        guild_has_logging(&pool, LoggingEvents::MessageDelete, data.guild_id.unwrap()).await
+    {
         let raw_message = sqlx::query!(
                 "SELECT content, author_id, attachments, pinned, edited_timestamp, tts, webhook_id FROM log_messages WHERE id = $1",
                 data.message_id.0 as i64
@@ -119,21 +133,33 @@ pub async fn send_message_delete(ctx: &Context, data: &MessageDeleteEvent) {
             .await;
 
         if let Ok(Some(msg)) = raw_message {
-            let author = if let Ok(x) = UserId(msg.author_id as u64).to_user(ctx).await { x } else { return };
+            let author = if let Ok(x) = UserId(msg.author_id as u64).to_user(ctx).await {
+                x
+            } else {
+                return;
+            };
 
             let embed = Embed::fake(|e| {
                 e.title("Message Deleted");
-                e.description(format!("Message from <#{}> with the id `{}`", data.channel_id.0, data.message_id.0));
+                e.description(format!(
+                    "Message from <#{}> with the id `{}`",
+                    data.channel_id.0, data.message_id.0
+                ));
                 e.author(|a| {
                     a.icon_url(author.face());
                     a.name(author.tag())
                 });
 
-                let content = msg.content.as_ref().unwrap_or(&String::from("- Unknown Content.")).to_owned() + "\u{200b}";
+                let content = msg
+                    .content
+                    .as_ref()
+                    .unwrap_or(&String::from("- Unknown Content."))
+                    .to_owned()
+                    + "\u{200b}";
 
                 if content.len() > 1000 {
-                    e.field("New Content (1)", &content[..content.len()/2], false);
-                    e.field("New Content (2)", &content[content.len()/2..], false);
+                    e.field("New Content (1)", &content[..content.len() / 2], false);
+                    e.field("New Content (2)", &content[content.len() / 2..], false);
                 } else {
                     e.field("New Content", &content, false);
                 }
@@ -175,18 +201,18 @@ pub async fn send_message_delete(ctx: &Context, data: &MessageDeleteEvent) {
 
             match &ctx.http.get_webhook_with_token(id, token).await {
                 Ok(hook) => {
-                    if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                        m.embeds(vec![embed])
-                    }).await {
+                    if let Err(why) = hook
+                        .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                        .await
+                    {
                         error!("Error Sending Hook: {}", why)
                     }
                 }
                 Err(why) => {
                     error!("Error Obtaining Hook: {}", why);
-                    return
+                    return;
                 }
             }
-            
         }
     }
 }
@@ -198,14 +224,20 @@ pub async fn send_guild_member_add(ctx: &Context, data: &GuildMemberAddEvent) {
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::GuildMemberAdd, data.guild_id).await {
+    if let Some(channel_data) =
+        guild_has_logging(&pool, LoggingEvents::GuildMemberAdd, data.guild_id).await
+    {
         let embed = Embed::fake(|e| {
             e.title("Member Joined");
             e.author(|a| {
                 a.icon_url(data.member.user.face());
                 a.name(data.member.user.tag())
             });
-            e.field("Created at", &data.member.user.created_at().to_rfc2822(), false);
+            e.field(
+                "Created at",
+                &data.member.user.created_at().to_rfc2822(),
+                false,
+            );
             if let Some(x) = &data.member.joined_at {
                 e.field("Joined at", x.to_rfc2822(), false);
             }
@@ -213,22 +245,23 @@ pub async fn send_guild_member_add(ctx: &Context, data: &GuildMemberAddEvent) {
 
             e
         });
-        
+
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
         let token = split.nth(0).unwrap();
-        
+
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
-                if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                    m.embeds(vec![embed])
-                }).await {
+                if let Err(why) = hook
+                    .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                    .await
+                {
                     error!("Error Sending Hook: {}", why)
                 }
             }
             Err(why) => {
                 error!("Error Obtaining Hook: {}", why);
-                return
+                return;
             }
         }
     }
@@ -241,7 +274,9 @@ pub async fn send_guild_member_remove(ctx: &Context, data: &GuildMemberRemoveEve
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::GuildMemberRemove, data.guild_id).await {
+    if let Some(channel_data) =
+        guild_has_logging(&pool, LoggingEvents::GuildMemberRemove, data.guild_id).await
+    {
         let embed = Embed::fake(|e| {
             e.title("Member Left");
             e.author(|a| {
@@ -251,25 +286,25 @@ pub async fn send_guild_member_remove(ctx: &Context, data: &GuildMemberRemoveEve
             e.field("Created at", &data.user.created_at().to_rfc2822(), false);
             e.field("ID", &data.user.id.0, false);
 
-
             e
         });
-        
+
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
         let token = split.nth(0).unwrap();
-        
+
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
-                if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                    m.embeds(vec![embed])
-                }).await {
+                if let Err(why) = hook
+                    .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                    .await
+                {
                     error!("Error Sending Hook: {}", why)
                 }
             }
             Err(why) => {
                 error!("Error Obtaining Hook: {}", why);
-                return
+                return;
             }
         }
     }
@@ -282,7 +317,13 @@ pub async fn send_message_delete_bulk(ctx: &Context, data: &MessageDeleteBulkEve
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::MessageDeleteBulk, data.guild_id.unwrap()).await {
+    if let Some(channel_data) = guild_has_logging(
+        &pool,
+        LoggingEvents::MessageDeleteBulk,
+        data.guild_id.unwrap(),
+    )
+    .await
+    {
         let embed = Embed::fake(|e| {
             e.title("Bulk of messages Deleted");
             e.description(format!("Deleted on <#{}>", &data.channel_id.0));
@@ -290,22 +331,23 @@ pub async fn send_message_delete_bulk(ctx: &Context, data: &MessageDeleteBulkEve
 
             e
         });
-        
+
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
         let token = split.nth(0).unwrap();
-        
+
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
-                if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                    m.embeds(vec![embed])
-                }).await {
+                if let Err(why) = hook
+                    .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                    .await
+                {
                     error!("Error Sending Hook: {}", why)
                 }
             }
             Err(why) => {
                 error!("Error Obtaining Hook: {}", why);
-                return
+                return;
             }
         }
     }
@@ -318,37 +360,42 @@ pub async fn send_guild_role_create(ctx: &Context, data: &GuildRoleCreateEvent) 
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::GuildRoleCreate, data.guild_id).await {
+    if let Some(channel_data) =
+        guild_has_logging(&pool, LoggingEvents::GuildRoleCreate, data.guild_id).await
+    {
         let embed = Embed::fake(|e| {
             e.title("Role Created");
             e.field("ID", &data.role.id.0, false);
             e.field("Mention", format!("<@&{}>", &data.role.id.0), false);
             e.field("Mentionable", &data.role.mentionable, false);
-            e.field("Permissions", format!("{:?}", &data.role.permissions), false);
+            e.field(
+                "Permissions",
+                format!("{:?}", &data.role.permissions),
+                false,
+            );
             e.colour(data.role.colour);
             e.timestamp(&chrono::offset::Utc::now());
-            e.footer(|f| {
-                f.text("Created")
-            });
+            e.footer(|f| f.text("Created"));
 
             e
         });
-        
+
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
         let token = split.nth(0).unwrap();
-        
+
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
-                if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                    m.embeds(vec![embed])
-                }).await {
+                if let Err(why) = hook
+                    .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                    .await
+                {
                     error!("Error Sending Hook: {}", why)
                 }
             }
             Err(why) => {
                 error!("Error Obtaining Hook: {}", why);
-                return
+                return;
             }
         }
     }
@@ -361,33 +408,34 @@ pub async fn send_guild_role_delete(ctx: &Context, data: &GuildRoleDeleteEvent) 
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::GuildRoleDelete, data.guild_id).await {
+    if let Some(channel_data) =
+        guild_has_logging(&pool, LoggingEvents::GuildRoleDelete, data.guild_id).await
+    {
         let embed = Embed::fake(|e| {
             e.title("Role Deleted");
             e.field("ID", &data.role_id.0, false);
             e.timestamp(&chrono::offset::Utc::now());
-            e.footer(|f| {
-                f.text("Deleted")
-            });
+            e.footer(|f| f.text("Deleted"));
 
             e
         });
-        
+
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
         let token = split.nth(0).unwrap();
-        
+
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
-                if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                    m.embeds(vec![embed])
-                }).await {
+                if let Err(why) = hook
+                    .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                    .await
+                {
                     error!("Error Sending Hook: {}", why)
                 }
             }
             Err(why) => {
                 error!("Error Obtaining Hook: {}", why);
-                return
+                return;
             }
         }
     }
@@ -407,11 +455,11 @@ pub async fn send_guild_role_update(_ctx: &Context, _data: &GuildRoleUpdateEvent
         let embed = Embed::fake(|e| {
             e
         });
-        
+
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
         let token = split.nth(0).unwrap();
-        
+
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
                 if let Err(why) = hook.execute(&ctx.http, false, |m| {
@@ -437,7 +485,9 @@ pub async fn send_guild_member_update(ctx: &Context, data: &GuildMemberUpdateEve
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::GuildMemberUpdate, data.guild_id).await {
+    if let Some(channel_data) =
+        guild_has_logging(&pool, LoggingEvents::GuildMemberUpdate, data.guild_id).await
+    {
         let embed = Embed::fake(|e| {
             e.title("Member Updated");
             e.author(|a| {
@@ -450,31 +500,39 @@ pub async fn send_guild_member_update(ctx: &Context, data: &GuildMemberUpdateEve
                 e.field("Nickname", nick, false);
             }
             if data.roles.len() > 1 {
-                e.field("Roles", &data.roles.iter().map(|i| format!("<@&{}>", i.0)).collect::<Vec<_>>().join(" | "), false);
+                e.field(
+                    "Roles",
+                    &data
+                        .roles
+                        .iter()
+                        .map(|i| format!("<@&{}>", i.0))
+                        .collect::<Vec<_>>()
+                        .join(" | "),
+                    false,
+                );
             }
             e.timestamp(&chrono::offset::Utc::now());
-            e.footer(|f| {
-                f.text("Updated")
-            });
+            e.footer(|f| f.text("Updated"));
 
             e
         });
-        
+
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
         let token = split.nth(0).unwrap();
-        
+
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
-                if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                    m.embeds(vec![embed])
-                }).await {
+                if let Err(why) = hook
+                    .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                    .await
+                {
                     error!("Error Sending Hook: {}", why)
                 }
             }
             Err(why) => {
                 error!("Error Obtaining Hook: {}", why);
-                return
+                return;
             }
         }
     }
@@ -487,22 +545,32 @@ pub async fn send_reaction_add(ctx: &Context, data: &ReactionAddEvent) {
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::ReactionAdd, data.reaction.guild_id.unwrap()).await {
+    if let Some(channel_data) = guild_has_logging(
+        &pool,
+        LoggingEvents::ReactionAdd,
+        data.reaction.guild_id.unwrap(),
+    )
+    .await
+    {
         let reaction = &data.reaction;
-        
+
         if let ReactionType::Custom { animated, id, name } = &reaction.emoji {
             let embed = Embed::fake(|e| {
                 e.title("Reaction Added");
                 e.description(format!("Reaction on <#{0}> in [this message](https://discord.com/channels/{1}/{0}/{2}) by <@!{3}>", reaction.channel_id.0, reaction.guild_id.unwrap().0, reaction.message_id.0, reaction.user_id.unwrap().0));
                 e.field("User ID", reaction.user_id.unwrap().0, false);
 
-                e.field("Emoji", {
-                    if *animated {
-                        format!("<a:{}:{}>", name.as_ref().unwrap(), id.0)
-                    } else {
-                        format!("<:{}:{}>", name.as_ref().unwrap(), id.0)
-                    }
-                }, false);
+                e.field(
+                    "Emoji",
+                    {
+                        if *animated {
+                            format!("<a:{}:{}>", name.as_ref().unwrap(), id.0)
+                        } else {
+                            format!("<:{}:{}>", name.as_ref().unwrap(), id.0)
+                        }
+                    },
+                    false,
+                );
 
                 if *animated {
                     e.image(format!("https://cdn.discordapp.com/emojis/{}.gif", id));
@@ -511,28 +579,27 @@ pub async fn send_reaction_add(ctx: &Context, data: &ReactionAddEvent) {
                 }
 
                 e.timestamp(&chrono::offset::Utc::now());
-                e.footer(|f| {
-                    f.text("Added")
-                });
+                e.footer(|f| f.text("Added"));
 
                 e
             });
-            
+
             let mut split = channel_data.webhook_url.split('/');
             let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
             let token = split.nth(0).unwrap();
-            
+
             match &ctx.http.get_webhook_with_token(id, token).await {
                 Ok(hook) => {
-                    if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                        m.embeds(vec![embed])
-                    }).await {
+                    if let Err(why) = hook
+                        .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                        .await
+                    {
                         error!("Error Sending Hook: {}", why)
                     }
                 }
                 Err(why) => {
                     error!("Error Obtaining Hook: {}", why);
-                    return
+                    return;
                 }
             }
         }
@@ -546,7 +613,13 @@ pub async fn send_reaction_remove(ctx: &Context, data: &ReactionRemoveEvent) {
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::ReactionRemove, data.reaction.guild_id.unwrap()).await {
+    if let Some(channel_data) = guild_has_logging(
+        &pool,
+        LoggingEvents::ReactionRemove,
+        data.reaction.guild_id.unwrap(),
+    )
+    .await
+    {
         let reaction = &data.reaction;
 
         if let ReactionType::Custom { animated, id, name } = &reaction.emoji {
@@ -555,13 +628,17 @@ pub async fn send_reaction_remove(ctx: &Context, data: &ReactionRemoveEvent) {
                 e.description(format!("Reaction on <#{0}> in [this message](https://discord.com/channels/{1}/{0}/{2}) by <@!{3}>", reaction.channel_id.0, reaction.guild_id.unwrap().0, reaction.message_id.0, reaction.user_id.unwrap().0));
                 e.field("User ID", reaction.user_id.unwrap().0, false);
 
-                e.field("Emoji", {
-                    if *animated {
-                        format!("<a:{}:{}>", name.as_ref().unwrap(), id.0)
-                    } else {
-                        format!("<:{}:{}>", name.as_ref().unwrap(), id.0)
-                    }
-                }, false);
+                e.field(
+                    "Emoji",
+                    {
+                        if *animated {
+                            format!("<a:{}:{}>", name.as_ref().unwrap(), id.0)
+                        } else {
+                            format!("<:{}:{}>", name.as_ref().unwrap(), id.0)
+                        }
+                    },
+                    false,
+                );
 
                 if *animated {
                     e.image(format!("https://cdn.discordapp.com/emojis/{}.gif", id));
@@ -570,28 +647,27 @@ pub async fn send_reaction_remove(ctx: &Context, data: &ReactionRemoveEvent) {
                 }
 
                 e.timestamp(&chrono::offset::Utc::now());
-                e.footer(|f| {
-                    f.text("Removed")
-                });
+                e.footer(|f| f.text("Removed"));
 
                 e
             });
-            
+
             let mut split = channel_data.webhook_url.split('/');
             let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
             let token = split.nth(0).unwrap();
-            
+
             match &ctx.http.get_webhook_with_token(id, token).await {
                 Ok(hook) => {
-                    if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                        m.embeds(vec![embed])
-                    }).await {
+                    if let Err(why) = hook
+                        .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                        .await
+                    {
                         error!("Error Sending Hook: {}", why)
                     }
                 }
                 Err(why) => {
                     error!("Error Obtaining Hook: {}", why);
-                    return
+                    return;
                 }
             }
         }
@@ -605,34 +681,44 @@ pub async fn send_reaction_remove_all(ctx: &Context, data: &ReactionRemoveAllEve
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::ReactionRemoveAll, data.guild_id.unwrap()).await {
+    if let Some(channel_data) = guild_has_logging(
+        &pool,
+        LoggingEvents::ReactionRemoveAll,
+        data.guild_id.unwrap(),
+    )
+    .await
+    {
         let embed = Embed::fake(|e| {
             e.title("Reactions Cleared");
-            e.description(format!("Reactions on <#{0}> in [this message](https://discord.com/channels/{1}/{0}/{2})", data.channel_id.0, data.guild_id.unwrap().0, data.message_id.0));
+            e.description(format!(
+                "Reactions on <#{0}> in [this message](https://discord.com/channels/{1}/{0}/{2})",
+                data.channel_id.0,
+                data.guild_id.unwrap().0,
+                data.message_id.0
+            ));
 
             e.timestamp(&chrono::offset::Utc::now());
-            e.footer(|f| {
-                f.text("Cleared")
-            });
+            e.footer(|f| f.text("Cleared"));
 
             e
         });
-        
+
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
         let token = split.nth(0).unwrap();
-        
+
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
-                if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                    m.embeds(vec![embed])
-                }).await {
+                if let Err(why) = hook
+                    .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                    .await
+                {
                     error!("Error Sending Hook: {}", why)
                 }
             }
             Err(why) => {
                 error!("Error Obtaining Hook: {}", why);
-                return
+                return;
             }
         }
     }
@@ -647,20 +733,24 @@ pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
 
     let channel_data = match &data.channel {
         Channel::Guild(channel) => {
-            if let Some(x) = guild_has_logging(&pool, LoggingEvents::ChannelCreate, channel.guild_id).await {
+            if let Some(x) =
+                guild_has_logging(&pool, LoggingEvents::ChannelCreate, channel.guild_id).await
+            {
                 x
             } else {
-                return
+                return;
             }
         }
         Channel::Category(channel) => {
-            if let Some(x) = guild_has_logging(&pool, LoggingEvents::ChannelCreate, channel.guild_id).await {
+            if let Some(x) =
+                guild_has_logging(&pool, LoggingEvents::ChannelCreate, channel.guild_id).await
+            {
                 x
             } else {
-                return
+                return;
             }
         }
-         _ => return,
+        _ => return,
     };
 
     let embed = match &data.channel {
@@ -679,22 +769,38 @@ pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
                         let user = x.to_user(ctx).await.unwrap_or_default();
 
                         if !perm.allow.is_empty() {
-                            fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
+                            fields.push((
+                                format!("Allowed Permissions for \"{}\"", user.tag()),
+                                format!("{:?}", perm.allow),
+                                false,
+                            ));
                         }
 
                         if !perm.deny.is_empty() {
-                            fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            fields.push((
+                                format!("Denied Permissions for \"{}\"", user.tag()),
+                                format!("{:?}", perm.deny),
+                                false,
+                            ));
                         }
                     }
                     PermissionOverwriteType::Role(x) => {
                         let role = x.to_role_cached(ctx).await.unwrap();
 
                         if !perm.allow.is_empty() {
-                            fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
+                            fields.push((
+                                format!("Allowed Permissions for role \"{}\"", role.name),
+                                format!("{:?}", perm.allow),
+                                false,
+                            ));
                         }
 
                         if !perm.deny.is_empty() {
-                            fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            fields.push((
+                                format!("Denied Permissions for role \"{}\"", role.name),
+                                format!("{:?}", perm.deny),
+                                false,
+                            ));
                         }
                     }
                     _ => (),
@@ -704,9 +810,15 @@ pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
             Embed::fake(|e| {
                 e.title("Channel Created");
                 if let Some(category) = category_name {
-                    e.description(format!("Channel <#{}> (`{}`) has been created on the category {}.", channel.id.0, channel.name, category));
+                    e.description(format!(
+                        "Channel <#{}> (`{}`) has been created on the category {}.",
+                        channel.id.0, channel.name, category
+                    ));
                 } else {
-                    e.description(format!("Channel <#{}> (`{}`) has been created outside a category.", channel.id.0, channel.name));
+                    e.description(format!(
+                        "Channel <#{}> (`{}`) has been created outside a category.",
+                        channel.id.0, channel.name
+                    ));
                 }
                 e.field("ID", channel.id.0, false);
                 e.field("Type", format!("{:?}", channel.kind), false);
@@ -717,9 +829,7 @@ pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
                 }
 
                 e.timestamp(&chrono::offset::Utc::now());
-                e.footer(|f| {
-                    f.text("Created")
-                });
+                e.footer(|f| f.text("Created"));
 
                 e
             })
@@ -733,22 +843,38 @@ pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
                         let user = x.to_user(ctx).await.unwrap_or_default();
 
                         if !perm.allow.is_empty() {
-                            fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
+                            fields.push((
+                                format!("Allowed Permissions for \"{}\"", user.tag()),
+                                format!("{:?}", perm.allow),
+                                false,
+                            ));
                         }
 
                         if !perm.deny.is_empty() {
-                            fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            fields.push((
+                                format!("Denied Permissions for \"{}\"", user.tag()),
+                                format!("{:?}", perm.deny),
+                                false,
+                            ));
                         }
                     }
                     PermissionOverwriteType::Role(x) => {
                         let role = x.to_role_cached(ctx).await.unwrap();
 
                         if !perm.allow.is_empty() {
-                            fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
+                            fields.push((
+                                format!("Allowed Permissions for role \"{}\"", role.name),
+                                format!("{:?}", perm.allow),
+                                false,
+                            ));
                         }
 
                         if !perm.deny.is_empty() {
-                            fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            fields.push((
+                                format!("Denied Permissions for role \"{}\"", role.name),
+                                format!("{:?}", perm.deny),
+                                false,
+                            ));
                         }
                     }
                     _ => (),
@@ -765,31 +891,30 @@ pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
                 e.fields(fields);
 
                 e.timestamp(&chrono::offset::Utc::now());
-                e.footer(|f| {
-                    f.text("Created")
-                });
+                e.footer(|f| f.text("Created"));
 
                 e
             })
         }
         _ => return,
     };
-    
+
     let mut split = channel_data.webhook_url.split('/');
     let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
     let token = split.nth(0).unwrap();
-    
+
     match &ctx.http.get_webhook_with_token(id, token).await {
         Ok(hook) => {
-            if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                m.embeds(vec![embed])
-            }).await {
+            if let Err(why) = hook
+                .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                .await
+            {
                 error!("Error Sending Hook: {}", why)
             }
         }
         Err(why) => {
             error!("Error Obtaining Hook: {}", why);
-            return
+            return;
         }
     }
 }
@@ -803,20 +928,24 @@ pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
 
     let channel_data = match &data.channel {
         Channel::Guild(channel) => {
-            if let Some(x) = guild_has_logging(&pool, LoggingEvents::ChannelDelete, channel.guild_id).await {
+            if let Some(x) =
+                guild_has_logging(&pool, LoggingEvents::ChannelDelete, channel.guild_id).await
+            {
                 x
             } else {
-                return
+                return;
             }
         }
         Channel::Category(channel) => {
-            if let Some(x) = guild_has_logging(&pool, LoggingEvents::ChannelDelete, channel.guild_id).await {
+            if let Some(x) =
+                guild_has_logging(&pool, LoggingEvents::ChannelDelete, channel.guild_id).await
+            {
                 x
             } else {
-                return
+                return;
             }
         }
-         _ => return,
+        _ => return,
     };
 
     let embed = match &data.channel {
@@ -835,22 +964,38 @@ pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
                         let user = x.to_user(ctx).await.unwrap_or_default();
 
                         if !perm.allow.is_empty() {
-                            fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
+                            fields.push((
+                                format!("Allowed Permissions for \"{}\"", user.tag()),
+                                format!("{:?}", perm.allow),
+                                false,
+                            ));
                         }
 
                         if !perm.deny.is_empty() {
-                            fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            fields.push((
+                                format!("Denied Permissions for \"{}\"", user.tag()),
+                                format!("{:?}", perm.deny),
+                                false,
+                            ));
                         }
                     }
                     PermissionOverwriteType::Role(x) => {
                         let role = x.to_role_cached(ctx).await.unwrap();
 
                         if !perm.allow.is_empty() {
-                            fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
+                            fields.push((
+                                format!("Allowed Permissions for role \"{}\"", role.name),
+                                format!("{:?}", perm.allow),
+                                false,
+                            ));
                         }
 
                         if !perm.deny.is_empty() {
-                            fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            fields.push((
+                                format!("Denied Permissions for role \"{}\"", role.name),
+                                format!("{:?}", perm.deny),
+                                false,
+                            ));
                         }
                     }
                     _ => (),
@@ -860,9 +1005,15 @@ pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
             Embed::fake(|e| {
                 e.title("Channel Deleted");
                 if let Some(category) = category_name {
-                    e.description(format!("Channel <#{}> (`{}`) has been deleted from the category {}.", channel.id.0, channel.name, category));
+                    e.description(format!(
+                        "Channel <#{}> (`{}`) has been deleted from the category {}.",
+                        channel.id.0, channel.name, category
+                    ));
                 } else {
-                    e.description(format!("Channel <#{}> (`{}`) has been deleted; it was outside a category.", channel.id.0, channel.name));
+                    e.description(format!(
+                        "Channel <#{}> (`{}`) has been deleted; it was outside a category.",
+                        channel.id.0, channel.name
+                    ));
                 }
                 e.field("ID", channel.id.0, false);
                 e.field("Type", format!("{:?}", channel.kind), false);
@@ -873,9 +1024,7 @@ pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
                 }
 
                 e.timestamp(&chrono::offset::Utc::now());
-                e.footer(|f| {
-                    f.text("Deleted")
-                });
+                e.footer(|f| f.text("Deleted"));
 
                 e
             })
@@ -889,22 +1038,38 @@ pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
                         let user = x.to_user(ctx).await.unwrap_or_default();
 
                         if !perm.allow.is_empty() {
-                            fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
+                            fields.push((
+                                format!("Allowed Permissions for \"{}\"", user.tag()),
+                                format!("{:?}", perm.allow),
+                                false,
+                            ));
                         }
 
                         if !perm.deny.is_empty() {
-                            fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            fields.push((
+                                format!("Denied Permissions for \"{}\"", user.tag()),
+                                format!("{:?}", perm.deny),
+                                false,
+                            ));
                         }
                     }
                     PermissionOverwriteType::Role(x) => {
                         let role = x.to_role_cached(ctx).await.unwrap();
 
                         if !perm.allow.is_empty() {
-                            fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
+                            fields.push((
+                                format!("Allowed Permissions for role \"{}\"", role.name),
+                                format!("{:?}", perm.allow),
+                                false,
+                            ));
                         }
 
                         if !perm.deny.is_empty() {
-                            fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            fields.push((
+                                format!("Denied Permissions for role \"{}\"", role.name),
+                                format!("{:?}", perm.deny),
+                                false,
+                            ));
                         }
                     }
                     _ => (),
@@ -921,32 +1086,30 @@ pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
                 e.fields(fields);
 
                 e.timestamp(&chrono::offset::Utc::now());
-                e.footer(|f| {
-                    f.text("Deleted")
-                });
+                e.footer(|f| f.text("Deleted"));
 
                 e
             })
         }
         _ => return,
     };
-    
-    
+
     let mut split = channel_data.webhook_url.split('/');
     let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
     let token = split.nth(0).unwrap();
-    
+
     match &ctx.http.get_webhook_with_token(id, token).await {
         Ok(hook) => {
-            if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                m.embeds(vec![embed])
-            }).await {
+            if let Err(why) = hook
+                .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                .await
+            {
                 error!("Error Sending Hook: {}", why)
             }
         }
         Err(why) => {
             error!("Error Obtaining Hook: {}", why);
-            return
+            return;
         }
     }
 }
@@ -960,20 +1123,24 @@ pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
 
     let channel_data = match &data.channel {
         Channel::Guild(channel) => {
-            if let Some(x) = guild_has_logging(&pool, LoggingEvents::ChannelUpdate, channel.guild_id).await {
+            if let Some(x) =
+                guild_has_logging(&pool, LoggingEvents::ChannelUpdate, channel.guild_id).await
+            {
                 x
             } else {
-                return
+                return;
             }
         }
         Channel::Category(channel) => {
-            if let Some(x) = guild_has_logging(&pool, LoggingEvents::ChannelUpdate, channel.guild_id).await {
+            if let Some(x) =
+                guild_has_logging(&pool, LoggingEvents::ChannelUpdate, channel.guild_id).await
+            {
                 x
             } else {
-                return
+                return;
             }
         }
-         _ => return,
+        _ => return,
     };
 
     let embed = match &data.channel {
@@ -992,22 +1159,38 @@ pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
                         let user = x.to_user(ctx).await.unwrap_or_default();
 
                         if !perm.allow.is_empty() {
-                            fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
+                            fields.push((
+                                format!("Allowed Permissions for \"{}\"", user.tag()),
+                                format!("{:?}", perm.allow),
+                                false,
+                            ));
                         }
 
                         if !perm.deny.is_empty() {
-                            fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            fields.push((
+                                format!("Denied Permissions for \"{}\"", user.tag()),
+                                format!("{:?}", perm.deny),
+                                false,
+                            ));
                         }
                     }
                     PermissionOverwriteType::Role(x) => {
                         let role = x.to_role_cached(ctx).await.unwrap();
 
                         if !perm.allow.is_empty() {
-                            fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
+                            fields.push((
+                                format!("Allowed Permissions for role \"{}\"", role.name),
+                                format!("{:?}", perm.allow),
+                                false,
+                            ));
                         }
 
                         if !perm.deny.is_empty() {
-                            fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            fields.push((
+                                format!("Denied Permissions for role \"{}\"", role.name),
+                                format!("{:?}", perm.deny),
+                                false,
+                            ));
                         }
                     }
                     _ => (),
@@ -1017,9 +1200,15 @@ pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
             Embed::fake(|e| {
                 e.title("Channel Updated");
                 if let Some(category) = category_name {
-                    e.description(format!("Channel <#{}> (`{}`) has been updated on the category {}.", channel.id.0, channel.name, category));
+                    e.description(format!(
+                        "Channel <#{}> (`{}`) has been updated on the category {}.",
+                        channel.id.0, channel.name, category
+                    ));
                 } else {
-                    e.description(format!("Channel <#{}> (`{}`) has been updated outside a category.", channel.id.0, channel.name));
+                    e.description(format!(
+                        "Channel <#{}> (`{}`) has been updated outside a category.",
+                        channel.id.0, channel.name
+                    ));
                 }
                 e.field("ID", channel.id.0, false);
                 e.field("Type", format!("{:?}", channel.kind), false);
@@ -1030,9 +1219,7 @@ pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
                 }
 
                 e.timestamp(&chrono::offset::Utc::now());
-                e.footer(|f| {
-                    f.text("Updated")
-                });
+                e.footer(|f| f.text("Updated"));
 
                 e
             })
@@ -1046,22 +1233,38 @@ pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
                         let user = x.to_user(ctx).await.unwrap_or_default();
 
                         if !perm.allow.is_empty() {
-                            fields.push((format!("Allowed Permissions for \"{}\"", user.tag()), format!("{:?}", perm.allow), false));
+                            fields.push((
+                                format!("Allowed Permissions for \"{}\"", user.tag()),
+                                format!("{:?}", perm.allow),
+                                false,
+                            ));
                         }
 
                         if !perm.deny.is_empty() {
-                            fields.push((format!("Denied Permissions for \"{}\"", user.tag()), format!("{:?}", perm.deny), false));
+                            fields.push((
+                                format!("Denied Permissions for \"{}\"", user.tag()),
+                                format!("{:?}", perm.deny),
+                                false,
+                            ));
                         }
                     }
                     PermissionOverwriteType::Role(x) => {
                         let role = x.to_role_cached(ctx).await.unwrap();
 
                         if !perm.allow.is_empty() {
-                            fields.push((format!("Allowed Permissions for role \"{}\"", role.name), format!("{:?}", perm.allow), false));
+                            fields.push((
+                                format!("Allowed Permissions for role \"{}\"", role.name),
+                                format!("{:?}", perm.allow),
+                                false,
+                            ));
                         }
 
                         if !perm.deny.is_empty() {
-                            fields.push((format!("Denied Permissions for role \"{}\"", role.name), format!("{:?}", perm.deny), false));
+                            fields.push((
+                                format!("Denied Permissions for role \"{}\"", role.name),
+                                format!("{:?}", perm.deny),
+                                false,
+                            ));
                         }
                     }
                     _ => (),
@@ -1078,31 +1281,30 @@ pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
                 e.fields(fields);
 
                 e.timestamp(&chrono::offset::Utc::now());
-                e.footer(|f| {
-                    f.text("Updated")
-                });
+                e.footer(|f| f.text("Updated"));
 
                 e
             })
         }
         _ => return,
     };
-    
+
     let mut split = channel_data.webhook_url.split('/');
     let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
     let token = split.nth(0).unwrap();
-    
+
     match &ctx.http.get_webhook_with_token(id, token).await {
         Ok(hook) => {
-            if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                m.embeds(vec![embed])
-            }).await {
+            if let Err(why) = hook
+                .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                .await
+            {
                 error!("Error Sending Hook: {}", why)
             }
         }
         Err(why) => {
             error!("Error Obtaining Hook: {}", why);
-            return
+            return;
         }
     }
 }
@@ -1114,36 +1316,44 @@ pub async fn send_channel_pins_update(ctx: &Context, data: &ChannelPinsUpdateEve
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::ChannelPinsUpdate, data.guild_id.unwrap()).await {
+    if let Some(channel_data) = guild_has_logging(
+        &pool,
+        LoggingEvents::ChannelPinsUpdate,
+        data.guild_id.unwrap(),
+    )
+    .await
+    {
         let embed = Embed::fake(|e| {
             e.title("Channel Pins Updated");
-            e.description(format!("Pins have been updated on <#{}>", data.channel_id.0));
+            e.description(format!(
+                "Pins have been updated on <#{}>",
+                data.channel_id.0
+            ));
 
             if let Some(timestamp) = data.last_pin_timestamp {
-                e.footer(|f| {
-                    f.text("Last pin")
-                });
+                e.footer(|f| f.text("Last pin"));
                 e.timestamp(&timestamp);
             }
 
             e
         });
-        
+
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
         let token = split.nth(0).unwrap();
-        
+
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
-                if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                    m.embeds(vec![embed])
-                }).await {
+                if let Err(why) = hook
+                    .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                    .await
+                {
                     error!("Error Sending Hook: {}", why)
                 }
             }
             Err(why) => {
                 error!("Error Obtaining Hook: {}", why);
-                return
+                return;
             }
         }
     }
@@ -1156,7 +1366,9 @@ pub async fn send_guild_ban_add(ctx: &Context, data: &GuildBanAddEvent) {
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::GuildBanAdd, data.guild_id).await {
+    if let Some(channel_data) =
+        guild_has_logging(&pool, LoggingEvents::GuildBanAdd, data.guild_id).await
+    {
         let embed = Embed::fake(|e| {
             e.title("User Banned");
             e.field("ID", data.user.id.0, false);
@@ -1171,28 +1383,27 @@ pub async fn send_guild_ban_add(ctx: &Context, data: &GuildBanAddEvent) {
             }
 
             e.timestamp(&chrono::offset::Utc::now());
-            e.footer(|f| {
-                f.text("Banned")
-            });
+            e.footer(|f| f.text("Banned"));
 
             e
         });
-        
+
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
         let token = split.nth(0).unwrap();
-        
+
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
-                if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                    m.embeds(vec![embed])
-                }).await {
+                if let Err(why) = hook
+                    .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                    .await
+                {
                     error!("Error Sending Hook: {}", why)
                 }
             }
             Err(why) => {
                 error!("Error Obtaining Hook: {}", why);
-                return
+                return;
             }
         }
     }
@@ -1205,7 +1416,9 @@ pub async fn send_guild_ban_remove(ctx: &Context, data: &GuildBanRemoveEvent) {
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::GuildBanRemove, data.guild_id).await {
+    if let Some(channel_data) =
+        guild_has_logging(&pool, LoggingEvents::GuildBanRemove, data.guild_id).await
+    {
         let embed = Embed::fake(|e| {
             e.title("User Unbanned");
             e.field("ID", data.user.id.0, false);
@@ -1220,28 +1433,27 @@ pub async fn send_guild_ban_remove(ctx: &Context, data: &GuildBanRemoveEvent) {
             }
 
             e.timestamp(&chrono::offset::Utc::now());
-            e.footer(|f| {
-                f.text("Unbanned")
-            });
+            e.footer(|f| f.text("Unbanned"));
 
             e
         });
-        
+
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
         let token = split.nth(0).unwrap();
-        
+
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
-                if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                    m.embeds(vec![embed])
-                }).await {
+                if let Err(why) = hook
+                    .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                    .await
+                {
                     error!("Error Sending Hook: {}", why)
                 }
             }
             Err(why) => {
                 error!("Error Obtaining Hook: {}", why);
-                return
+                return;
             }
         }
     }
@@ -1254,40 +1466,49 @@ pub async fn send_guild_emojis_update(ctx: &Context, data: &GuildEmojisUpdateEve
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::GuildEmojisUpdate, data.guild_id).await {
+    if let Some(channel_data) =
+        guild_has_logging(&pool, LoggingEvents::GuildEmojisUpdate, data.guild_id).await
+    {
         let embed = Embed::fake(|e| {
             e.title("Emojis Updated");
             for (_, emoji) in &data.emojis {
                 if emoji.animated {
-                    e.field(format!("<a:{}:{}>", emoji.name, emoji.id.0), format!("https://cdn.discordapp.com/emojis/{}.gif", emoji.id.0), false);
+                    e.field(
+                        format!("<a:{}:{}>", emoji.name, emoji.id.0),
+                        format!("https://cdn.discordapp.com/emojis/{}.gif", emoji.id.0),
+                        false,
+                    );
                 } else {
-                    e.field(format!("<:{}:{}>", emoji.name, emoji.id.0), format!("https://cdn.discordapp.com/emojis/{}.gif", emoji.id.0), false);
+                    e.field(
+                        format!("<:{}:{}>", emoji.name, emoji.id.0),
+                        format!("https://cdn.discordapp.com/emojis/{}.gif", emoji.id.0),
+                        false,
+                    );
                 }
             }
 
             e.timestamp(&chrono::offset::Utc::now());
-            e.footer(|f| {
-                f.text("Updated")
-            });
+            e.footer(|f| f.text("Updated"));
 
             e
         });
-        
+
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
         let token = split.nth(0).unwrap();
-        
+
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
-                if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                    m.embeds(vec![embed])
-                }).await {
+                if let Err(why) = hook
+                    .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                    .await
+                {
                     error!("Error Sending Hook: {}", why)
                 }
             }
             Err(why) => {
                 error!("Error Obtaining Hook: {}", why);
-                return
+                return;
             }
         }
     }
@@ -1300,33 +1521,34 @@ pub async fn send_guild_integrations_update(ctx: &Context, data: &GuildIntegrati
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    if let Some(channel_data) = guild_has_logging(&pool, LoggingEvents::GuildIntegrationsUpdate, data.guild_id).await {
+    if let Some(channel_data) =
+        guild_has_logging(&pool, LoggingEvents::GuildIntegrationsUpdate, data.guild_id).await
+    {
         let embed = Embed::fake(|e| {
             e.title("Integrations have been modified");
 
             e.timestamp(&chrono::offset::Utc::now());
-            e.footer(|f| {
-                f.text("Modified")
-            });
+            e.footer(|f| f.text("Modified"));
 
             e
         });
-        
+
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
         let token = split.nth(0).unwrap();
-        
+
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
-                if let Err(why) = hook.execute(&ctx.http, false, |m| {
-                    m.embeds(vec![embed])
-                }).await {
+                if let Err(why) = hook
+                    .execute(&ctx.http, false, |m| m.embeds(vec![embed]))
+                    .await
+                {
                     error!("Error Sending Hook: {}", why)
                 }
             }
             Err(why) => {
                 error!("Error Obtaining Hook: {}", why);
-                return
+                return;
             }
         }
     }
