@@ -1013,7 +1013,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .raw_event_handler(logging::events::RawHandler)
         .framework(std_framework)
         .register_songbird()
-        .add_intent({
+        .intents({
             let mut intents = GatewayIntents::all();
             //intents.remove(GatewayIntents::GUILD_PRESENCES);
             intents.remove(GatewayIntents::DIRECT_MESSAGE_TYPING);

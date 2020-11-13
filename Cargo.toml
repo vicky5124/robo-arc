@@ -64,8 +64,8 @@ features = ["full"]
 # https://github.com/serenity-rs/serenity
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"
-rev = "fd6f08b7ca8239cd4c17865b023cb06867c1ff98"
-#branch = "next"
+#rev = "fd6f08b7ca8239cd4c17865b023cb06867c1ff98"
+branch = "next"
 #version = "0.9.0-rc.2"
 default-features = false
 features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "native_tls_backend", "absolute_ratelimits", "collector", "voice"]
@@ -86,7 +86,7 @@ features = ["derive"]
 git = "https://github.com/launchbadge/sqlx/"
 branch = "master"
 default-features = false
-features = ["runtime-tokio", "macros", "postgres", "uuid", "offline", "chrono"]
+features = ["macros", "postgres", "uuid", "offline", "chrono", "runtime-tokio-native-tls"]
 
 # https://github.com/tafia/quick-xml
 [dependencies.quick-xml]
@@ -100,14 +100,14 @@ branch = "songbird"
 
 [dependencies.songbird]
 git = "https://github.com/serenity-rs/serenity/"
-rev = "fd6f08b7ca8239cd4c17865b023cb06867c1ff98"
-#branch = "next"
+#rev = "fd6f08b7ca8239cd4c17865b023cb06867c1ff98"
+branch = "next"
 default-features = false
 features = ["serenity-native", "gateway"]
 
-[patch.crates-io.serenity]
-git = "https://github.com/serenity-rs/serenity"
-rev = "fd6f08b7ca8239cd4c17865b023cb06867c1ff98"
+#[patch.crates-io.serenity]
+#git = "https://github.com/serenity-rs/serenity"
+#rev = "fd6f08b7ca8239cd4c17865b023cb06867c1ff98"
 #branch = "next"
 
 # used for profiling for flamegraph
