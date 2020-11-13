@@ -158,10 +158,10 @@ pub async fn send_message_delete(ctx: &Context, data: &MessageDeleteEvent) {
                     + "\u{200b}";
 
                 if content.len() > 1000 {
-                    e.field("New Content (1)", &content[..content.len() / 2], false);
-                    e.field("New Content (2)", &content[content.len() / 2..], false);
+                    e.field("Content (1)", &content[..content.len() / 2], false);
+                    e.field("Content (2)", &content[content.len() / 2..], false);
                 } else {
-                    e.field("New Content", &content, false);
+                    e.field("Content", &content, false);
                 }
 
                 if let Some(id) = &msg.webhook_id {
