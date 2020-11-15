@@ -64,9 +64,7 @@ features = ["full"]
 # https://github.com/serenity-rs/serenity
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"
-#rev = "fd6f08b7ca8239cd4c17865b023cb06867c1ff98"
-branch = "next"
-#version = "0.9.0-rc.2"
+branch = "current"
 default-features = false
 features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "native_tls_backend", "absolute_ratelimits", "collector", "voice"]
 
@@ -99,9 +97,8 @@ branch = "songbird"
 #version = "0.1.1-alpha"
 
 [dependencies.songbird]
-git = "https://github.com/serenity-rs/serenity/"
-#rev = "fd6f08b7ca8239cd4c17865b023cb06867c1ff98"
-branch = "next"
+git = "https://github.com/serenity-rs/songbird/"
+branch = "current"
 default-features = false
 features = ["serenity-native", "gateway"]
 
