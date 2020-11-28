@@ -173,7 +173,7 @@ async fn skip(ctx: &Context, msg: &Message) -> CommandResult {
 
 /// Displays the current song queue.
 #[command]
-#[aliases(que)]
+#[aliases(que, q)]
 async fn queue(ctx: &Context, msg: &Message) -> CommandResult {
     let lava_client_lock = {
         let data_read = ctx.data.read().await;
@@ -448,6 +448,8 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         query = re.replace_all(&query, "").into_owned();
     }
 
+    let mut m = None;
+
     if !embeded {
         if let Err(_) = ctx
             .http
@@ -459,9 +461,9 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             .await
         {
             if query.starts_with("http") {
-                msg.channel_id
+                m = Some(msg.channel_id
                     .say(ctx, "Please, put the url between <> so it doesn't embed.")
-                    .await?;
+                    .await?);
             }
         }
     }
@@ -585,6 +587,11 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         msg.channel_id.say(ctx, "Please, connect the bot to the voice channel you are currently on first with the `join` command.").await?;
     }
 
+    if let Some(m) = m {
+        tokio::time::delay_for(Duration::from_secs(2)).await;
+        let _ = m.delete(ctx).await;
+    }
+
     Ok(())
 }
 
@@ -604,6 +611,8 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
         query = re.replace_all(&query, "").into_owned();
     }
 
+    let mut m = None;
+
     if !embeded {
         if let Err(_) = ctx
             .http
@@ -615,9 +624,9 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
             .await
         {
             if query.starts_with("http") {
-                msg.channel_id
+                m = Some(msg.channel_id
                     .say(ctx, "Please, put the url between <> so it doesn't embed.")
-                    .await?;
+                    .await?);
             }
         }
     }
@@ -681,6 +690,11 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
             .await?;
     } else {
         msg.channel_id.say(ctx, "Please, connect the bot to the voice channel you are currently on first with the `join` command.").await?;
+    }
+
+    if let Some(m) = m {
+        tokio::time::delay_for(Duration::from_secs(2)).await;
+        let _ = m.delete(ctx).await;
     }
 
     Ok(())
