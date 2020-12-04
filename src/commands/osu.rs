@@ -422,7 +422,15 @@ async fn short_recent_builder(
     bot_msg.clone().edit(http.clone(), |m| { // say method doesn't work for the message builder.
         m.content(format!("`{}`", beatmap.beatmap_id));
         m.embed( |e| {
-            e.color(Colour::new(user.user_id.parse().unwrap()));
+            e.color(Colour::new({
+                let colour = user.user_id.parse().unwrap();
+                if colour > 16777215 {
+                    15227880
+                } else {
+                    colour
+                }
+            }));
+            dbg!(&e);
             e.title(format!("{} - {} [**{}**]\nby {}",
                             beatmap.artist, beatmap.title, beatmap.version, beatmap.creator));
             e.url(format!("https://osu.ppy.sh/b/{}", beatmap.beatmap_id));
