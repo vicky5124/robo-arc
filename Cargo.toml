@@ -36,8 +36,10 @@ photon-rs = { git = "https://github.com/silvia-odwyer/photon" }
 dotenv = "0.15" # https://github.com/dotenv-rs/dotenv
 loc = "0.5" # https://github.com/cgag/loc
 walkdir = "2.3" # https://github.com/BurntSushi/walkdir
+# TODO: remove this dep
 failure = "0.1" # https://github.com/rust-lang-nursery/failure
-racer = "=2.1.40" # https://github.com/racer-rust/racer/
+
+#racer = "=2.1.40" # https://github.com/racer-rust/racer/
 warp = "0.2" # https://github.com/seanmonstar/warp/
 chrono = "0.4" # https://github.com/chronotope/chrono
 humantime = "2.0" # https://github.com/tailhook/humantime
