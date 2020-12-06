@@ -68,7 +68,7 @@ pub async fn _join(ctx: &Context, msg: &Message) -> Result<String, Error> {
             lava_client_lock
                 .lock()
                 .await
-                .create_session(guild_id, &connection_info.recv_async().await?)
+                .create_session(guild_id, &connection_info)
                 .await?;
 
             Ok(connect_to.mention())

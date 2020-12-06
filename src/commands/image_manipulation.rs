@@ -60,7 +60,7 @@ async fn pride_image(
 
 async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
     // Load the image as a buffer.
-    let mut imgbuf = image::load_from_memory(&image_vec)?.into_rgba();
+    let mut imgbuf = image::load_from_memory(&image_vec)?.into_rgba8();
 
     let gray_bytes = Arc::new(Mutex::new(Vec::new()));
     let gray_bytes_clone = Arc::clone(&gray_bytes);
