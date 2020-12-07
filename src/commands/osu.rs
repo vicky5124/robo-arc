@@ -430,7 +430,6 @@ async fn short_recent_builder(
                     colour
                 }
             }));
-            dbg!(&e);
             e.title(format!("{} - {} [**{}**]\nby {}",
                             beatmap.artist, beatmap.title, beatmap.version, beatmap.creator));
             e.url(format!("https://osu.ppy.sh/b/{}", beatmap.beatmap_id));
