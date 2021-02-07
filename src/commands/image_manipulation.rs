@@ -1,4 +1,3 @@
-use image;
 use photon_rs::{
     multiple::blend,
     native::open_image,
@@ -17,24 +16,32 @@ use serenity::{
     model::channel::Message,
     prelude::Context,
 };
-use tokio::task::block_in_place;
+use tokio::task::spawn_blocking;
 
 async fn pride_image(
     image_vec: &[u8],
     name: String,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-    let mut og_image = PhotonImage::new_from_byteslice(image_vec.to_vec());
+    let og_image = RwLock::new(PhotonImage::new_from_byteslice(image_vec.to_vec()));
     let pride_path = format!("pride/{}.png", name);
-    let mut pride_image = open_image(Box::leak(pride_path.into_boxed_str()))?;
 
-    let og_image_arc = Arc::new(RwLock::new(&mut og_image));
-    let og_image_clone = Arc::clone(&og_image_arc);
-    let og_image_clone_clone = Arc::clone(&og_image_arc);
+    // TODO: Better error handling for this.
+    let mut pride_image = match open_image(Box::leak(pride_path.into_boxed_str())) {
+        Ok(x) => x,
+        Err(_) => {
+            let pride_path = "pride/gay_gradient.png".to_string();
+            open_image(Box::leak(pride_path.into_boxed_str()))?
+        }
+    };
 
-    block_in_place(move || {
+    let og_image_arc = Arc::new(og_image);
+    let og_image_clone = og_image_arc.clone();
+
+    spawn_blocking(move || {
         pride_image = {
-            let og_x = og_image_clone_clone.read().unwrap().get_width();
-            let og_y = og_image_clone_clone.read().unwrap().get_height();
+            let og = og_image_clone.read().unwrap();
+            let og_x = og.get_width();
+            let og_y = og.get_height();
 
             resize(&pride_image, og_x, og_y, SamplingFilter::Nearest)
         };
@@ -42,9 +49,11 @@ async fn pride_image(
         let mut og_img_mut = og_image_clone.write().unwrap();
 
         blend(&mut og_img_mut, &pride_image, "overlay");
-    });
+    }).await?;
 
     let mut result = Vec::new();
+
+    let og_image = og_image_arc.write().unwrap();
 
     let raw_pixels = og_image.get_raw_pixels();
     let width = og_image.get_width();
@@ -67,7 +76,7 @@ async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Erro
 
     // Iterate over the coordinates and pixels of the image
     // This makes the grading.
-    block_in_place(move || {
+    spawn_blocking(move || {
         for (_, _, pixel) in imgbuf.enumerate_pixels_mut() {
             // Algorythm to transform RGB into black and white.
             // https://en.wikipedia.org/wiki/YIQ
