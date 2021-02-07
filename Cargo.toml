@@ -122,5 +122,5 @@ features = ["serenity-rustls", "gateway"]
 
 # used for profiling for flamegraph
 # https://github.com/flamegraph-rs/flamegraph
-#[profile.release]
-#debug = true
+[profile.release]
+debug = true
