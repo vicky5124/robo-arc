@@ -21,6 +21,7 @@ use tokio::task::spawn_blocking;
 async fn pride_image(
     image_vec: &[u8],
     name: String,
+    algorythm: String,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
     let og_image = RwLock::new(PhotonImage::new_from_byteslice(image_vec.to_vec()));
     let pride_path = format!("pride/{}.png", name);
@@ -48,7 +49,7 @@ async fn pride_image(
 
         let mut og_img_mut = og_image_clone.write().unwrap();
 
-        blend(&mut og_img_mut, &pride_image, "overlay");
+        blend(&mut og_img_mut, &pride_image, &algorythm);
     }).await?;
 
     let mut result = Vec::new();
@@ -177,11 +178,17 @@ async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
 /// Prides the attached image.
 /// - Currently only works with attached images, with a maximum size of 8k
+/// - If an unknwon flag or algorithm is provided, the default will be used.
 ///
-/// Default: gay_gradient
-/// Usage: `pride transgender_gradient` and attach an image.
+/// Usage: `pride <flag> <algorithm>` and attach an image.
+/// Example:
+/// `pride`
+/// `pride transgender_gradient`
+/// `pride gay_gradient difference`
 ///
-/// Available flags:
+/// Default values in *cursive*
+///
+/// __Available flags__:
 /// **Agender**
 /// - agender
 /// - agender_gradient
@@ -198,7 +205,7 @@ async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 ///
 /// **Gay**
 /// - gay
-/// - gay_gradient
+/// - *gay_gradient*
 ///
 /// **Lesbian (2018)**
 /// - lesbian
@@ -218,13 +225,15 @@ async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 /// - transgender
 /// - transgender_reverse
 /// - transgender_gradient
+///
+/// __Available algorythms__:
+/// *`overlay`*, `over`, `atop`, `xor`, `multiply`, `burn`, `soft_light`,
+/// `hard_light`, `difference`, `lighten`, `darken`, `dodge`, `plus`, `exclusion`
 #[command]
 async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let arg = if let Ok(x) = args.single::<String>() {
-        x
-    } else {
-        "gay_gradient".to_string()
-    };
+    let arg = args.single::<String>().unwrap_or("gay_gradient".to_string());
+    let algorythm = args.single::<String>().unwrap_or("overlay".to_string());
+
     let first_attachment = &msg.attachments.get(0);
     let mut filename = &String::new();
 
@@ -266,7 +275,7 @@ async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
     // Uploads the grayscaled image bytes as an attachment
     // this is necessary to do as im never saving the image, just have the bytes as a vector.
-    let prided_bytes = pride_image(&bytes, arg).await?;
+    let prided_bytes = pride_image(&bytes, arg, algorythm).await?;
     let attachment = AttachmentType::Bytes {
         data: Cow::from(prided_bytes),
         filename: filename.to_owned(),
@@ -305,11 +314,9 @@ async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     pgrayscale
 )]
 async fn pride_pre_grayscaled(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let arg = if let Ok(x) = args.single::<String>() {
-        x
-    } else {
-        "gay_gradient".to_string()
-    };
+    let arg = args.single::<String>().unwrap_or("gay_gradient".to_string());
+    let algorythm = args.single::<String>().unwrap_or("overlay".to_string());
+
     let first_attachment = &msg.attachments.get(0);
     let mut filename = &String::new();
 
@@ -352,7 +359,7 @@ async fn pride_pre_grayscaled(ctx: &Context, msg: &Message, mut args: Args) -> C
     // Uploads the grayscaled image bytes as an attachment
     // this is necessary to do as im never saving the image, just have the bytes as a vector.
     let grayscaled_bytes = grayscale(&bytes).await?;
-    let prided_bytes = pride_image(&grayscaled_bytes, arg).await?;
+    let prided_bytes = pride_image(&grayscaled_bytes, arg, algorythm).await?;
     let attachment = AttachmentType::Bytes {
         data: Cow::from(prided_bytes),
         filename: filename.to_owned(),
