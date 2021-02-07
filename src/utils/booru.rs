@@ -59,7 +59,7 @@ pub async fn obtain_tags_unsafe(raw_args: Args) -> Vec<String> {
             "-n" => {
                 // basically choose a random item from the list.
                 let choices = ["rating:Questionable", "rating:Explicit"];
-                let r = rand::thread_rng().gen_range(0, choices.len());
+                let r = rand::thread_rng().gen_range(0..choices.len());
                 let choice = choices[r];
                 // and push that random item to the tags.
                 tags.push(choice)

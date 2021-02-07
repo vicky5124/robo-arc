@@ -913,7 +913,7 @@ async fn dynamic_prefix(ctx: &Context, msg: &Message) -> Option<String> {
 // Here's where everything starts.
 // This main function is a little special, as it returns Result
 // which allows ? to be used for error handling.
-#[tokio::main(core_threads = 8)]
+#[tokio::main(worker_threads = 8)]
 #[instrument]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Opens the config.toml file and reads it's content

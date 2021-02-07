@@ -113,7 +113,7 @@ pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     {
         let mut y = 1;
         loop {
-            let r = rand::thread_rng().gen_range(0, resp.len());
+            let r = rand::thread_rng().gen_range(0..resp.len());
             let x = &resp[r];
             y += 1;
             // 8MB
@@ -301,7 +301,7 @@ pub async fn chan(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     {
         let mut y = 1;
         loop {
-            let r = rand::thread_rng().gen_range(0, resp.len());
+            let r = rand::thread_rng().gen_range(0..resp.len());
             let x = &resp[r];
             y += 1;
             // 8MB

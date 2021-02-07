@@ -71,7 +71,7 @@ pub async fn _join(ctx: &Context, msg: &Message) -> Result<String, Error> {
                 .create_session(guild_id, &connection_info)
                 .await?;
 
-            Ok(connect_to.mention())
+            Ok(connect_to.mention().to_string())
         }
         Err(why) => {
             error!("Error joining voice channel: {}", why);
@@ -588,7 +588,7 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     }
 
     if let Some(m) = m {
-        tokio::time::delay_for(Duration::from_secs(2)).await;
+        tokio::time::sleep(Duration::from_secs(2)).await;
         let _ = m.delete(ctx).await;
     }
 
@@ -693,7 +693,7 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
     }
 
     if let Some(m) = m {
-        tokio::time::delay_for(Duration::from_secs(2)).await;
+        tokio::time::sleep(Duration::from_secs(2)).await;
         let _ = m.delete(ctx).await;
     }
 

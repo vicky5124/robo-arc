@@ -288,7 +288,7 @@ pub async fn get_booru(
     {
         let mut y = 1;
         loop {
-            let r = rand::thread_rng().gen_range(0, xml.post.len());
+            let r = rand::thread_rng().gen_range(0..xml.post.len());
             let x = xml.post[r].clone();
             let mut is_unsafe = false;
             y += 1;

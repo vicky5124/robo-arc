@@ -642,7 +642,7 @@ pub async fn notification_loop(ctx: Arc<Context>) {
             //});
             debug!("Notification loop finished.");
 
-            tokio::time::delay_for(Duration::from_secs(120)).await;
+            tokio::time::sleep(Duration::from_secs(120)).await;
         }
     });
 
@@ -666,7 +666,7 @@ pub async fn notification_loop(ctx: Arc<Context>) {
                     eprintln!("An error occurred while running unmute_check() >>> {}", why);
                 }
             });
-            tokio::time::delay_for(Duration::from_secs(15)).await;
+            tokio::time::sleep(Duration::from_secs(15)).await;
         }
     });
 }

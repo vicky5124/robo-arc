@@ -466,7 +466,7 @@ async fn permanent_ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
 
     msg.reply(ctx, format!("You are attempting to ban <@{}> with the id `{}` **PERMANENTLY**.\nThis is **NOT __reverseable__** and will make the user be banned again every time they try to join back.", user.0, user.0)).await?;
 
-    let r = rand::thread_rng().gen_range(0_u128, u128::MAX);
+    let r = rand::thread_rng().gen_range(0_u128..u128::MAX);
 
     dbg!(&r);
 
