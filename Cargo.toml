@@ -74,7 +74,9 @@ features = ["full"]
 [dependencies.serenity]
 #git = "https://github.com/serenity-rs/serenity"
 #branch = "current"
-version = "0.10"
+git = "https://github.com/Lakelezz/serenity"
+branch = "sub-command-nesting"
+#version = "0.10"
 default-features = false
 features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "rustls_backend", "absolute_ratelimits", "collector", "voice"]
 
@@ -115,10 +117,12 @@ version = "0.1"
 default-features = false
 features = ["serenity-rustls", "gateway"]
 
-#[patch.crates-io.serenity]
+[patch.crates-io.serenity]
 #git = "https://github.com/serenity-rs/serenity"
 #rev = "fd6f08b7ca8239cd4c17865b023cb06867c1ff98"
 #branch = "next"
+git = "https://github.com/Lakelezz/serenity"
+branch = "sub-command-nesting"
 
 # used for profiling for flamegraph
 # https://github.com/flamegraph-rs/flamegraph

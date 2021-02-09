@@ -710,7 +710,7 @@ async fn configure_osu(ctx: &Context, msg: &Message, arguments: Args) -> Command
 
 /// Shows your osu! profile or of the user specified user.username
 ///
-/// You can use `.osuc` to configure your osu! profile.
+/// You can use `osuc` to configure your osu! profile.
 ///
 /// Affected parameters for configuration:
 /// - PP: To know if the bot should display the PP stadistics.
@@ -1001,7 +1001,7 @@ async fn osu_profile(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
 /// Obtains your score on the specified beatmap id
 /// The number that's sent along with the recent command is the beatmap id of it.
 ///
-/// You can use `.osuc` to configure your osu! profile.
+/// You can use `osuc` to configure your osu! profile.
 ///
 /// Affected parameters for configuration:
 /// - Mode: To specify the gamemode the score was on.
@@ -1222,7 +1222,7 @@ async fn recent(ctx: &Context, msg: &Message, arguments: Args) -> CommandResult 
         user_data.short_recent = x.short_recent;
     } else {
         if arg_user == "" {
-            msg.channel_id.say(ctx, "It looks like you don't have a configured osu! username, consider configuring one with `n!osuc`").await?;
+            msg.channel_id.say(ctx, "It looks like you don't have a configured osu! username, consider configuring one with `osuc`").await?;
         }
         user_data.name = arg_user;
         user_data.mode = Some(0);

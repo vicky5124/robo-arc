@@ -613,12 +613,12 @@ pub async fn best_girl(ctx: &Context, msg: &Message, args: Args) -> CommandResul
     let row = if let Some(x) = data {
         x
     } else {
-        msg.reply(ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`").await?;
+        msg.reply(ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `conf user best_girl your_best_girl_tag`").await?;
         return Ok(());
     };
 
     if row.best_girl == None {
-        msg.reply(ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `.conf user best_girl your_best_girl_tag`").await?;
+        msg.reply(ctx, "You don't have any waifu :(\nBut don't worry! You can get one using `conf user best_girl your_best_girl_tag`").await?;
         return Ok(());
     }
 
