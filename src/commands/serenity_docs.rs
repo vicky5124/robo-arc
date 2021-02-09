@@ -105,9 +105,9 @@ async fn rtfm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     msg.channel_id
         .say(
             ctx,
-            "Serenity Tokio: <https://serenity-rs.github.io/serenity/current/serenity/>
-Serenity ThreadPool: <https://docs.rs/serenity/0.8.7/serenity/>
-Lavalink-rs: <https://docs.rs/lavalink-rs/0.3.0-alpha/lavalink_rs/>",
+            "Serenity: <https://serenity-rs.github.io/serenity/current/serenity/>
+Lavalink-rs: <https://docs.rs/lavalink-rs/>
+Songbird: <https://docs.rs/songbird/>",
         )
         .await?;
 
