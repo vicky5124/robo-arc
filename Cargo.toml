@@ -22,6 +22,7 @@ num-format = "0.4" # https://github.com/bcmyers/num-format
 serde_json = "1.0" # https://github.com/serde-rs/json
 serde-aux = "2" # https://github.com/vityafx/serde-aux
 image = "0.23" # https://github.com/image-rs/image
+libwebp-image = "0.2" # https://github.com/qnighy/libwebp-image-rs
 qrcode = "0.12" # https://github.com/kennytm/qrcode-rust
 tracing = "0.1" # https://github.com/tokio-rs/tracing
 tracing-subscriber = "0.2" # https://github.com/tokio-rs/tracing

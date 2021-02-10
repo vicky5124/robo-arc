@@ -17,6 +17,7 @@ use serenity::{
     prelude::Context,
 };
 use tokio::task::spawn_blocking;
+use reqwest::Client as ReqwestClient;
 
 async fn pride_image(
     image_vec: &[u8],
@@ -70,7 +71,22 @@ async fn pride_image(
 
 async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
     // Load the image as a buffer.
-    let mut imgbuf = image::load_from_memory(&image_vec)?.into_rgba8();
+    let mut imgbuf = match image::load_from_memory(&image_vec) {
+        Ok(x) => x.into_rgba8(),
+        Err(_) => {
+            let mut result = Vec::new();
+
+            {
+                let image_buf = libwebp_image::webp_load_from_memory(&image_vec)?.into_rgba8();
+
+                image::DynamicImage::ImageRgba8(image_buf)
+                    .write_to(&mut result, image::ImageOutputFormat::Jpeg(255))?;
+            }
+
+            image::load_from_memory(&result)?.into_rgba8()
+        }
+    };
+
 
     let gray_bytes = Arc::new(Mutex::new(Vec::new()));
     let gray_bytes_clone = Arc::clone(&gray_bytes);
@@ -91,7 +107,7 @@ async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Erro
         }
 
         // Save the image as “fractal.png”, the format is deduced from the path
-        // imgbuf.save("grayscale.png")?;
+        //imgbuf.save("grayscale.png");
         image::DynamicImage::ImageRgba8(imgbuf)
             .write_to(
                 &mut *gray_bytes_clone.lock().unwrap(),
@@ -141,8 +157,29 @@ async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
                 (x.url.to_owned(), bytes)
             }
         }
-        // else say that an image was not provided.
-        None => ("No image was provided.".to_string(), vec![0]),
+        // else use the user's pfp
+        None => {
+            let url = msg.author.face();
+
+            let reqwest = ReqwestClient::new();
+            let bytes = reqwest
+                .get(&url)
+                .send()
+                .await?
+                .bytes()
+                .await?
+                .into_iter()
+                .collect::<Vec<u8>>();
+
+            let image_buf = libwebp_image::webp_load_from_memory(&bytes)?.into_rgba8();
+
+            let mut result = Vec::new();
+
+            image::DynamicImage::ImageRgba8(image_buf)
+                .write_to(&mut result, image::ImageOutputFormat::Jpeg(255))?;
+
+            (url, result)
+        }
     };
 
     // if an error was returned from the previous checks, say the error and finish the command.
@@ -263,8 +300,29 @@ async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 (x.url.to_owned(), bytes)
             }
         }
-        // else say that an image was not provided.
-        None => ("No image was provided.".to_string(), vec![0]),
+        // else use the user's pfp
+        None => {
+            let url = msg.author.face();
+
+            let reqwest = ReqwestClient::new();
+            let bytes = reqwest
+                .get(&url)
+                .send()
+                .await?
+                .bytes()
+                .await?
+                .into_iter()
+                .collect::<Vec<u8>>();
+
+            let image_buf = libwebp_image::webp_load_from_memory(&bytes)?.into_rgba8();
+
+            let mut result = Vec::new();
+
+            image::DynamicImage::ImageRgba8(image_buf)
+                .write_to(&mut result, image::ImageOutputFormat::Jpeg(255))?;
+
+            (url, result)
+        }
     };
 
     // if an error was returned from the previous checks, say the error and finish the command.
@@ -346,8 +404,29 @@ async fn pride_pre_grayscaled(ctx: &Context, msg: &Message, mut args: Args) -> C
                 (x.url.to_owned(), bytes)
             }
         }
-        // else say that an image was not provided.
-        None => ("No image was provided.".to_string(), vec![0]),
+        // else use the user's pfp
+        None => {
+            let url = msg.author.face();
+
+            let reqwest = ReqwestClient::new();
+            let bytes = reqwest
+                .get(&url)
+                .send()
+                .await?
+                .bytes()
+                .await?
+                .into_iter()
+                .collect::<Vec<u8>>();
+
+            let image_buf = libwebp_image::webp_load_from_memory(&bytes)?.into_rgba8();
+
+            let mut result = Vec::new();
+
+            image::DynamicImage::ImageRgba8(image_buf)
+                .write_to(&mut result, image::ImageOutputFormat::Jpeg(255))?;
+
+            (url, result)
+        }
     };
 
     // if an error was returned from the previous checks, say the error and finish the command.
