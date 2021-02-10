@@ -492,6 +492,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {{
     let stderr = String::from_utf8(output.stderr).unwrap();
 
     if !stdout.is_empty() {
+        println!("{}", stdout);
         msg.channel_id
             .send_message(ctx, |m| {
                 m.embed(|e| {
@@ -502,6 +503,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {{
             .await?;
     }
     if !stderr.is_empty() {
+        eprintln!("{}", stderr);
         msg.channel_id
             .send_message(ctx, |m| {
                 m.embed(|e| {

@@ -5,8 +5,8 @@ use photon_rs::{
     PhotonImage,
 };
 
-//use std::fs::File;
-//use std::io::Write;
+use tracing::*;
+
 use std::borrow::Cow;
 use std::sync::{Arc, Mutex, RwLock};
 
@@ -18,6 +18,14 @@ use serenity::{
     prelude::Context,
 };
 use tokio::task::spawn_blocking;
+
+pub fn save_image(bytes: &[u8], path: &str) {
+    use std::fs::File;
+    use std::io::Write;
+
+    let mut file = File::create(path).unwrap();
+    file.write_all(bytes).unwrap();
+}
 
 async fn pride_image(
     image_vec: &[u8],
@@ -66,7 +74,8 @@ async fn pride_image(
     image::DynamicImage::ImageRgba8(img_buffer)
         .write_to(&mut result, image::ImageOutputFormat::Jpeg(255))?;
 
-    //save_image(result, "lol_test_overlay.png");
+    save_image(&result, "lol_test_overlay.png");
+
     Ok(result)
 }
 
@@ -129,7 +138,7 @@ async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Erro
 async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     // obtains the first attachment on the message or None if the message doesn't have one.
     let first_attachment = &msg.attachments.get(0);
-    let mut filename = &String::new();
+    let mut filename = "pfp.jpg".to_string();
 
     let (image_url, bytes) = match first_attachment {
         // if there was an attachment on the first possition, unwrap it.
@@ -149,7 +158,7 @@ async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
                 }
 
                 let bytes = x.download().await?;
-                filename = &x.filename;
+                filename = x.filename.to_string();
 
                 //let mut file = File::create(filename)?;
                 //file.write_all(&bytes)?;
@@ -274,7 +283,7 @@ async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let algorythm = args.single::<String>().unwrap_or("overlay".to_string());
 
     let first_attachment = &msg.attachments.get(0);
-    let mut filename = &String::new();
+    let mut filename = "pfp.jpg".to_string();
 
     let (image_url, bytes) = match first_attachment {
         // if there was an attachment on the first possition, unwrap it.
@@ -294,7 +303,7 @@ async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 }
 
                 let bytes = x.download().await?;
-                filename = &x.filename;
+                filename = x.filename.to_string();
 
                 //let mut file = File::create(filename)?;
                 //file.write_all(&bytes)?;
@@ -322,6 +331,7 @@ async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
             image::DynamicImage::ImageRgba8(image_buf)
                 .write_to(&mut result, image::ImageOutputFormat::Jpeg(255))?;
+
 
             (url, result)
         }
@@ -380,7 +390,7 @@ async fn pride_pre_grayscaled(ctx: &Context, msg: &Message, mut args: Args) -> C
     let algorythm = args.single::<String>().unwrap_or("overlay".to_string());
 
     let first_attachment = &msg.attachments.get(0);
-    let mut filename = &String::new();
+    let mut filename = "pfp.jpg".to_string();
 
     let (image_url, bytes) = match first_attachment {
         // if there was an attachment on the first possition, unwrap it.
@@ -400,7 +410,7 @@ async fn pride_pre_grayscaled(ctx: &Context, msg: &Message, mut args: Args) -> C
                 }
 
                 let bytes = x.download().await?;
-                filename = &x.filename;
+                filename = x.filename.to_string();
 
                 //let mut file = File::create(filename)?;
                 //file.write_all(&bytes)?;
@@ -441,8 +451,11 @@ async fn pride_pre_grayscaled(ctx: &Context, msg: &Message, mut args: Args) -> C
 
     // Uploads the grayscaled image bytes as an attachment
     // this is necessary to do as im never saving the image, just have the bytes as a vector.
+    warn!("1");
     let grayscaled_bytes = grayscale(&bytes).await?;
+    warn!("2");
     let prided_bytes = pride_image(&grayscaled_bytes, arg, algorythm).await?;
+    warn!("3");
     let attachment = AttachmentType::Bytes {
         data: Cow::from(prided_bytes),
         filename: filename.to_owned(),
