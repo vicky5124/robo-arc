@@ -9,7 +9,8 @@ use serenity::{
 pub async fn bot_has_manage_messages_check(ctx: &Context, msg: &Message) -> Result<(), Reason> {
     let bot_id = ctx.cache.current_user().await.id.0;
     let err = Reason::User(
-        "I'm unable to run this command due to missing the `Manage Messages` permission.".to_string(),
+        "I'm unable to run this command due to missing the `Manage Messages` permission."
+            .to_string(),
     );
     if let Some(guild) = msg.channel(ctx).await.unwrap().guild() {
         if !guild
@@ -42,7 +43,8 @@ pub async fn bot_has_manage_roles_check(ctx: &Context, msg: &Message) -> Result<
         .manage_roles()
     {
         Err(Reason::User(
-            "I'm unable to run this command due to missing the `Manage Roles` permission.".to_string(),
+            "I'm unable to run this command due to missing the `Manage Roles` permission."
+                .to_string(),
         ))
     } else {
         Ok(())

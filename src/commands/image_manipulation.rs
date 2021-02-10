@@ -10,6 +10,7 @@ use photon_rs::{
 use std::borrow::Cow;
 use std::sync::{Arc, Mutex, RwLock};
 
+use reqwest::Client as ReqwestClient;
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
     http::AttachmentType,
@@ -17,7 +18,6 @@ use serenity::{
     prelude::Context,
 };
 use tokio::task::spawn_blocking;
-use reqwest::Client as ReqwestClient;
 
 async fn pride_image(
     image_vec: &[u8],
@@ -51,7 +51,8 @@ async fn pride_image(
         let mut og_img_mut = og_image_clone.write().unwrap();
 
         blend(&mut og_img_mut, &pride_image, &algorythm);
-    }).await?;
+    })
+    .await?;
 
     let mut result = Vec::new();
 
@@ -86,7 +87,6 @@ async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Erro
             image::load_from_memory(&result)?.into_rgba8()
         }
     };
-
 
     let gray_bytes = Arc::new(Mutex::new(Vec::new()));
     let gray_bytes_clone = Arc::clone(&gray_bytes);
@@ -268,7 +268,9 @@ async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 /// `hard_light`, `difference`, `lighten`, `darken`, `dodge`, `plus`, `exclusion`
 #[command]
 async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let arg = args.single::<String>().unwrap_or("gay_gradient".to_string());
+    let arg = args
+        .single::<String>()
+        .unwrap_or("gay_gradient".to_string());
     let algorythm = args.single::<String>().unwrap_or("overlay".to_string());
 
     let first_attachment = &msg.attachments.get(0);
@@ -372,7 +374,9 @@ async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     pgrayscale
 )]
 async fn pride_pre_grayscaled(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let arg = args.single::<String>().unwrap_or("gay_gradient".to_string());
+    let arg = args
+        .single::<String>()
+        .unwrap_or("gay_gradient".to_string());
     let algorythm = args.single::<String>().unwrap_or("overlay".to_string());
 
     let first_attachment = &msg.attachments.get(0);

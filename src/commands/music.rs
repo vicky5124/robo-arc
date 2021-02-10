@@ -461,9 +461,11 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             .await
         {
             if query.starts_with("http") {
-                m = Some(msg.channel_id
-                    .say(ctx, "Please, put the url between <> so it doesn't embed.")
-                    .await?);
+                m = Some(
+                    msg.channel_id
+                        .say(ctx, "Please, put the url between <> so it doesn't embed.")
+                        .await?,
+                );
             }
         }
     }
@@ -624,9 +626,11 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
             .await
         {
             if query.starts_with("http") {
-                m = Some(msg.channel_id
-                    .say(ctx, "Please, put the url between <> so it doesn't embed.")
-                    .await?);
+                m = Some(
+                    msg.channel_id
+                        .say(ctx, "Please, put the url between <> so it doesn't embed.")
+                        .await?,
+                );
             }
         }
     }
