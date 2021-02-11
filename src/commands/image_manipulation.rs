@@ -5,8 +5,6 @@ use photon_rs::{
     PhotonImage,
 };
 
-use tracing::*;
-
 use std::borrow::Cow;
 use std::sync::{Arc, Mutex, RwLock};
 
@@ -19,7 +17,7 @@ use serenity::{
 };
 use tokio::task::spawn_blocking;
 
-pub fn save_image(bytes: &[u8], path: &str) {
+pub fn _save_image(bytes: &[u8], path: &str) {
     use std::fs::File;
     use std::io::Write;
 
@@ -74,7 +72,7 @@ async fn pride_image(
     image::DynamicImage::ImageRgba8(img_buffer)
         .write_to(&mut result, image::ImageOutputFormat::Jpeg(255))?;
 
-    save_image(&result, "lol_test_overlay.png");
+    //_save_image(&result, "lol_test_overlay.png");
 
     Ok(result)
 }
@@ -116,17 +114,19 @@ async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Erro
         }
 
         // Save the image as “fractal.png”, the format is deduced from the path
-        //imgbuf.save("grayscale.png");
+        //let _ = imgbuf.save("grayscale.png");
+        let mut gray_bytes = gray_bytes_clone.lock().unwrap();
         image::DynamicImage::ImageRgba8(imgbuf)
-            .write_to(
-                &mut *gray_bytes_clone.lock().unwrap(),
-                image::ImageOutputFormat::Jpeg(255),
-            )
+            .write_to(&mut *gray_bytes, image::ImageOutputFormat::Jpeg(255))
             .expect("There was an error writing the image.");
-    });
+    })
+    .await?;
 
-    let result = gray_bytes.lock().unwrap();
-    Ok(result.clone().to_vec())
+    let image_bytes = gray_bytes.lock().unwrap();
+
+    //_save_image(&image_bytes, "lol_test_overlay.png");
+
+    Ok(image_bytes.to_vec())
 }
 
 /// Grayscales the attached image.
@@ -332,7 +332,6 @@ async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             image::DynamicImage::ImageRgba8(image_buf)
                 .write_to(&mut result, image::ImageOutputFormat::Jpeg(255))?;
 
-
             (url, result)
         }
     };
@@ -451,11 +450,8 @@ async fn pride_pre_grayscaled(ctx: &Context, msg: &Message, mut args: Args) -> C
 
     // Uploads the grayscaled image bytes as an attachment
     // this is necessary to do as im never saving the image, just have the bytes as a vector.
-    warn!("1");
     let grayscaled_bytes = grayscale(&bytes).await?;
-    warn!("2");
     let prided_bytes = pride_image(&grayscaled_bytes, arg, algorythm).await?;
-    warn!("3");
     let attachment = AttachmentType::Bytes {
         data: Cow::from(prided_bytes),
         filename: filename.to_owned(),
