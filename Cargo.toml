@@ -48,7 +48,7 @@ warp = "0.3" # https://github.com/seanmonstar/warp/
 chrono = "0.4" # https://github.com/chronotope/chrono
 humantime = "2.0" # https://github.com/tailhook/humantime
 fasteval = "0.2" # https://github.com/likebike/fasteval
-#darkredis = "0.7" # https://github.com/bunogi/darkredis
+darkredis = "0.8" # https://github.com/bunogi/darkredis
 num_cpus = "1.13" # https://github.com/seanmonstar/num_cpus 
 clap = "2.33" # https://github.com/clap-rs/clap
  
@@ -57,10 +57,6 @@ clap = "2.33" # https://github.com/clap-rs/clap
 #[features]
 #default = ["reqwest/default-tls"]
 #vendored-openssl = ["openssl/vendored"]
-
-[dependencies.darkredis]
-git = "https://github.com/BlackHoleFox/darkredis"
-branch = "tokio-and-dependency-updates"
  
 # https://github.com/rust-random/rand
 [dependencies.rand]
@@ -107,7 +103,7 @@ features = ["serialize"]
 #git = "https://gitlab.com/nitsuga5124/lavalink-rs/"
 #branch = "songbird"
 version = "0.5"
-features = ["rustls"]
+features = ["rustls", "andesite"]
 
 [dependencies.songbird]
 #git = "https://github.com/serenity-rs/songbird/"
