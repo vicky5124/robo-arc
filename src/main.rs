@@ -764,6 +764,7 @@ async fn before(ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
     }
 
     info!("Running command: {}", &cmd_name);
+    debug!("Command Message Struct: {:?}", &msg);
 
     true
 }
