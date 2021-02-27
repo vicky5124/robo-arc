@@ -193,7 +193,7 @@ async fn queue(ctx: &Context, msg: &Message) -> CommandResult {
             }
 
             if node.queue.len() > 10 {
-                queue += &format!("... {}", node.queue.len());
+                queue += &format!("... {}", node.queue.len() - 1);
             }
 
             queue += "\n```";
@@ -205,6 +205,67 @@ async fn queue(ctx: &Context, msg: &Message) -> CommandResult {
             msg.channel_id.say(ctx, "The queue is empty.").await?;
         }
     };
+
+    Ok(())
+}
+
+/// Removes the queue item with that index.
+#[command]
+#[aliases(rem, rm)]
+async fn remove(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let index = match args.single::<usize>() {
+        Ok(x) => x,
+        Err(_) => {
+            msg.reply(ctx, "Please specify a valid queue index number.")
+                .await?;
+            return Ok(());
+        }
+    };
+
+    let lava_client = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<Lavalink>().unwrap().clone()
+    };
+
+    if let Some(mut node) = lava_client.nodes().await.get_mut(&msg.guild_id.unwrap().0) {
+        if index < node.queue.len() && index != 0 {
+            let track = node.queue.remove(index);
+            let track_info = track.track.info.as_ref().unwrap();
+
+            msg.channel_id
+                .send_message(ctx, |m| {
+                    m.content("Skipped:");
+                    m.embed(|e| {
+                        e.title(&track_info.title);
+                        e.thumbnail(format!(
+                            "https://i.ytimg.com/vi/{}/default.jpg",
+                            &track_info.identifier
+                        ));
+                        e.url(&track_info.uri);
+                        e.footer(|f| f.text(format!("Submited by unknown")));
+                        e.field("Uploader", &track_info.author, true);
+                        e.field(
+                            "Length",
+                            format!("{}:{}", track_info.length / 1000 % 3600 / 60, {
+                                let x = track_info.length / 1000 % 3600 % 60;
+                                if x < 10 {
+                                    format!("0{}", x)
+                                } else {
+                                    x.to_string()
+                                }
+                            }),
+                            true,
+                        );
+                        e
+                    })
+                })
+                .await?;
+
+            return Ok(());
+        }
+    }
+
+    msg.channel_id.say(ctx, "Nothing to skip.").await?;
 
     Ok(())
 }
@@ -517,7 +578,8 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             }
         };
 
-        lava_client.play(guild_id, query_information.tracks[0].clone())
+        lava_client
+            .play(guild_id, query_information.tracks[0].clone())
             .requester(msg.author.id)
             .queue()
             .await?;
@@ -580,7 +642,7 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
 /// Adds an entire playlist to the queue.
 ///
-/// Usage: `play https://www.youtube.com/playlist?list=PLTktV6LgA75yif8RR7yUiSttZD7GKtl_5`
+/// Usage: `playlist https://www.youtube.com/playlist?list=PLTktV6LgA75yif8RR7yUiSttZD7GKtl_5`
 #[command]
 #[min_args(1)]
 #[aliases(playlist, playplaylist, play_list, pl, playl, plist)]
@@ -653,7 +715,8 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
         };
 
         for track in query_information.tracks {
-            lava_client.play(guild_id, track.clone())
+            lava_client
+                .play(guild_id, track.clone())
                 .requester(msg.author.id)
                 .queue()
                 .await?;

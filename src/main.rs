@@ -303,6 +303,7 @@ struct Mod;
     resume,
     stop,
     skip,
+    remove,
     seek,
     shuffle,
     queue,
