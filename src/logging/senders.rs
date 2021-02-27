@@ -1,12 +1,6 @@
 use crate::global_data::DatabasePool;
 use crate::utils::logging::{guild_has_logging, LoggingEvents};
 
-use tracing::{
-    error,
-    //warn,
-    instrument,
-};
-
 use serenity::{
     model::{
         channel::{Channel, Embed, PermissionOverwriteType, ReactionType},

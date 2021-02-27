@@ -3,7 +3,6 @@ use bitflags::bitflags;
 
 use serenity::model::id::GuildId;
 use sqlx::PgPool;
-use tracing::error;
 
 bitflags! {
     pub struct LoggingEvents: u64 {

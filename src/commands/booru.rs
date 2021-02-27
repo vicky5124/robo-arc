@@ -17,7 +17,6 @@ use std::{borrow::Cow, collections::HashMap, time::Duration};
 
 use futures::stream::StreamExt;
 use futures::TryStreamExt;
-use sqlx;
 
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult, Delimiter},

@@ -4,13 +4,6 @@ use std::{collections::HashMap, sync::Arc};
 
 use darkredis::Connection;
 
-use tracing::{
-    error,
-    instrument,
-    //info,
-    warn,
-};
-
 use serenity::{
     model::{
         event::*,

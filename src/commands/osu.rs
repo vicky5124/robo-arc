@@ -16,7 +16,6 @@ use serenity::{
     utils::Colour,
 };
 
-use sqlx;
 //use futures::TryStreamExt;
 //use futures::stream::StreamExt;
 

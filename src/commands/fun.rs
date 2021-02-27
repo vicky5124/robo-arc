@@ -16,11 +16,9 @@ use serenity::{
 use qrcode::{render::unicode, QrCode};
 use reqwest::{Client as ReqwestClient, Url};
 use serde::{Deserialize, Serialize};
-use tracing::error;
 
 use crypto::buffer::{BufferResult, ReadBuffer, WriteBuffer};
 use crypto::{aes, blockmodes, buffer, symmetriccipher};
-use hex;
 
 use fasteval::error::Error;
 

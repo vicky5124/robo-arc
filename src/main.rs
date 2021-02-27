@@ -8,6 +8,8 @@
 //!
 //! This is lisenced with the copyleft license Mozilla Public License Version 2.0
 
+#[macro_use] extern crate tracing;
+
 mod commands; // Load the commands module
 mod global_data;
 mod logging;
@@ -55,27 +57,16 @@ use std::{
 use tokio::sync::Mutex;
 
 use dotenv;
-use tracing::{
-    debug,
-    error,
-
-    // Log macros.
-    info,
-    instrument,
-    // Others
-    Level,
-};
+use tracing::Level;
 
 use tracing_log::LogTracer;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 //use tracing_futures::Instrument;
-//use log;
 
 use serde::{
     Deserialize, // To deserialize data into structures
     Serialize,
 };
-use serde_json; // To parse the data of .json files (where's serde_toml smh)
 
 use warp::{reply::json, reply::Json, Filter};
 

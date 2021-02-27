@@ -3,11 +3,6 @@ use crate::logging::*;
 
 use std::sync::Arc;
 
-//use tracing::{
-//    warn,
-//    error,
-//};
-
 use serenity::{
     async_trait,
     model::event::Event,

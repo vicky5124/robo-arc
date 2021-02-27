@@ -11,23 +11,12 @@ use serenity::{
 use tokio::process::Command;
 
 use regex::Regex;
-use serde_json;
 
 use failure::Error;
 use failure::Fail;
 
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-
-use tracing::{
-    //    info,
-    //    trace,
-    //    debug,
-    //    warn,
-    error,
-    //    //Log macros.
-    instrument,
-};
 
 #[derive(Debug, Fail)]
 #[fail(display = "Not in a voice channel.")]

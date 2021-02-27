@@ -10,9 +10,6 @@ use std::{
 
 use reqwest::{header::*, Client as ReqwestClient, Url};
 use serde::Deserialize;
-use sqlx;
-
-use tracing::{debug, error, info};
 
 use serenity::{
     model::{channel::Embed, id::ChannelId},

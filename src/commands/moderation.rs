@@ -4,8 +4,6 @@ use crate::utils::checks::BOT_HAS_MANAGE_ROLES_CHECK;
 
 use std::time::Duration;
 
-use tracing::warn;
-
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult, Delimiter},
     model::{

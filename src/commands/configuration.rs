@@ -7,7 +7,6 @@ use std::time::Duration;
 
 use futures::stream::StreamExt;
 use futures::TryStreamExt;
-use sqlx;
 
 use reqwest::Url;
 use serde_json;
