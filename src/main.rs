@@ -1053,14 +1053,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             let port = configuration.lavalink.port;
             let password = configuration.lavalink.password;
 
-            let mut lava_client = LavalinkClient::new(bot_id.0);
+            let lava_client = LavalinkClient::builder(bot_id.0)
+                .set_host(host.to_string())
+                .set_password(password.to_string())
+                .set_port(port.try_into().unwrap())
+                .build(LavalinkHandler)
+                .await?;
 
-            lava_client.set_host(host.to_string());
-            lava_client.set_password(password.to_string());
-            lava_client.set_port(port.try_into().unwrap());
-
-            let lava = lava_client.initialize(LavalinkHandler).await?;
-            data.insert::<Lavalink>(lava);
+            data.insert::<Lavalink>(lava_client);
         }
 
         {

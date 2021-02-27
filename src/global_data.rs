@@ -52,7 +52,7 @@ impl TypeMapKey for BooruCommands {
 }
 
 impl TypeMapKey for Lavalink {
-    type Value = Arc<Mutex<LavalinkClient>>;
+    type Value = LavalinkClient;
 }
 
 impl TypeMapKey for SentTwitchStreams {

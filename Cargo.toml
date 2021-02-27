@@ -102,7 +102,7 @@ features = ["serialize"]
 [dependencies.lavalink-rs]
 #git = "https://gitlab.com/nitsuga5124/lavalink-rs/"
 #branch = "songbird"
-version = "0.5"
+version = "0.6.0-rc"
 features = ["rustls", "andesite"]
 
 [dependencies.songbird]
