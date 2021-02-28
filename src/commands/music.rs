@@ -87,16 +87,14 @@ async fn shuffle(ctx: &Context, msg: &Message) -> CommandResult {
         {
             let old_queue = node.queue.clone();
 
-            if !old_queue.is_empty() {
-                if old_queue.len() > 1 {
-                    let mut queue = old_queue.get(1..).unwrap().to_vec();
+            if !old_queue.is_empty() && old_queue.len() > 1 {
+                let mut queue = old_queue.get(1..).unwrap().to_vec();
 
-                    let mut rng = thread_rng();
-                    queue.shuffle(&mut rng);
+                let mut rng = thread_rng();
+                queue.shuffle(&mut rng);
 
-                    node.queue = vec![old_queue[0].clone()];
-                    node.queue.append(&mut queue.to_vec());
-                }
+                node.queue = vec![old_queue[0].clone()];
+                node.queue.append(&mut queue.to_vec());
             }
         }
         msg.react(ctx, '✅').await?;
@@ -129,7 +127,7 @@ async fn skip(ctx: &Context, msg: &Message) -> CommandResult {
                         &track_info.identifier
                     ));
                     e.url(&track_info.uri);
-                    e.footer(|f| f.text(format!("Submited by unknown")));
+                    e.footer(|f| f.text("Submited by unknown".to_string()));
                     e.field("Uploader", &track_info.author, true);
                     e.field(
                         "Length",
@@ -231,7 +229,7 @@ async fn remove(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                             &track_info.identifier
                         ));
                         e.url(&track_info.uri);
-                        e.footer(|f| f.text(format!("Submited by unknown")));
+                        e.footer(|f| f.text("Submited by unknown".to_string()));
                         e.field("Uploader", &track_info.author, true);
                         e.field(
                             "Length",
@@ -485,24 +483,23 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     let mut m = None;
 
-    if !embeded {
-        if let Err(_) = ctx
-            .http
-            .edit_message(
-                msg.channel_id.0,
-                msg.id.0,
-                &serde_json::json!({"flags" : 4}),
-            )
-            .await
-        {
-            if query.starts_with("http") {
-                m = Some(
-                    msg.channel_id
-                        .say(ctx, "Please, put the url between <> so it doesn't embed.")
-                        .await?,
-                );
-            }
-        }
+    if ctx
+        .http
+        .edit_message(
+            msg.channel_id.0,
+            msg.id.0,
+            &serde_json::json!({"flags" : 4}),
+        )
+        .await
+        .is_err()
+        && query.starts_with("http")
+        && !embeded
+    {
+        m = Some(
+            msg.channel_id
+                .say(ctx, "Please, put the url between <> so it doesn't embed.")
+                .await?,
+        );
     }
 
     let guild_id = match ctx.cache.guild_channel(msg.channel_id).await {
@@ -647,24 +644,23 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
 
     let mut m = None;
 
-    if !embeded {
-        if let Err(_) = ctx
-            .http
-            .edit_message(
-                msg.channel_id.0,
-                msg.id.0,
-                &serde_json::json!({"flags" : 4}),
-            )
-            .await
-        {
-            if query.starts_with("http") {
-                m = Some(
-                    msg.channel_id
-                        .say(ctx, "Please, put the url between <> so it doesn't embed.")
-                        .await?,
-                );
-            }
-        }
+    if ctx
+        .http
+        .edit_message(
+            msg.channel_id.0,
+            msg.id.0,
+            &serde_json::json!({"flags" : 4}),
+        )
+        .await
+        .is_err()
+        && query.starts_with("http")
+        && !embeded
+    {
+        m = Some(
+            msg.channel_id
+                .say(ctx, "Please, put the url between <> so it doesn't embed.")
+                .await?,
+        );
     }
 
     let guild_id = match ctx.cache.guild_channel(msg.channel_id).await {

@@ -87,22 +87,20 @@ async fn higher_or_lower(ctx: &Context, msg: &Message) -> CommandResult {
 
                             break;
                         }
-                    } else {
-                        if new_value > current_value {
-                            message
-                                .edit(ctx, |m| {
-                                    m.embed(|e| {
-                                        e.title(format!("{} lost.", msg.author.name));
-                                        e.image(format!(
-                                            "https://5124.mywire.org/HDD/poker_cards/{}",
-                                            choice
-                                        ))
-                                    })
+                    } else if new_value > current_value {
+                        message
+                            .edit(ctx, |m| {
+                                m.embed(|e| {
+                                    e.title(format!("{} lost.", msg.author.name));
+                                    e.image(format!(
+                                        "https://5124.mywire.org/HDD/poker_cards/{}",
+                                        choice
+                                    ))
                                 })
-                                .await?;
+                            })
+                            .await?;
 
-                            break;
-                        }
+                        break;
                     }
 
                     current_value = new_value;
@@ -347,15 +345,18 @@ async fn tic_tac_toe(ctx: &Context, msg: &Message, mut args: Args) -> CommandRes
     }
     players.pop();
 
-    let mut board = Board::default();
-    board.current_piece = players[0].1;
+    let mut board = Board {
+        current_piece: players[0].1,
+        ..Default::default()
+    };
+
     let mut m = msg
         .channel_id
         .say(ctx, format!(">>> ```{}```", &board))
         .await?;
 
     for i in 1..4u8 {
-        let num = ReactionType::Unicode(String::from(format!("{}\u{fe0f}\u{20e3}", i)));
+        let num = ReactionType::Unicode(format!("{}\u{fe0f}\u{20e3}", i));
         m.react(ctx, num).await?;
     }
 
@@ -403,26 +404,25 @@ async fn tic_tac_toe(ctx: &Context, msg: &Message, mut args: Args) -> CommandRes
                         let _ = m.delete_reactions(ctx).await;
                         return Ok(());
                     }
-                } else {
-                    if !x.is_none() && !y.is_none() {
-                        let piece = Piece {
-                            pos_x: x.unwrap(),
-                            pos_y: y.unwrap(),
-                            typ: Some(i.1),
-                        };
-                        if let Err(_) = board.place_piece(piece) {
-                            x = None;
-                            y = None;
-                        } else {
-                            break 'outer;
-                        }
+                } else if !x.is_none() && !y.is_none() {
+                    let piece = Piece {
+                        pos_x: x.unwrap(),
+                        pos_y: y.unwrap(),
+                        typ: Some(i.1),
+                    };
+
+                    if board.place_piece(piece).is_err() {
+                        x = None;
+                        y = None;
+                    } else {
+                        break 'outer;
                     }
                 }
             }
         }
         board.check_win_condition();
 
-        if let Some(_) = board.win_condition {
+        if board.win_condition.is_some() {
             m.edit(ctx, |m| {
                 m.content(format!("{} WON!\n>>> ```{}```", i.0.mention(), &board))
             })

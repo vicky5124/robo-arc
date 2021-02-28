@@ -9,7 +9,6 @@ use futures::stream::StreamExt;
 use futures::TryStreamExt;
 
 use reqwest::Url;
-use serde_json;
 
 use regex::Regex;
 
@@ -43,7 +42,7 @@ async fn set_best_tags(
     .fetch_optional(&pool)
     .await?;
 
-    if let None = data {
+    if data.is_none() {
         if sex == "boy" {
             // insert +1boy
             tags += " 1boy";
@@ -190,7 +189,7 @@ async fn streamrole(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
             .get_member(msg.guild_id.unwrap().0, msg.author.id.0)
             .await?;
         if !member.roles.contains(&RoleId(role_id as u64)) {
-            if let Err(_) = member.add_role(ctx, role_id as u64).await {
+            if member.add_role(ctx, role_id as u64).await.is_err() {
                 msg.channel_id.say(ctx, "The configured role does not exist, contact the server administrators about the issue.").await?;
             } else {
                 msg.channel_id
@@ -207,26 +206,24 @@ async fn streamrole(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                     )
                     .await?;
             }
+        } else if let Err(why) = member.remove_role(ctx, role_id as u64).await {
+            msg.channel_id
+                .say(ctx, format!("I was unable to remove your role: {}", why))
+                .await?;
         } else {
-            if let Err(why) = member.remove_role(ctx, role_id as u64).await {
-                msg.channel_id
-                    .say(ctx, format!("I was unable to remove your role: {}", why))
-                    .await?;
-            } else {
-                msg.channel_id
-                    .say(
-                        ctx,
-                        format!(
-                            "Successfully removed the role `{}`",
-                            RoleId(role_id as u64)
-                                .to_role_cached(ctx)
-                                .await
-                                .unwrap()
-                                .name
-                        ),
-                    )
-                    .await?;
-            }
+            msg.channel_id
+                .say(
+                    ctx,
+                    format!(
+                        "Successfully removed the role `{}`",
+                        RoleId(role_id as u64)
+                            .to_role_cached(ctx)
+                            .await
+                            .unwrap()
+                            .name
+                    ),
+                )
+                .await?;
         }
     }
 
@@ -236,13 +233,13 @@ async fn streamrole(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
 #[command]
 #[aliases(husbando, husband, bb)]
 async fn best_boy(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    Ok(set_best_tags("boy", ctx, msg, args.message().to_string()).await?)
+    set_best_tags("boy", ctx, msg, args.message().to_string()).await
 }
 
 #[command]
 #[aliases(waifu, wife, bg)]
 async fn best_girl(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    Ok(set_best_tags("girl", ctx, msg, args.message().to_string()).await?)
+    set_best_tags("girl", ctx, msg, args.message().to_string()).await
 }
 
 #[command]
@@ -264,7 +261,7 @@ async fn booru(ctx: &Context, msg: &Message, raw_args: Args) -> CommandResult {
     .boxed()
     .await?;
 
-    if let None = data {
+    if data.is_none() {
         if booru.as_str() == "" {
             msg.reply(ctx, "Please, specify the booru to set as your default.")
                 .await?;
@@ -332,7 +329,7 @@ async fn notifications(ctx: &Context, message: &Message, _args: Args) -> Command
     }).await?;
 
     for i in 1..=2_u8 {
-        let num = ReactionType::Unicode(String::from(format!("{}\u{fe0f}\u{20e3}", i)));
+        let num = ReactionType::Unicode(format!("{}\u{fe0f}\u{20e3}", i));
         msg.react(ctx, num).await?;
     }
 
@@ -340,7 +337,29 @@ async fn notifications(ctx: &Context, message: &Message, _args: Args) -> Command
     let mut is_create = true;
     let mut site = "yandere";
 
-    loop {
+    if let Some(reaction) = message
+        .author
+        .await_reaction(ctx)
+        .timeout(Duration::from_secs(120))
+        .await
+    {
+        reaction.as_inner_ref().delete(ctx).await?;
+        let emoji = &reaction.as_inner_ref().emoji;
+
+        match emoji.as_data().as_str() {
+            "1\u{fe0f}\u{20e3}" => is_hook = true,
+            "2\u{fe0f}\u{20e3}" => is_hook = false,
+            _ => (),
+        }
+
+        msg.edit(ctx, |m| {
+            m.content(format!("<@{}>", message.author.id));
+            m.embed(|e| {
+                e.title("Select the number of option that you want");
+                e.description("Select the operation you want to do:\n\n1: Create Notification\n2: Remove Existing Notification (WIP)")
+            })
+        }).await?;
+
         if let Some(reaction) = message
             .author
             .await_reaction(ctx)
@@ -351,18 +370,20 @@ async fn notifications(ctx: &Context, message: &Message, _args: Args) -> Command
             let emoji = &reaction.as_inner_ref().emoji;
 
             match emoji.as_data().as_str() {
-                "1\u{fe0f}\u{20e3}" => is_hook = true,
-                "2\u{fe0f}\u{20e3}" => is_hook = false,
+                "1\u{fe0f}\u{20e3}" => is_create = true,
+                "2\u{fe0f}\u{20e3}" => is_create = false,
                 _ => (),
             }
-
             msg.edit(ctx, |m| {
                 m.content(format!("<@{}>", message.author.id));
                 m.embed(|e| {
                     e.title("Select the number of option that you want");
-                    e.description("Select the operation you want to do:\n\n1: Create Notification\n2: Remove Existing Notification (WIP)")
+                    e.description(
+                        "Select the site to configure notifications on:\n\n1: YandeRe\n2: Twitch",
+                    )
                 })
-            }).await?;
+            })
+            .await?;
 
             if let Some(reaction) = message
                 .author
@@ -374,36 +395,9 @@ async fn notifications(ctx: &Context, message: &Message, _args: Args) -> Command
                 let emoji = &reaction.as_inner_ref().emoji;
 
                 match emoji.as_data().as_str() {
-                    "1\u{fe0f}\u{20e3}" => is_create = true,
-                    "2\u{fe0f}\u{20e3}" => is_create = false,
+                    "1\u{fe0f}\u{20e3}" => site = "yandere",
+                    "2\u{fe0f}\u{20e3}" => site = "twitch",
                     _ => (),
-                }
-                msg.edit(ctx, |m| {
-                    m.content(format!("<@{}>", message.author.id));
-                    m.embed(|e| {
-                        e.title("Select the number of option that you want");
-                        e.description("Select the site to configure notifications on:\n\n1: YandeRe\n2: Twitch")
-                    })
-                }).await?;
-
-                if let Some(reaction) = message
-                    .author
-                    .await_reaction(ctx)
-                    .timeout(Duration::from_secs(120))
-                    .await
-                {
-                    reaction.as_inner_ref().delete(ctx).await?;
-                    let emoji = &reaction.as_inner_ref().emoji;
-
-                    match emoji.as_data().as_str() {
-                        "1\u{fe0f}\u{20e3}" => site = "yandere",
-                        "2\u{fe0f}\u{20e3}" => site = "twitch",
-                        _ => (),
-                    }
-                    break;
-                } else {
-                    timeout(ctx, &mut msg, message).await?;
-                    return Ok(());
                 }
             } else {
                 timeout(ctx, &mut msg, message).await?;
@@ -413,6 +407,9 @@ async fn notifications(ctx: &Context, message: &Message, _args: Args) -> Command
             timeout(ctx, &mut msg, message).await?;
             return Ok(());
         }
+    } else {
+        timeout(ctx, &mut msg, message).await?;
+        return Ok(());
     }
 
     match site {
@@ -556,7 +553,7 @@ async fn configure_yandere(
 
             if is_hook {
                 check_hook(ctx, msg, &mut config).await;
-                if let None = config.hook {
+                if config.hook.is_none() {
                     let channel_id = msg.channel_id.0;
                     let map = serde_json::json!({"name": "Robo Arc"});
 
@@ -577,7 +574,7 @@ async fn configure_yandere(
                     .await?;
 
                     if let Some(row) = query {
-                        let mut hooks = row.webhook.unwrap_or(Vec::new());
+                        let mut hooks = row.webhook.unwrap_or_default();
                         hooks.push(hook_url);
                         hooks.dedup();
 
@@ -618,7 +615,7 @@ async fn configure_yandere(
                 .await?;
 
                 if let Some(row) = query {
-                    let mut channels = row.channel_id.unwrap_or(Vec::new());
+                    let mut channels = row.channel_id.unwrap_or_default();
                     channels.push(msg.channel_id.0 as i64);
                     channels.dedup();
 
@@ -741,7 +738,7 @@ async fn configure_twitch(
 
                 if is_hook {
                     check_hook(ctx, msg, &mut config).await;
-                    if let None = config.hook {
+                    if config.hook.is_none() {
                         let channel_id = msg.channel_id.0;
                         let map = serde_json::json!({"name": "Robo Arc"});
 
@@ -785,190 +782,194 @@ async fn configure_twitch(
                     .await?;
             }
         }
-    } else {
-        if is_hook {
-            msg.edit(ctx, |m| {
-                m.content(format!("<@{}>", author.id));
-                m.embed(|e| {
-                    e.title("Say the webhook url you would like to see the streamers to unnotify.");
-                    e.description("Tip: you can locate the url inside the channel configuration, on the webhooks tab, it will be part of the hook created by me.\n You will likely need to replace `discordapp.com` to `discord.com` so it's recognized correctly.")
-                })
-            }).await?;
+    } else if is_hook {
+        msg.edit(ctx, |m| {
+            m.content(format!("<@{}>", author.id));
+            m.embed(|e| {
+                e.title("Say the webhook url you would like to see the streamers to unnotify.");
+                e.description("Tip: you can locate the url inside the channel configuration, on the webhooks tab, it will be part of the hook created by me.\n You will likely need to replace `discordapp.com` to `discord.com` so it's recognized correctly.")
+            })
+        }).await?;
 
-            let hook_url;
-            if let Some(reply) = author
-                .await_reply(ctx)
-                .timeout(Duration::from_secs(120))
-                .await
-            {
-                let _ = reply.delete(ctx).await;
+        let hook_url;
+        if let Some(reply) = author
+            .await_reply(ctx)
+            .timeout(Duration::from_secs(120))
+            .await
+        {
+            let _ = reply.delete(ctx).await;
 
-                let mut m = reply.content.to_string();
-                if m.starts_with("http") && m.contains("discord") && m.contains("webhook") {
-                    m = m.replace("canary.", "");
-                    m = m.replace("pbt.", "");
-                    m = m.replace("discordapp", "discord");
-                    hook_url = m.to_string();
-                } else {
-                    og_message
-                        .reply(ctx, "An invalid url was provided.")
-                        .await?;
-                    timeout(ctx, msg, og_message).await?;
-                    return Ok(());
-                }
+            let mut m = reply.content.to_string();
+            if m.starts_with("http") && m.contains("discord") && m.contains("webhook") {
+                m = m.replace("canary.", "");
+                m = m.replace("pbt.", "");
+                m = m.replace("discordapp", "discord");
+                hook_url = m.to_string();
             } else {
-                timeout(ctx, msg, og_message).await?;
-                return Ok(());
-            }
-
-            let mut query = sqlx::query!(
-                "SELECT streamer FROM streamer_notification_webhook WHERE webhook = $1",
-                &hook_url
-            )
-            .fetch(&pool);
-
-            let mut streamers = Vec::new();
-            while let Some(i) = query.try_next().await? {
-                streamers.push(i.streamer);
-            }
-
-            let mut x = 0_usize;
-            let streamers_choice = streamers
-                .iter()
-                .map(|i| {
-                    x += 1;
-                    format!("{}: '{}'\n", x, i)
-                })
-                .collect::<String>();
-
-            if streamers_choice.is_empty() {
                 og_message
-                    .reply(ctx, "No streamers are being notified with that webhook.")
+                    .reply(ctx, "An invalid url was provided.")
                     .await?;
                 timeout(ctx, msg, og_message).await?;
                 return Ok(());
             }
-
-            msg.edit(ctx, |m| {
-                m.content(format!("<@{}>", author.id));
-                m.embed(|e| {
-                    e.title("Say the number of the streamer you would like to stop getting notified about.");
-                    e.description(&streamers_choice)
-                })
-            }).await?;
-
-            let index;
-            if let Some(reply) = author
-                .await_reply(ctx)
-                .timeout(Duration::from_secs(120))
-                .await
-            {
-                if let Ok(x) = reply.content.parse::<usize>() {
-                    index = x;
-                } else {
-                    og_message
-                        .reply(ctx, "An invalid number was provided.")
-                        .await?;
-                    timeout(ctx, msg, og_message).await?;
-                    return Ok(());
-                }
-            } else {
-                timeout(ctx, msg, og_message).await?;
-                return Ok(());
-            }
-
-            config.streamer = if let Some(x) = streamers.get(index - 1) {
-                x.to_string()
-            } else {
-                og_message
-                    .reply(ctx, "The number provided is too large.")
-                    .await?;
-                timeout(ctx, msg, og_message).await?;
-                return Ok(());
-            };
-
-            sqlx::query!(
-                "DELETE FROM streamer_notification_webhook WHERE streamer = $1 AND webhook = $2",
-                &config.streamer,
-                &hook_url
-            )
-            .execute(&pool)
-            .await?;
         } else {
-            let mut query = sqlx::query!(
-                "SELECT streamer FROM streamer_notification_channel WHERE channel_id = $1",
-                msg.channel_id.0 as i64
-            )
-            .fetch(&pool);
-
-            let mut streamers = Vec::new();
-            while let Some(i) = query.try_next().await? {
-                streamers.push(i.streamer);
-            }
-
-            let mut x = 0_usize;
-            let streamers_choice = streamers
-                .iter()
-                .map(|i| {
-                    x += 1;
-                    format!("{}: '{}'\n", x, i)
-                })
-                .collect::<String>();
-
-            if streamers_choice.is_empty() {
-                og_message
-                    .reply(ctx, "No streamers are being notified in this channel.")
-                    .await?;
-                timeout(ctx, msg, og_message).await?;
-                return Ok(());
-            }
-
-            msg.edit(ctx, |m| {
-                m.content(format!("<@{}>", author.id));
-                m.embed(|e| {
-                    e.title("Say the number of the streamer you would like to stop getting notified about.");
-                    e.description(&streamers_choice)
-                })
-            }).await?;
-
-            let index;
-            if let Some(reply) = author
-                .await_reply(ctx)
-                .timeout(Duration::from_secs(120))
-                .await
-            {
-                if let Ok(x) = reply.content.parse::<usize>() {
-                    index = x;
-                } else {
-                    og_message
-                        .reply(ctx, "An invalid number was provided.")
-                        .await?;
-                    timeout(ctx, msg, og_message).await?;
-                    return Ok(());
-                }
-            } else {
-                timeout(ctx, msg, og_message).await?;
-                return Ok(());
-            }
-
-            config.streamer = if let Some(x) = streamers.get(index - 1) {
-                x.to_string()
-            } else {
-                og_message
-                    .reply(ctx, "The number provided is too large.")
-                    .await?;
-                timeout(ctx, msg, og_message).await?;
-                return Ok(());
-            };
-
-            sqlx::query!(
-                "DELETE FROM streamer_notification_channel WHERE streamer = $1 AND channel_id = $2",
-                &config.streamer,
-                msg.channel_id.0 as i64
-            )
-            .execute(&pool)
-            .await?;
+            timeout(ctx, msg, og_message).await?;
+            return Ok(());
         }
+
+        let mut query = sqlx::query!(
+            "SELECT streamer FROM streamer_notification_webhook WHERE webhook = $1",
+            &hook_url
+        )
+        .fetch(&pool);
+
+        let mut streamers = Vec::new();
+        while let Some(i) = query.try_next().await? {
+            streamers.push(i.streamer);
+        }
+
+        let mut x = 0_usize;
+        let streamers_choice = streamers
+            .iter()
+            .map(|i| {
+                x += 1;
+                format!("{}: '{}'\n", x, i)
+            })
+            .collect::<String>();
+
+        if streamers_choice.is_empty() {
+            og_message
+                .reply(ctx, "No streamers are being notified with that webhook.")
+                .await?;
+            timeout(ctx, msg, og_message).await?;
+            return Ok(());
+        }
+
+        msg.edit(ctx, |m| {
+            m.content(format!("<@{}>", author.id));
+            m.embed(|e| {
+                e.title(
+                    "Say the number of the streamer you would like to stop getting notified about.",
+                );
+                e.description(&streamers_choice)
+            })
+        })
+        .await?;
+
+        let index;
+        if let Some(reply) = author
+            .await_reply(ctx)
+            .timeout(Duration::from_secs(120))
+            .await
+        {
+            if let Ok(x) = reply.content.parse::<usize>() {
+                index = x;
+            } else {
+                og_message
+                    .reply(ctx, "An invalid number was provided.")
+                    .await?;
+                timeout(ctx, msg, og_message).await?;
+                return Ok(());
+            }
+        } else {
+            timeout(ctx, msg, og_message).await?;
+            return Ok(());
+        }
+
+        config.streamer = if let Some(x) = streamers.get(index - 1) {
+            x.to_string()
+        } else {
+            og_message
+                .reply(ctx, "The number provided is too large.")
+                .await?;
+            timeout(ctx, msg, og_message).await?;
+            return Ok(());
+        };
+
+        sqlx::query!(
+            "DELETE FROM streamer_notification_webhook WHERE streamer = $1 AND webhook = $2",
+            &config.streamer,
+            &hook_url
+        )
+        .execute(&pool)
+        .await?;
+    } else {
+        let mut query = sqlx::query!(
+            "SELECT streamer FROM streamer_notification_channel WHERE channel_id = $1",
+            msg.channel_id.0 as i64
+        )
+        .fetch(&pool);
+
+        let mut streamers = Vec::new();
+        while let Some(i) = query.try_next().await? {
+            streamers.push(i.streamer);
+        }
+
+        let mut x = 0_usize;
+        let streamers_choice = streamers
+            .iter()
+            .map(|i| {
+                x += 1;
+                format!("{}: '{}'\n", x, i)
+            })
+            .collect::<String>();
+
+        if streamers_choice.is_empty() {
+            og_message
+                .reply(ctx, "No streamers are being notified in this channel.")
+                .await?;
+            timeout(ctx, msg, og_message).await?;
+            return Ok(());
+        }
+
+        msg.edit(ctx, |m| {
+            m.content(format!("<@{}>", author.id));
+            m.embed(|e| {
+                e.title(
+                    "Say the number of the streamer you would like to stop getting notified about.",
+                );
+                e.description(&streamers_choice)
+            })
+        })
+        .await?;
+
+        let index;
+        if let Some(reply) = author
+            .await_reply(ctx)
+            .timeout(Duration::from_secs(120))
+            .await
+        {
+            if let Ok(x) = reply.content.parse::<usize>() {
+                index = x;
+            } else {
+                og_message
+                    .reply(ctx, "An invalid number was provided.")
+                    .await?;
+                timeout(ctx, msg, og_message).await?;
+                return Ok(());
+            }
+        } else {
+            timeout(ctx, msg, og_message).await?;
+            return Ok(());
+        }
+
+        config.streamer = if let Some(x) = streamers.get(index - 1) {
+            x.to_string()
+        } else {
+            og_message
+                .reply(ctx, "The number provided is too large.")
+                .await?;
+            timeout(ctx, msg, og_message).await?;
+            return Ok(());
+        };
+
+        sqlx::query!(
+            "DELETE FROM streamer_notification_channel WHERE streamer = $1 AND channel_id = $2",
+            &config.streamer,
+            msg.channel_id.0 as i64
+        )
+        .execute(&pool)
+        .await?;
     }
 
     Ok(())
@@ -1011,7 +1012,7 @@ async fn toggle_annoy(ctx: &Context, msg: &Message, _args: Args) -> CommandResul
     .fetch_optional(&pool)
     .await?;
 
-    if let Some(_) = data {
+    if data.is_some() {
         sqlx::query!(
             "DELETE FROM annoyed_channels WHERE channel_id IN ($1)",
             channel_id
@@ -1125,7 +1126,7 @@ async fn prefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .boxed()
         .await?;
 
-    if let None = data {
+    if data.is_none() {
         sqlx::query!(
             "INSERT INTO prefixes (guild_id, prefix) VALUES ($1, $2)",
             guild_id,
@@ -1263,7 +1264,7 @@ async fn enable_command(ctx: &Context, msg: &Message, mut args: Args) -> Command
                     if let Some(mut disallowed_commands) = x.disallowed_commands {
                         if disallowed_commands.contains(&command_name.to_string()) {
                             if let Some(pos) =
-                                disallowed_commands.iter().position(|x| &x == &command_name)
+                                disallowed_commands.iter().position(|x| x == command_name)
                             {
                                 disallowed_commands.remove(pos);
                             };

@@ -430,10 +430,10 @@ async fn short_recent_builder(
                 }
             }));
             e.title(format!("{} - {} [**{}**]\nby {}",
-                            beatmap.artist, beatmap.title, beatmap.version, beatmap.creator));
+                    beatmap.artist, beatmap.title, beatmap.version, beatmap.creator));
             e.url(format!("https://osu.ppy.sh/b/{}", beatmap.beatmap_id));
             e.description(format!("**{}** ┇ **x{} / {}**\n**{:.2}%** ┇ {} - {} - {} - {}\n Recent #{} ━ Progress: {:.2}%",
-                                  user_recent.score.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en), user_recent.maxcombo, beatmap.max_combo, accuracy, user_recent.count300, user_recent.count100, user_recent.count50, user_recent.countmiss, attempts + 1, progress));
+                    user_recent.score.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en), user_recent.maxcombo, beatmap.max_combo, accuracy, user_recent.count300, user_recent.count100, user_recent.count50, user_recent.countmiss, attempts + 1, progress));
             e.timestamp(user_recent.date.clone());
             e.thumbnail(format!("https://b.ppy.sh/thumb/{}l.jpg", beatmap.beatmapset_id));
             e.author( |a| {
@@ -484,7 +484,7 @@ async fn short_recent_builder(
                     f.icon_url(&rating_url);
 
                     f
-            });
+                });
             } else {
                 e.footer(|f| {
                     f.text(format!("{:.4}* | {}", beatmap.difficultyrating, mods));
@@ -542,7 +542,7 @@ async fn configure_osu(ctx: &Context, msg: &Message, arguments: Args) -> Command
     let author_id = *msg.author.id.as_u64() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
     let data =
         sqlx::query!("SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
-                            author_id)
+            author_id)
         .fetch_optional(&pool)
         .boxed()
         .await?; // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
@@ -583,7 +583,7 @@ async fn configure_osu(ctx: &Context, msg: &Message, arguments: Args) -> Command
                     _ => Some(true),
                 }
 
-            // if the argument starts with the keyword short_recent OR recent
+                // if the argument starts with the keyword short_recent OR recent
             } else if arg.starts_with("short_recent=")
                 || arg.starts_with("recent=")
                 || arg.starts_with("short=")
@@ -603,8 +603,8 @@ async fn configure_osu(ctx: &Context, msg: &Message, arguments: Args) -> Command
                     _ => Some(0),
                 }
 
-            // this triggers if the argument was not a keyword argument and adds the argument to
-            // the username adding a space.
+                // this triggers if the argument was not a keyword argument and adds the argument to
+                // the username adding a space.
             } else if empty_data {
                 user_data.name += arg;
             } else {
@@ -624,11 +624,11 @@ async fn configure_osu(ctx: &Context, msg: &Message, arguments: Args) -> Command
         // gets the current configuration of the user
         let current_conf = format!(
             "
-**User ID**: {}
-**Username**: {}
-**Mode ID**: {}
-**Show PP**? {}
-**Short recent**? {}",
+            **User ID**: {}
+            **Username**: {}
+            **Mode ID**: {}
+            **Show PP**? {}
+            **Short recent**? {}",
             user_data.osu_id,
             user_data.name,
             user_data.mode.unwrap(),
@@ -667,7 +667,7 @@ async fn configure_osu(ctx: &Context, msg: &Message, arguments: Args) -> Command
 
     // Insert a row to the table, but if it conflicts, update the existing one.
     sqlx::query!("INSERT INTO osu_user (osu_id, osu_username, pp, mode, short_recent, discord_id) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (discord_id) DO UPDATE SET osu_id = $1, osu_username = $2, pp = $3, mode = $4, short_recent = $5",
-        user_data.osu_id, user_data.name, user_data.pp.unwrap(), user_data.mode.unwrap(), user_data.short_recent.unwrap(), author_id)
+    user_data.osu_id, user_data.name, user_data.pp.unwrap(), user_data.mode.unwrap(), user_data.short_recent.unwrap(), author_id)
         .execute(&pool)
         .await?;
 
@@ -683,11 +683,11 @@ async fn configure_osu(ctx: &Context, msg: &Message, arguments: Args) -> Command
 
     let current_conf = format!(
         "
-**User ID**: {}
-**Username**: {}
-**Mode ID**: {}
-**Show PP**? {}
-**Short recent**? {}",
+        **User ID**: {}
+        **Username**: {}
+        **Mode ID**: {}
+        **Show PP**? {}
+        **Short recent**? {}",
         user_data.osu_id,
         user_data.name,
         user_data.mode.unwrap(),
@@ -774,13 +774,11 @@ async fn osu_profile(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
         if username.is_empty() {
             username = row.osu_username;
         }
-    } else {
-        if username.is_empty() {
-            if let Ok(m) = msg.member(ctx).await {
-                username = m.display_name().to_string();
-            } else {
-                username = msg.author.name.to_string();
-            }
+    } else if username.is_empty() {
+        if let Ok(m) = msg.member(ctx).await {
+            username = m.display_name().to_string();
+        } else {
+            username = msg.author.name.to_string();
         }
     }
 
@@ -800,7 +798,7 @@ async fn osu_profile(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
 
     let country_url = format!("https://raw.githubusercontent.com/stevenrskelton/flag-icon/master/png/75/country-squared/{}.png", &user.country.to_lowercase());
 
-    if let None = user.total_score {
+    if user.total_score.is_none() {
         msg.channel_id
             .send_message(ctx, |m| {
                 m.embed(|e| {
@@ -834,12 +832,12 @@ async fn osu_profile(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
                     e.description({
                         let mut s = format!(
                             "
-                            **{} -- {} -- {}** == 300/100/50
-                            **{:.2}% -- {}** Plays
-                            Total = **{}** ┇ Ranked = **{}**
-                            Played **{}** seconds or: **{:?}**
-                            **L{}** > Next level: `{}`
-                        ",
+                                **{} -- {} -- {}** == 300/100/50
+                                **{:.2}% -- {}** Plays
+                                Total = **{}** ┇ Ranked = **{}**
+                                Played **{}** seconds or: **{:?}**
+                                **L{}** > Next level: `{}`
+                                ",
                             &user
                                 .count300
                                 .as_ref()
@@ -1051,12 +1049,10 @@ async fn score(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         mode = row.mode.unwrap_or(0);
         username = row.osu_username;
         osu_id = row.osu_id;
+    } else if let Ok(m) = msg.member(ctx).await {
+        username = m.display_name().to_string();
     } else {
-        if let Ok(m) = msg.member(ctx).await {
-            username = m.display_name().to_string();
-        } else {
-            username = msg.author.name.to_string();
-        }
+        username = msg.author.name.to_string();
     }
 
     let score = get_osu_scores(osu_id, &username, bmap_id, mode, &osu_key).await?;
@@ -1197,16 +1193,16 @@ async fn recent(ctx: &Context, msg: &Message, arguments: Args) -> CommandResult 
 
     let mut user_data = OsuUserDBData::default(); // generate a basic structure with the default values.
 
-    let data = if arg_user == "" {
+    let data = if arg_user.is_empty() {
         let author_id = *msg.author.id.as_u64() as i64; // get the author_id as a signed 64 bit int, because that's what the database asks for.
         arg_user = msg.author.name.clone();
         sqlx::query_as!(OsuUserRawDBData, "SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE discord_id = $1", // query the SQL to the database.
-                            author_id)
+            author_id)
         .fetch_optional(&pool)
         .await? // The arguments on this array will go to the respective calls as $ in the database (arrays start at 1 in this case reeeeee)
     } else {
         sqlx::query_as!(OsuUserRawDBData, "SELECT osu_id, osu_username, pp, mode, short_recent FROM osu_user WHERE osu_username = $1", // query the SQL to the database.
-                            arg_user)
+            arg_user)
         .fetch_optional(&pool)
         .await?
     };
@@ -1220,7 +1216,7 @@ async fn recent(ctx: &Context, msg: &Message, arguments: Args) -> CommandResult 
         user_data.pp = x.pp;
         user_data.short_recent = x.short_recent;
     } else {
-        if arg_user == "" {
+        if arg_user.is_empty() {
             msg.channel_id.say(ctx, "It looks like you don't have a configured osu! username, consider configuring one with `osuc`").await?;
         }
         user_data.name = arg_user;
@@ -1271,10 +1267,11 @@ async fn recent(ctx: &Context, msg: &Message, arguments: Args) -> CommandResult 
     }
 
     // Group all the needed data to EventData
-    let mut event_data = EventData::default();
-    event_data.user_db_data = Some(user_data);
-    event_data.user_recent_raw = Some(user_recent_raw.clone());
-    event_data.osu_key = Some(osu_key);
+    let event_data = EventData {
+        user_db_data: Some(user_data),
+        user_recent_raw: Some(user_recent_raw.clone()),
+        osu_key: Some(osu_key),
+    };
 
     let mut page = 0;
 
@@ -1577,7 +1574,7 @@ async fn beatmap_pp(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 .takes_value(true)
                 .required(false),
         )
-        .get_matches_from_safe(args.message().split(" "));
+        .get_matches_from_safe(args.message().split(' '));
 
     let matches = match matches_result {
         Ok(x) => x,

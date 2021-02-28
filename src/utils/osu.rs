@@ -87,12 +87,8 @@ impl PpCalculation {
             multiplier *= 0.95;
         }
 
-        let total_value =
-            ((aim_value.powf(1.1) + speed_value.powf(1.1) + accuracy_value.powf(1.1))
-                .powf(1.0 / 1.1))
-                * multiplier;
-
-        total_value
+        ((aim_value.powf(1.1) + speed_value.powf(1.1) + accuracy_value.powf(1.1)).powf(1.0 / 1.1))
+            * multiplier
     }
 
     pub fn compute_aim_value(&self) -> f64 {
@@ -252,25 +248,23 @@ impl PpCalculation {
     }
 
     pub fn _test() {
-        let mut pp = Self::default();
-
-        pp.score_mods = vec![];
-        pp.score_max_combo = 863.0;
-        pp.score_great = 556.0;
-        pp.score_good = 63.0;
-        pp.score_meh = 2.0;
-        pp.score_miss = 0.0;
-
-        pp.map_aim_strain = 2.54215;
-        pp.map_speed_strain = 2.83749;
-
-        pp.map_max_combo = 865.0;
-        pp.map_ar = 9.0;
-        pp.map_od = 8.0;
-
-        pp.map_circles = 456.0;
-        pp.map_sliders = 164.0;
-        pp.map_spinners = 1.0;
+        let mut pp = Self {
+            score_mods: vec![],
+            score_max_combo: 863.0,
+            score_great: 556.0,
+            score_good: 63.0,
+            score_meh: 2.0,
+            score_miss: 0.0,
+            map_aim_strain: 2.54215,
+            map_speed_strain: 2.83749,
+            map_max_combo: 865.0,
+            map_ar: 9.0,
+            map_od: 8.0,
+            map_circles: 456.0,
+            map_sliders: 164.0,
+            map_spinners: 1.0,
+            ..Default::default()
+        };
 
         let ppnum = pp.calculate();
         println!("DTN {}", ppnum);
@@ -288,239 +282,239 @@ impl PpCalculation {
     }
 }
 /*
-class diff_calc:
-    """
-    difficulty calculator.
-    fields:
-    total: star rating
-    aim: aim stars
-    speed: speed stars
-    nsingles: number of notes that are considered singletaps by
-              the difficulty calculator
-    nsingles_threshold: number of taps slower or equal to the
-                        singletap threshold value
-    """
+   class diff_calc:
+   """
+   difficulty calculator.
+   fields:
+   total: star rating
+   aim: aim stars
+   speed: speed stars
+   nsingles: number of notes that are considered singletaps by
+   the difficulty calculator
+   nsingles_threshold: number of taps slower or equal to the
+   singletap threshold value
+   """
 
-    def __init__(self):
-        self.strains = []
-        # NOTE: i tried pre-allocating this to 600 elements or so
-        # and it didn't show appreciable performance improvements
+   def __init__(self):
+   self.strains = []
+   # NOTE: i tried pre-allocating this to 600 elements or so
+   # and it didn't show appreciable performance improvements
 
-        self.reset()
-
-
-    def reset(self):
-        self.total = 0.0
-        self.aim = self.aim_difficulty = self.aim_length_bonus = 0.0
-        self.speed = self.speed_difficulty = self.speed_length_bonus = 0.0
-        self.nsingles = self.nsingles_threshold = 0
+   self.reset()
 
 
-    def __str__(self):
-        return """%g stars (%g aim, %g speed)
-%d spacing singletaps
-%d taps within singletap threshold""" % (
-            self.total, self.aim, self.speed, self.nsingles,
-            self.nsingles_threshold
-        )
+   def reset(self):
+   self.total = 0.0
+   self.aim = self.aim_difficulty = self.aim_length_bonus = 0.0
+   self.speed = self.speed_difficulty = self.speed_length_bonus = 0.0
+   self.nsingles = self.nsingles_threshold = 0
 
 
-    def calc_individual(self, difftype, bmap, speed_mul):
-        # calculates total strain for difftype. this assumes the
-        # normalized positions for hitobjects are already present
-
-        # max strains are weighted from highest to lowest.
-        # this is how much the weight decays
-        DECAY_WEIGHT = 0.9
-
-        # strains are calculated by analyzing the map in chunks
-        # and taking the peak strains in each chunk. this is the
-        # length of a strain interval in milliseconds
-        strain_step = 400.0 * speed_mul
-
-        objs = bmap.hitobjects
-        self.strains[:] = []
-        # first object doesn't generate a strain so we begin with
-        # an incremented interval end
-        interval_end = (
-          math.ceil(objs[0].time / strain_step) * strain_step
-        )
-        max_strain = 0.0
-
-        t = difftype
-
-        for i, obj in enumerate(objs[1:]):
-            prev = objs[i]
-
-            d_strain(difftype, obj, prev, speed_mul)
-
-            while obj.time > interval_end:
-                # add max strain for this interval
-                self.strains.append(max_strain)
-
-                # decay last object's strains until the next
-                # interval and use that as the initial max strain
-                decay = pow(
-                    DECAY_BASE[t],
-                    (interval_end - prev.time) / 1000.0
-                )
-
-                max_strain = prev.strains[t] * decay
-                interval_end += strain_step
+   def __str__(self):
+   return """%g stars (%g aim, %g speed)
+   %d spacing singletaps
+   %d taps within singletap threshold""" % (
+   self.total, self.aim, self.speed, self.nsingles,
+   self.nsingles_threshold
+   )
 
 
-            max_strain = max(max_strain, obj.strains[t])
+   def calc_individual(self, difftype, bmap, speed_mul):
+   # calculates total strain for difftype. this assumes the
+   # normalized positions for hitobjects are already present
+
+   # max strains are weighted from highest to lowest.
+   # this is how much the weight decays
+   DECAY_WEIGHT = 0.9
+
+   # strains are calculated by analyzing the map in chunks
+   # and taking the peak strains in each chunk. this is the
+   # length of a strain interval in milliseconds
+   strain_step = 400.0 * speed_mul
+
+   objs = bmap.hitobjects
+   self.strains[:] = []
+   # first object doesn't generate a strain so we begin with
+   # an incremented interval end
+   interval_end = (
+   math.ceil(objs[0].time / strain_step) * strain_step
+   )
+   max_strain = 0.0
+
+   t = difftype
+
+   for i, obj in enumerate(objs[1:]):
+   prev = objs[i]
+
+   d_strain(difftype, obj, prev, speed_mul)
+
+   while obj.time > interval_end:
+   # add max strain for this interval
+   self.strains.append(max_strain)
+
+# decay last object's strains until the next
+    # interval and use that as the initial max strain
+decay = pow(
+    DECAY_BASE[t],
+    (interval_end - prev.time) / 1000.0
+)
+
+    max_strain = prev.strains[t] * decay
+    interval_end += strain_step
 
 
-        # don't forget to add the last strain
-        self.strains.append(max_strain)
-
-        # weight the top strains sorted from highest to lowest
-        weight = 1.0
-        total = 0.0
-        difficulty = 0.0
-
-        strains = self.strains
-        strains.sort(reverse=True)
-
-        for strain in strains:
-            total += pow(strain, 1.2)
-            difficulty += strain * weight
-            weight *= DECAY_WEIGHT
+max_strain = max(max_strain, obj.strains[t])
 
 
-        return ( difficulty, total )
+    # don't forget to add the last strain
+self.strains.append(max_strain)
+
+    # weight the top strains sorted from highest to lowest
+    weight = 1.0
+    total = 0.0
+    difficulty = 0.0
+
+    strains = self.strains
+strains.sort(reverse=True)
+
+    for strain in strains:
+total += pow(strain, 1.2)
+    difficulty += strain * weight
+    weight *= DECAY_WEIGHT
+
+
+return ( difficulty, total )
 
 
     def calc(self, bmap, mods=MODS_NOMOD, singletap_threshold=125):
         """
-        calculates difficulty and stores results in self.total,
-        self.aim, self.speed, self.nsingles,
-        self.nsingles_threshold.
-        returns self.
-        singletap_threshold is the smallest milliseconds interval
-        that will be considered singletappable, defaults to 125ms
-        which is 240 bpm 1/2 ((60000 / 240) / 2)
-        """
+            calculates difficulty and stores results in self.total,
+            self.aim, self.speed, self.nsingles,
+            self.nsingles_threshold.
+            returns self.
+            singletap_threshold is the smallest milliseconds interval
+    that will be considered singletappable, defaults to 125ms
+            which is 240 bpm 1/2 ((60000 / 240) / 2)
+            """
 
-        # non-normalized diameter where the small circle size buff
-        # starts
-        CIRCLESIZE_BUFF_THRESHOLD = 30.0
-        STAR_SCALING_FACTOR = 0.0675 # global stars multiplier
+            # non-normalized diameter where the small circle size buff
+            # starts
+            CIRCLESIZE_BUFF_THRESHOLD = 30.0
+            STAR_SCALING_FACTOR = 0.0675 # global stars multiplier
 
-        # 50% of the difference between aim and speed is added to
-        # star rating to compensate aim only or speed only maps
-        EXTREME_SCALING_FACTOR = 0.5
+            # 50% of the difference between aim and speed is added to
+            # star rating to compensate aim only or speed only maps
+            EXTREME_SCALING_FACTOR = 0.5
 
-        PLAYFIELD_WIDTH = 512.0 # in osu!pixels
-        playfield_center = v2f(
-            PLAYFIELD_WIDTH / 2, PLAYFIELD_WIDTH / 2
-        )
+    PLAYFIELD_WIDTH = 512.0 # in osu!pixels
+playfield_center = v2f(
+    PLAYFIELD_WIDTH / 2, PLAYFIELD_WIDTH / 2
+)
 
-        if bmap.mode != MODE_STD:
-            raise NotImplementedError
+    if bmap.mode != MODE_STD:
+    raise NotImplementedError
 
-        self.reset()
+self.reset()
 
-        # calculate CS with mods
-        speed_mul, _, _, cs, _ = mods_apply(mods, cs=bmap.cs)
+    # calculate CS with mods
+speed_mul, _, _, cs, _ = mods_apply(mods, cs=bmap.cs)
 
-        # circle radius
-        radius = (
-            (PLAYFIELD_WIDTH / 16.0) *
-            (1.0 - 0.7 * (cs - 5.0) / 5.0)
-        )
+    # circle radius
+    radius = (
+        (PLAYFIELD_WIDTH / 16.0) *
+        (1.0 - 0.7 * (cs - 5.0) / 5.0)
+    )
 
-        # positions are normalized on circle radius so that we can
-        # calc as if everything was the same circlesize
-        scaling_factor = 52.0 / radius
+    # positions are normalized on circle radius so that we can
+    # calc as if everything was the same circlesize
+    scaling_factor = 52.0 / radius
 
-        # low cs buff (credits to osuElements)
-        if radius < CIRCLESIZE_BUFF_THRESHOLD:
-            scaling_factor *= (
-                1.0 + min(CIRCLESIZE_BUFF_THRESHOLD - radius, 5.0) / 50.0
-            )
+    # low cs buff (credits to osuElements)
+    if radius < CIRCLESIZE_BUFF_THRESHOLD:
+    scaling_factor *= (
+        1.0 + min(CIRCLESIZE_BUFF_THRESHOLD - radius, 5.0) / 50.0
+    )
 
 
-        playfield_center *= scaling_factor
+    playfield_center *= scaling_factor
 
-        # calculate normalized positions
-        objs = bmap.hitobjects
-        prev1 = None
-        prev2 = None
-        i = 0
-        for obj in objs:
-            if obj.objtype & OBJ_SPINNER != 0:
-                obj.normpos = v2f(
-                    playfield_center.x, playfield_center.y
-                )
-            else:
-                obj.normpos = obj.data.pos * scaling_factor
+    # calculate normalized positions
+    objs = bmap.hitobjects
+    prev1 = None
+    prev2 = None
+    i = 0
+    for obj in objs:
+    if obj.objtype & OBJ_SPINNER != 0:
+obj.normpos = v2f(
+    playfield_center.x, playfield_center.y
+)
+    else:
+    obj.normpos = obj.data.pos * scaling_factor
 
-            if i >= 2:
-                v1 = prev2.normpos - prev1.normpos
-                v2 = obj.normpos - prev1.normpos
-                dot = v1.dot(v2)
-                det = v1.x * v2.y - v1.y * v2.x
-                obj.angle = abs(math.atan2(det, dot))
-            else:
-                obj.angle = None
+    if i >= 2:
+    v1 = prev2.normpos - prev1.normpos
+    v2 = obj.normpos - prev1.normpos
+dot = v1.dot(v2)
+    det = v1.x * v2.y - v1.y * v2.x
+obj.angle = abs(math.atan2(det, dot))
+    else:
+    obj.angle = None
 
-            prev2 = prev1
-            prev1 = obj
-            i+=1
+    prev2 = prev1
+    prev1 = obj
+    i+=1
 
-        b = bmap
+    b = bmap
 
-        # speed and aim stars
-        speed = self.calc_individual(DIFF_SPEED, b, speed_mul)
-        self.speed = speed[0]
-        self.speed_difficulty = speed[1]
+    # speed and aim stars
+speed = self.calc_individual(DIFF_SPEED, b, speed_mul)
+    self.speed = speed[0]
+    self.speed_difficulty = speed[1]
 
-        aim = self.calc_individual(DIFF_AIM, b, speed_mul)
-        self.aim = aim[0]
-        self.aim_difficulty = aim[1]
+aim = self.calc_individual(DIFF_AIM, b, speed_mul)
+    self.aim = aim[0]
+    self.aim_difficulty = aim[1]
 
-        def length_bonus(star, diff):
-            return (
-              0.32 + 0.5 * (math.log10(diff + star) - math.log10(star))
-            )
+    def length_bonus(star, diff):
+    return (
+        0.32 + 0.5 * (math.log10(diff + star) - math.log10(star))
+    )
 
-        self.aim_length_bonus = length_bonus(self.aim, self.aim_difficulty)
-        self.speed_length_bonus = (
-          length_bonus(self.speed, self.speed_difficulty)
-        )
-        self.aim = math.sqrt(self.aim) * STAR_SCALING_FACTOR
-        self.speed = math.sqrt(self.speed) * STAR_SCALING_FACTOR
-        if mods & MODS_TOUCH_DEVICE != 0:
-            self.aim = pow(self.aim, 0.8)
+    self.aim_length_bonus = length_bonus(self.aim, self.aim_difficulty)
+    self.speed_length_bonus = (
+        length_bonus(self.speed, self.speed_difficulty)
+    )
+    self.aim = math.sqrt(self.aim) * STAR_SCALING_FACTOR
+    self.speed = math.sqrt(self.speed) * STAR_SCALING_FACTOR
+    if mods & MODS_TOUCH_DEVICE != 0:
+self.aim = pow(self.aim, 0.8)
 
-        # total stars
-        self.total = self.aim + self.speed
-        self.total += (
-            abs(self.speed - self.aim) *
-                EXTREME_SCALING_FACTOR
-        )
+    # total stars
+    self.total = self.aim + self.speed
+    self.total += (
+        abs(self.speed - self.aim) *
+        EXTREME_SCALING_FACTOR
+    )
 
-        # singletap stats
-        for i, obj in enumerate(objs[1:]):
-            prev = objs[i]
+    # singletap stats
+    for i, obj in enumerate(objs[1:]):
+        prev = objs[i]
 
-            if obj.is_single:
-                self.nsingles += 1
+        if obj.is_single:
+        self.nsingles += 1
 
-            if obj.objtype & (OBJ_CIRCLE | OBJ_SLIDER) == 0:
-                continue
+        if obj.objtype & (OBJ_CIRCLE | OBJ_SLIDER) == 0:
+        continue
 
-            interval = (obj.time - prev.time) / speed_mul
+        interval = (obj.time - prev.time) / speed_mul
 
-            if interval >= singletap_threshold:
-                self.nsingles_threshold += 1
+        if interval >= singletap_threshold:
+        self.nsingles_threshold += 1
 
 
         return self
 
-*/
+        */
 
 // This is a map to convert the bitwhise number obtained from the api
 // To the mods it represents.

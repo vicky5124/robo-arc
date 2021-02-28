@@ -262,7 +262,7 @@ async fn translate(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
     let resp = match resp {
         Ok(x) => x,
         Err(_) => {
-            let mut dest = map["model_id"].splitn(2, "-");
+            let mut dest = map["model_id"].splitn(2, '-');
             msg.reply(ctx, format!("Failed to translate, probably because either `{}` or `{}` or both, are invalid languages.\n Please see <http://5124.mywire.org:8088/paste/7WobXTQ?lang=json> for a list of valid languages.", dest.next().unwrap(), dest.next().unwrap())).await?;
             return Ok(());
         }
@@ -277,7 +277,7 @@ async fn translate(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
         ),
     ];
 
-    let mut dest = map["model_id"].splitn(2, "-");
+    let mut dest = map["model_id"].splitn(2, '-');
 
     msg.channel_id
         .send_message(ctx, |m| {
@@ -321,7 +321,7 @@ fn encrypt_bytes(data: &[u8]) -> Result<Vec<u8>, symmetriccipher::SymmetricCiphe
                 .take_read_buffer()
                 .take_remaining()
                 .iter()
-                .map(|&i| i),
+                .copied(),
         );
 
         match result {
@@ -349,7 +349,7 @@ fn decrypt_bytes(encrypted_data: &[u8]) -> Result<Vec<u8>, symmetriccipher::Symm
                 .take_read_buffer()
                 .take_remaining()
                 .iter()
-                .map(|&i| i),
+                .copied(),
         );
 
         match result {
@@ -726,31 +726,31 @@ async fn uwufy(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     w = w.replace("+", "qu");
                     w = w.replace("=", "ouw");
 
-                    if !word.starts_with("A") {
+                    if !word.starts_with('A') {
                         w = w.replace("A", "WA");
                     } else {
                         w = w.replace("A", "Wa");
                     }
 
-                    if !word.starts_with("E") {
+                    if !word.starts_with('E') {
                         w = w.replace("E", "WE");
                     } else {
                         w = w.replace("E", "We");
                     }
 
-                    if !word.starts_with("I") {
+                    if !word.starts_with('I') {
                         w = w.replace("I", "WI");
                     } else {
                         w = w.replace("I", "Wi");
                     }
 
-                    if !word.starts_with("O") {
+                    if !word.starts_with('O') {
                         w = w.replace("O", "WO");
                     } else {
                         w = w.replace("O", "Wo");
                     }
 
-                    if !word.starts_with("U") {
+                    if !word.starts_with('U') {
                         w = w.replace("U", "WU");
                     } else {
                         w = w.replace("U", "Wu");

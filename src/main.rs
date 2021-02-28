@@ -1,6 +1,7 @@
 #![feature(core_intrinsics)]
 #![feature(async_closure)]
 #![type_length_limit = "1331829"]
+#![allow(clippy::unusual_byte_groupings)]
 //! This is a discord bot made with `serenity.rs` as a Rust learning project.
 //! If you see a lot of different ways to do the same thing, specially with error handling,
 //! this is indentional, as it helps me remember the concepts that rust provides, so they can be
@@ -33,7 +34,6 @@ use utils::database::*; // Obtain the get_database function from the utilities. 
 
 use std::{
     collections::HashSet, // Low cost indexable lists.
-    convert::TryInto,
     // For saving / reading files
     fs::File,
     io::prelude::*,
@@ -45,7 +45,6 @@ use std::{
 
 use tokio::sync::Mutex;
 
-use dotenv;
 use tracing::Level;
 
 use tracing_log::LogTracer;
@@ -102,7 +101,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         info!("Tracer initialized with level {}.", level);
 
-        if let Ok(_) = dotenv::dotenv() {
+        if dotenv::dotenv().is_ok() {
             let subscriber = FmtSubscriber::builder()
                 .with_env_filter(EnvFilter::from_default_env())
                 .finish();
@@ -218,7 +217,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             let lava_client = LavalinkClient::builder(bot_id.0)
                 .set_host(host.to_string())
                 .set_password(password.to_string())
-                .set_port(port.try_into().unwrap())
+                .set_port(port)
                 .build(LavalinkHandler)
                 .await?;
 

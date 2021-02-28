@@ -30,7 +30,7 @@ pub async fn on_dispatch_error(ctx: &Context, msg: &Message, error: DispatchErro
         DispatchError::NotEnoughArguments { min, given } => {
             let s = {
                 if given == 0 && min == 1 {
-                    format!("I need an argument to run this command")
+                    "I need an argument to run this command".to_string()
                 } else if given == 0 {
                     format!("I need atleast {} arguments to run this command", min)
                 } else {
@@ -132,7 +132,7 @@ pub async fn after(ctx: &Context, msg: &Message, cmd_name: &str, error: CommandR
         error!("{:?}", &error);
 
         //let err = why.0.to_string();
-        if let Err(_) = msg.channel_id.say(ctx, &why).await {
+        if msg.channel_id.say(ctx, &why).await.is_err() {
             error!(
                 "Unable to send messages on channel id {}",
                 &msg.channel_id.0
@@ -246,7 +246,7 @@ pub async fn dynamic_prefix(ctx: &Context, msg: &Message) -> Option<String> {
             }
             Ok(db_prefix) => {
                 p = if let Some(result) = db_prefix {
-                    result.prefix.unwrap_or(".".to_string()).to_string()
+                    result.prefix.unwrap_or_else(|| ".".to_string())
                 } else {
                     ".".to_string()
                 };

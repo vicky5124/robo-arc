@@ -41,10 +41,14 @@ pub struct Handler {
 
 pub async fn is_on_guild(guild_id: u64, ctx: Arc<Context>) -> Result<Json, warp::Rejection> {
     let cache = &ctx.cache;
-    let guilds = cache.guilds().await.iter().map(|i| i.0).collect::<Vec<_>>();
 
     let data = Allow {
-        allowed: guilds.contains(&guild_id.clone()),
+        allowed: cache
+            .guilds()
+            .await
+            .iter()
+            .map(|i| i.0)
+            .any(|x| x == guild_id),
     };
 
     Ok(json(&data))
@@ -55,7 +59,7 @@ impl EventHandler for Handler {
     async fn cache_ready(&self, ctx: Context, _guilds: Vec<GuildId>) {
         info!("Cache is READY");
 
-        if self.run_loops.lock().await.clone() {
+        if *self.run_loops.lock().await {
             *self.run_loops.lock().await = false;
 
             let ctx = Arc::new(ctx);
@@ -267,10 +271,8 @@ impl EventHandler for Handler {
                 // This makes every message sent by the bot get deleted if 🚫 is on the reactions.
                 // aka If you react with 🚫 on any message sent by the bot, it will get deleted.
                 // This is helpful for antispam and anti illegal content measures.
-                if s == "🚫" {
-                    if msg.author.id == ctx.cache.current_user().await.id {
-                        let _ = msg.delete(&ctx).await;
-                    }
+                if s == "🚫" && msg.author.id == ctx.cache.current_user().await.id {
+                    let _ = msg.delete(&ctx).await;
                 }
             }
             // Ignore the rest of the cases.
@@ -295,7 +297,7 @@ impl EventHandler for Handler {
         .unwrap();
 
         if let Some(row) = data {
-            if let Err(_) = member
+            if member
                 .ban_with_reason(
                     &ctx,
                     0,
@@ -305,6 +307,7 @@ impl EventHandler for Handler {
                     ),
                 )
                 .await
+                .is_err()
             {
                 if let Some(channel) = guild_id
                     .to_guild_cached(&ctx)

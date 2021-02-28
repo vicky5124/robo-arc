@@ -32,11 +32,9 @@ use rand::Rng;
 use reqwest::{header::*, Client as ReqwestClient, Url as ReqUrl};
 // quick_xml is an xml sedrde library.
 // used to deserialize the xml data into structs.
-use quick_xml;
 // serde or SerializerDeserializer, is a library to srialize data structures into structs.
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::*;
-use serde_json;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 struct NHentaiTags {
@@ -156,7 +154,7 @@ pub async fn get_booru(
         if channel.is_nsfw() || dm_channel {
             let mut raw_tags = booru::obtain_tags_unsafe(args).await;
             booru::illegal_check_unsafe(&mut raw_tags).await
-        // else, parse for safe tags.
+            // else, parse for safe tags.
         } else {
             let mut raw_tags = booru::obtain_tags_safe(args).await;
             booru::illegal_check_safe(&mut raw_tags).await
@@ -226,14 +224,14 @@ pub async fn get_booru(
     // deserialize the request XML into the Posts struct.
     let xml = if booru.typ == 4 {
         let mut posts: PostsE621 = serde_json::from_str(&resp.as_str())?;
-        for (index, post) in posts.clone().posts.iter().enumerate() {
-            posts.posts[index].actual_score = Some(if let Some(score_data) = post.score.clone() {
+        for post in posts.posts.iter_mut() {
+            post.actual_score = Some(if let Some(score_data) = post.score.clone() {
                 score_data.total.to_string()
             } else {
                 "0".to_string()
             });
-            posts.posts[index].score = None;
-            posts.posts[index].source = if let Some(sources) = post.sources.clone() {
+            post.score = None;
+            post.source = if let Some(sources) = post.sources.clone() {
                 if !sources.is_empty() {
                     Some(sources[0].clone())
                 } else {
@@ -242,13 +240,12 @@ pub async fn get_booru(
             } else {
                 None
             };
-            posts.posts[index].sample_url =
-                Some(post.sample.clone().unwrap().url.unwrap_or_default());
-            posts.posts[index].file_url = Some(post.file.clone().unwrap().url.unwrap_or_default());
-            posts.posts[index].string_tags = Some({
+            post.sample_url = Some(post.sample.clone().unwrap().url.unwrap_or_default());
+            post.file_url = Some(post.file.clone().unwrap().url.unwrap_or_default());
+            post.string_tags = Some({
                 if let Some(t) = post.tags.clone() {
                     t.general
-                        .unwrap_or(vec![Some("gore".to_string())])
+                        .unwrap_or_else(|| vec![Some("gore".to_string())])
                         .iter()
                         .map(|tag| format!("{} ", tag.as_ref().unwrap_or(&"gore".to_string())))
                         .collect::<String>()
@@ -269,15 +266,15 @@ pub async fn get_booru(
         new_posts
     } else {
         let posts_result = quick_xml::de::from_str::<Posts>(&resp.as_str());
-        if let Err(_) = posts_result {
+        if posts_result.is_err() {
             msg.reply(ctx, "There are no posts containing the requested tags.")
                 .await?;
             return Ok(());
         }
 
         let mut posts = posts_result.unwrap();
-        for (index, post) in posts.clone().post.iter().enumerate() {
-            posts.post[index].actual_score = post.score.clone();
+        for ref mut post in posts.post.iter_mut() {
+            post.actual_score = post.score.clone();
         }
         posts
     };
@@ -296,7 +293,7 @@ pub async fn get_booru(
                 for tag in x
                     .clone()
                     .tags
-                    .unwrap_or("gore".to_string())
+                    .unwrap_or_else(|| "gore".to_string())
                     .split(' ')
                     .into_iter()
                 {
@@ -308,12 +305,12 @@ pub async fn get_booru(
                 for tag in x
                     .clone()
                     .tags
-                    .unwrap_or("gore".to_string())
+                    .unwrap_or_else(|| "gore".to_string())
                     .split(' ')
                     .into_iter()
                 {
                     if SAFE_BANLIST.contains(&tag)
-                        || x.clone().rating.unwrap_or("x".to_string()) != "s"
+                        || x.clone().rating.unwrap_or_else(|| "x".to_string()) != "s"
                     {
                         is_unsafe = true;
                     }
@@ -363,9 +360,9 @@ pub async fn get_booru(
     let mut score = choice
         .actual_score
         .clone()
-        .unwrap_or("0".to_string())
+        .unwrap_or_else(|| "0".to_string())
         .to_string();
-    if score == "".to_string() {
+    if score.is_empty() {
         score = "0".to_string();
     }
     let score_string = score.to_string();
@@ -511,11 +508,7 @@ pub async fn booru_command(ctx: &Context, msg: &Message, args: Args) -> CommandR
 
     // get the booru and tags from the database.
     let mut booru = if let Some(result) = data {
-        if let Some(x) = result.booru {
-            Some(x)
-        } else {
-            None
-        }
+        result.booru
     } else {
         None
     };
@@ -531,10 +524,10 @@ pub async fn booru_command(ctx: &Context, msg: &Message, args: Args) -> CommandR
     // if the preffered booru is idol, invoke the idol command.
     if booru == "idol" {
         idol(ctx, msg, args).await?;
-    // if the preffered booru is sankaku or chan, invoke the chan command.
+        // if the preffered booru is sankaku or chan, invoke the chan command.
     } else if booru == "sankaku" || booru == "chan" {
         chan(ctx, msg, args).await?;
-    // if the command is a part of the boorus.json file, invoke the get_booru() function.
+        // if the command is a part of the boorus.json file, invoke the get_booru() function.
     } else if commands.contains(&booru.to_string()) {
         // obtain the rest of the data from the boorus.json file, of the specific booru.
         let b: Booru = {
@@ -549,7 +542,7 @@ pub async fn booru_command(ctx: &Context, msg: &Message, args: Args) -> CommandR
         };
         // invoke the get_booru command with the args and booru.
         get_booru(ctx, msg, &b, args).await?;
-    // else, the booru they have configured is not supported or it's not configured, so we default to chan.
+        // else, the booru they have configured is not supported or it's not configured, so we default to chan.
     } else {
         let msg = if booru == "default" {
             msg.reply(
@@ -659,10 +652,10 @@ pub async fn best_girl(ctx: &Context, msg: &Message, args: Args) -> CommandResul
     // if the preffered booru is idol, invoke the idol command.
     if booru == "idol" {
         idol(ctx, msg, args_tags).await?;
-    // if the preffered booru is sankaku or chan, invoke the chan command.
+        // if the preffered booru is sankaku or chan, invoke the chan command.
     } else if booru == "sankaku" || booru == "chan" {
         chan(ctx, msg, args_tags).await?;
-    // if the command is a part of the boorus.json file, invoke the get_booru() function.
+        // if the command is a part of the boorus.json file, invoke the get_booru() function.
     } else if commands.contains(&booru.to_string()) {
         // obtain the rest of the data from the boorus.json file, of the specific booru.
         let b: Booru = {
@@ -677,7 +670,7 @@ pub async fn best_girl(ctx: &Context, msg: &Message, args: Args) -> CommandResul
         };
         // invoke the get_booru command with the args and booru.
         get_booru(ctx, msg, &b, args_tags).await?;
-    // else, the booru they have configured is not supported, so we default to chan.
+        // else, the booru they have configured is not supported, so we default to chan.
     } else {
         msg.reply(
             ctx,
@@ -778,10 +771,10 @@ pub async fn best_boy(ctx: &Context, msg: &Message, args: Args) -> CommandResult
     // if the preffered booru is idol, invoke the idol command.
     if booru == "idol" {
         idol(ctx, msg, args_tags).await?;
-    // if the preffered booru is sankaku or chan, invoke the chan command.
+        // if the preffered booru is sankaku or chan, invoke the chan command.
     } else if booru == "sankaku" || booru == "chan" {
         chan(ctx, msg, args_tags).await?;
-    // if the command is a part of the boorus.json file, invoke the get_booru() function.
+        // if the command is a part of the boorus.json file, invoke the get_booru() function.
     } else if commands.contains(&booru.to_string()) {
         // obtain the rest of the data from the boorus.json file, of the specific booru.
         let b: Booru = {
@@ -796,7 +789,7 @@ pub async fn best_boy(ctx: &Context, msg: &Message, args: Args) -> CommandResult
         };
         // invoke the get_booru command with the args and booru.
         get_booru(ctx, msg, &b, args_tags).await?;
-    // else, the booru they have configured is not supported, so we default to chan.
+        // else, the booru they have configured is not supported, so we default to chan.
     } else {
         msg.reply(
             ctx,
@@ -852,200 +845,191 @@ pub async fn n_hentai(ctx: &Context, msg: &Message, args: Args) -> CommandResult
             map.insert("api_url", api_url);
             map.insert("post_url", post_url);
             map
+        } else if search == "random" {
+            let post_url = reqwest
+                .get("https://nhentai.net/random/")
+                .send()
+                .await?
+                .url()
+                .to_string();
+
+            let num = post_url.split('/').into_iter().nth(4).unwrap();
+            let api_url = format!("https://nhentai.net/api/gallery/{}", num);
+
+            let mut map = HashMap::new();
+            map.insert("api_url", api_url);
+            map.insert("post_url", post_url);
+            map
         } else {
-            if &search == &"random" {
-                let post_url = reqwest
-                    .get("https://nhentai.net/random/")
-                    .send()
-                    .await?
-                    .url()
-                    .to_string();
+            let url = ReqUrl::parse_with_params(
+                "https://nhentai.net/api/galleries/search",
+                &[("query", search)],
+            )?;
 
-                let num = post_url.split('/').into_iter().nth(4).unwrap();
-                let api_url = format!("https://nhentai.net/api/gallery/{}", num);
-
-                let mut map = HashMap::new();
-                map.insert("api_url", api_url.to_string());
-                map.insert("post_url", post_url);
-                map
+            let resp = if let Ok(x) = reqwest.get(url).send().await?.json::<NHentaiSearch>().await {
+                x
             } else {
                 let url = ReqUrl::parse_with_params(
                     "https://nhentai.net/api/galleries/search",
-                    &[("query", search)],
+                    &[("query", search), ("page", "2")],
                 )?;
-
-                let resp = if let Ok(x) =
-                    reqwest.get(url).send().await?.json::<NHentaiSearch>().await
-                {
+                if let Ok(x) = reqwest.get(url).send().await?.json::<NHentaiSearch>().await {
                     x
                 } else {
-                    let url = ReqUrl::parse_with_params(
-                        "https://nhentai.net/api/galleries/search",
-                        &[("query", search), ("page", "2")],
-                    )?;
-                    if let Ok(x) = reqwest.get(url).send().await?.json::<NHentaiSearch>().await {
-                        x
-                    } else {
-                        bot_msg
-                            .edit(ctx, |m| m.content("There was an error searching."))
-                            .await?;
-                        return Ok(());
-                    }
-                };
-
-                if resp.result.is_empty() {
                     bot_msg
-                        .edit(ctx, |m| m.content("There are no search results."))
+                        .edit(ctx, |m| m.content("There was an error searching."))
                         .await?;
                     return Ok(());
                 }
+            };
 
-                let mut index = 0;
-                let id;
-
-                let left = ReactionType::Unicode(String::from("⬅️"));
-                let right = ReactionType::Unicode(String::from("➡️"));
-
-                bot_msg.react(ctx, left).await?;
-                bot_msg.react(ctx, right).await?;
-                bot_msg.react(ctx, '✅').await?;
-
+            if resp.result.is_empty() {
                 bot_msg
-                    .edit(ctx, |m| {
-                        m.content(&resp.result[index].id);
-                        m.embed(|e| {
-                            e.title(&resp.result[index].title.english);
-                            e.url(format!("https://nhentai.net/g/{}/", &resp.result[index].id));
-                            e.description(format!("{}", {
-                                let mut tags = resp.result[index]
-                                    .tags
-                                    .iter()
-                                    .map(|t| format!("{}, ", t.name))
-                                    .collect::<String>();
-                                tags.pop();
-                                tags.pop();
-                                tags
-                            }));
+                    .edit(ctx, |m| m.content("There are no search results."))
+                    .await?;
+                return Ok(());
+            }
 
-                            let format = {
-                                let t = &resp.result[index].images.cover.t;
-                                if t == &"j".to_string() {
-                                    "jpg"
-                                } else if t == &"p".to_string() {
-                                    "png"
-                                } else {
-                                    "jpg"
-                                }
-                            };
+            let mut index = 0;
+            let id;
 
-                            e.image(format!(
-                                "https://t.nhentai.net/galleries/{}/cover.{}",
-                                &resp.result[index].media_id, format
-                            ));
-                            e.footer(|f| {
-                                f.text(format!(
-                                    "{} Pages | {} Favs",
-                                    &resp.result[index].num_pages,
-                                    &resp.result[index].num_favorites
-                                ))
-                            })
+            let left = ReactionType::Unicode(String::from("⬅️"));
+            let right = ReactionType::Unicode(String::from("➡️"));
+
+            bot_msg.react(ctx, left).await?;
+            bot_msg.react(ctx, right).await?;
+            bot_msg.react(ctx, '✅').await?;
+
+            let mut tags = resp.result[index]
+                .tags
+                .iter()
+                .map(|t| format!("{}, ", t.name))
+                .collect::<String>();
+            tags.pop();
+            tags.pop();
+
+            let format = {
+                let t = &resp.result[index].images.cover.t;
+                if t == &"j".to_string() {
+                    "jpg"
+                } else if t == &"p".to_string() {
+                    "png"
+                } else {
+                    "jpg"
+                }
+            };
+
+            bot_msg
+                .edit(ctx, |m| {
+                    m.content(&resp.result[index].id);
+                    m.embed(|e| {
+                        e.title(&resp.result[index].title.english);
+                        e.url(format!("https://nhentai.net/g/{}/", &resp.result[index].id));
+                        e.description(tags);
+
+                        e.image(format!(
+                            "https://t.nhentai.net/galleries/{}/cover.{}",
+                            &resp.result[index].media_id, format
+                        ));
+                        e.footer(|f| {
+                            f.text(format!(
+                                "{} Pages | {} Favs",
+                                &resp.result[index].num_pages, &resp.result[index].num_favorites
+                            ))
                         })
                     })
-                    .await?;
+                })
+                .await?;
 
-                loop {
-                    if let Some(reaction) = &bot_msg
-                        .await_reaction(ctx)
-                        .author_id(msg.author.id.0)
-                        .timeout(Duration::from_secs(30))
-                        .await
-                    {
-                        let emoji = &reaction.as_inner_ref().emoji;
+            loop {
+                if let Some(reaction) = &bot_msg
+                    .await_reaction(ctx)
+                    .author_id(msg.author.id.0)
+                    .timeout(Duration::from_secs(30))
+                    .await
+                {
+                    let emoji = &reaction.as_inner_ref().emoji;
 
-                        match emoji.as_data().as_str() {
-                            "⬅️" => {
-                                if index != 0 {
-                                    index -= 1;
-                                }
+                    match emoji.as_data().as_str() {
+                        "⬅️" => {
+                            if index != 0 {
+                                index -= 1;
                             }
-                            "➡️" => {
-                                if index != resp.result.len() - 1 {
-                                    index += 1;
-                                }
-                            }
-                            "✅" => {
-                                id = resp.result[index].id.clone();
-                                break;
-                            }
-                            _ => (),
                         }
-                        bot_msg
-                            .edit(ctx, |m| {
-                                m.content(&resp.result[index].id);
-                                m.embed(|e| {
-                                    e.title(&resp.result[index].title.english);
-                                    e.url(format!(
-                                        "https://nhentai.net/g/{}/",
-                                        &resp.result[index].id
-                                    ));
-                                    e.description(format!("{}", {
-                                        let mut tags = resp.result[index]
-                                            .tags
-                                            .iter()
-                                            .map(|t| format!("{}, ", t.name))
-                                            .collect::<String>();
-                                        tags.pop();
-                                        tags.pop();
-                                        tags
-                                    }));
+                        "➡️" => {
+                            if index != resp.result.len() - 1 {
+                                index += 1;
+                            }
+                        }
+                        "✅" => {
+                            id = resp.result[index].id.clone();
+                            break;
+                        }
+                        _ => (),
+                    }
+                    bot_msg
+                        .edit(ctx, |m| {
+                            m.content(&resp.result[index].id);
+                            m.embed(|e| {
+                                e.title(&resp.result[index].title.english);
+                                e.url(format!("https://nhentai.net/g/{}/", &resp.result[index].id));
+                                e.description({
+                                    let mut tags = resp.result[index]
+                                        .tags
+                                        .iter()
+                                        .map(|t| format!("{}, ", t.name))
+                                        .collect::<String>();
+                                    tags.pop();
+                                    tags.pop();
+                                    tags
+                                });
 
-                                    let format = {
-                                        let t = &resp.result[index].images.cover.t;
-                                        if t == &"j".to_string() {
-                                            "jpg"
-                                        } else if t == &"p".to_string() {
-                                            "png"
-                                        } else {
-                                            "jpg"
-                                        }
-                                    };
+                                let format = {
+                                    let t = &resp.result[index].images.cover.t;
+                                    if t == &"j".to_string() {
+                                        "jpg"
+                                    } else if t == &"p".to_string() {
+                                        "png"
+                                    } else {
+                                        "jpg"
+                                    }
+                                };
 
-                                    e.image(format!(
-                                        "https://t.nhentai.net/galleries/{}/cover.{}",
-                                        &resp.result[index].media_id, format
-                                    ));
-                                    e.footer(|f| {
-                                        f.text(format!(
-                                            "{} Pages | {} Favs",
-                                            &resp.result[index].num_pages,
-                                            &resp.result[index].num_favorites
-                                        ))
-                                    })
+                                e.image(format!(
+                                    "https://t.nhentai.net/galleries/{}/cover.{}",
+                                    &resp.result[index].media_id, format
+                                ));
+                                e.footer(|f| {
+                                    f.text(format!(
+                                        "{} Pages | {} Favs",
+                                        &resp.result[index].num_pages,
+                                        &resp.result[index].num_favorites
+                                    ))
                                 })
                             })
-                            .await?;
-                        reaction.as_inner_ref().delete(ctx).await?;
-                    } else {
-                        bot_msg.edit(ctx, |m| m.content("Timeout")).await?;
-                        ctx.http
-                            .edit_message(
-                                bot_msg.channel_id.0,
-                                bot_msg.id.0,
-                                &serde_json::json!({"flags" : 4}),
-                            )
-                            .await?;
-                        bot_msg.delete_reactions(ctx).await?;
-                        return Ok(());
-                    };
-                }
-
-                let api_url = format!("https://nhentai.net/api/gallery/{}", id);
-                let post_url = format!("https://nhentai.net/g/{}", id);
-                let mut map = HashMap::new();
-                map.insert("api_url", api_url);
-                map.insert("post_url", post_url);
-                map
+                        })
+                        .await?;
+                    reaction.as_inner_ref().delete(ctx).await?;
+                } else {
+                    bot_msg.edit(ctx, |m| m.content("Timeout")).await?;
+                    ctx.http
+                        .edit_message(
+                            bot_msg.channel_id.0,
+                            bot_msg.id.0,
+                            &serde_json::json!({"flags" : 4}),
+                        )
+                        .await?;
+                    bot_msg.delete_reactions(ctx).await?;
+                    return Ok(());
+                };
             }
+
+            let api_url = format!("https://nhentai.net/api/gallery/{}", id);
+            let post_url = format!("https://nhentai.net/g/{}", id);
+            let mut map = HashMap::new();
+            map.insert("api_url", api_url);
+            map.insert("post_url", post_url);
+            map
         }
     };
 
@@ -1077,7 +1061,7 @@ pub async fn n_hentai(ctx: &Context, msg: &Message, args: Args) -> CommandResult
             m.embed(|e| {
                 e.title(&resp.title.pretty);
                 e.url(format!("https://nhentai.net/g/{}/", &resp.id));
-                e.description(format!("{}", {
+                e.description({
                     let mut tags = resp
                         .tags
                         .iter()
@@ -1086,7 +1070,7 @@ pub async fn n_hentai(ctx: &Context, msg: &Message, args: Args) -> CommandResult
                     tags.pop();
                     tags.pop();
                     tags
-                }));
+                });
 
                 let format = {
                     let t = &resp.images.cover.t;
@@ -1142,24 +1126,24 @@ pub async fn n_hentai(ctx: &Context, msg: &Message, args: Args) -> CommandResult
 
             reaction.as_inner_ref().delete(ctx).await?;
 
-            if let Err(_) = bot_msg
+            let format = {
+                let t = &resp.images.pages[index].t;
+                if t == &"j".to_string() {
+                    "jpg"
+                } else if t == &"p".to_string() {
+                    "png"
+                } else {
+                    "jpg"
+                }
+            };
+
+            let edit = bot_msg
                 .edit(ctx, |m| {
                     m.content(&resp.id);
                     m.embed(|e| {
                         e.title(&resp.title.pretty);
                         e.url(format!("https://nhentai.net/g/{}/", &resp.id));
                         e.description("");
-
-                        let format = {
-                            let t = &resp.images.pages[index].t;
-                            if t == &"j".to_string() {
-                                "jpg"
-                            } else if t == &"p".to_string() {
-                                "png"
-                            } else {
-                                "jpg"
-                            }
-                        };
 
                         e.image(format!(
                             "https://i.nhentai.net/galleries/{}/{}.{}",
@@ -1177,32 +1161,34 @@ pub async fn n_hentai(ctx: &Context, msg: &Message, args: Args) -> CommandResult
                         })
                     })
                 })
-                .await
-            {
+                .await;
+
+            if edit.is_err() {
                 break;
-            };
+            }
         } else {
-            if let Err(_) = bot_msg
+            let mut tags = resp
+                .tags
+                .iter()
+                .map(|t| format!("{}, ", t.name))
+                .collect::<String>();
+            tags.pop();
+            tags.pop();
+
+            let edit = bot_msg
                 .edit(ctx, |m| {
                     m.embed(|e| {
                         e.title(&resp.title.pretty);
                         e.url(format!("https://nhentai.net/g/{}/", &resp.id));
-                        e.description(format!("{}", {
-                            let mut tags = resp
-                                .tags
-                                .iter()
-                                .map(|t| format!("{}, ", t.name))
-                                .collect::<String>();
-                            tags.pop();
-                            tags.pop();
-                            tags
-                        }))
+                        e.description(tags)
                     })
                 })
-                .await
-            {
+                .await;
+
+            if edit.is_err() {
                 break;
-            };
+            }
+
             bot_msg.delete_reactions(ctx).await?;
             break;
         };
@@ -1289,14 +1275,12 @@ async fn sauce(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let image_url = {
         if let Ok(x) = args.single::<String>() {
             x
+        } else if let Some(x) = &msg.attachments.get(0) {
+            x.url.to_string()
         } else {
-            if let Some(x) = &msg.attachments.get(0) {
-                x.url.to_string()
-            } else {
-                msg.reply(ctx, "Please, attach an image to the command.")
-                    .await?;
-                return Ok(());
-            }
+            msg.reply(ctx, "Please, attach an image to the command.")
+                .await?;
+            return Ok(());
         }
     };
 

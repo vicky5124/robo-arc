@@ -78,7 +78,7 @@ pub async fn parse_member(
                 .await;
 
             let message = {
-                if members_string == "" {
+                if members_string.is_empty() {
                     format!(
                         "No member named '{}' was found.",
                         member_name.replace("@", "")
@@ -348,7 +348,9 @@ async fn temporal_mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
     let raw_member = args.single_quoted::<String>()?;
     let mut member = parse_member(ctx, msg, raw_member).await?;
 
-    let unformatted_time = args.single_quoted::<String>().unwrap_or("1h".to_string());
+    let unformatted_time = args
+        .single_quoted::<String>()
+        .unwrap_or_else(|_| "1h".to_string());
     let seconds = string_to_seconds(unformatted_time);
 
     if seconds < 30 {

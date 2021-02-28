@@ -30,8 +30,7 @@ pub async fn send_message_update(ctx: &Context, data: &MessageUpdateEvent) {
 
         if let Ok(Some(old_message)) = old_message {
             if let Some(old_message) = old_message.content_history {
-                let old_message_content =
-                    old_message.get(old_message.len().checked_sub(1).unwrap_or(0));
+                let old_message_content = old_message.get(old_message.len().saturating_sub(1));
                 if old_message_content.clone().unwrap_or(&String::new())
                     == &data.content.clone().unwrap_or_default()
                 {
@@ -88,7 +87,7 @@ pub async fn send_message_update(ctx: &Context, data: &MessageUpdateEvent) {
 
                 let mut split = channel_data.webhook_url.split('/');
                 let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-                let token = split.nth(0).unwrap();
+                let token = split.next().unwrap();
 
                 match &ctx.http.get_webhook_with_token(id, token).await {
                     Ok(hook) => {
@@ -191,7 +190,7 @@ pub async fn send_message_delete(ctx: &Context, data: &MessageDeleteEvent) {
 
             let mut split = channel_data.webhook_url.split('/');
             let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-            let token = split.nth(0).unwrap();
+            let token = split.next().unwrap();
 
             match &ctx.http.get_webhook_with_token(id, token).await {
                 Ok(hook) => {
@@ -242,7 +241,7 @@ pub async fn send_guild_member_add(ctx: &Context, data: &GuildMemberAddEvent) {
 
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-        let token = split.nth(0).unwrap();
+        let token = split.next().unwrap();
 
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
@@ -285,7 +284,7 @@ pub async fn send_guild_member_remove(ctx: &Context, data: &GuildMemberRemoveEve
 
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-        let token = split.nth(0).unwrap();
+        let token = split.next().unwrap();
 
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
@@ -328,7 +327,7 @@ pub async fn send_message_delete_bulk(ctx: &Context, data: &MessageDeleteBulkEve
 
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-        let token = split.nth(0).unwrap();
+        let token = split.next().unwrap();
 
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
@@ -376,7 +375,7 @@ pub async fn send_guild_role_create(ctx: &Context, data: &GuildRoleCreateEvent) 
 
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-        let token = split.nth(0).unwrap();
+        let token = split.next().unwrap();
 
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
@@ -416,7 +415,7 @@ pub async fn send_guild_role_delete(ctx: &Context, data: &GuildRoleDeleteEvent) 
 
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-        let token = split.nth(0).unwrap();
+        let token = split.next().unwrap();
 
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
@@ -452,7 +451,7 @@ pub async fn send_guild_role_update(_ctx: &Context, _data: &GuildRoleUpdateEvent
 
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-        let token = split.nth(0).unwrap();
+        let token = split.next().unwrap();
 
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
@@ -513,7 +512,7 @@ pub async fn send_guild_member_update(ctx: &Context, data: &GuildMemberUpdateEve
 
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-        let token = split.nth(0).unwrap();
+        let token = split.next().unwrap();
 
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
@@ -580,7 +579,7 @@ pub async fn send_reaction_add(ctx: &Context, data: &ReactionAddEvent) {
 
             let mut split = channel_data.webhook_url.split('/');
             let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-            let token = split.nth(0).unwrap();
+            let token = split.next().unwrap();
 
             match &ctx.http.get_webhook_with_token(id, token).await {
                 Ok(hook) => {
@@ -648,7 +647,7 @@ pub async fn send_reaction_remove(ctx: &Context, data: &ReactionRemoveEvent) {
 
             let mut split = channel_data.webhook_url.split('/');
             let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-            let token = split.nth(0).unwrap();
+            let token = split.next().unwrap();
 
             match &ctx.http.get_webhook_with_token(id, token).await {
                 Ok(hook) => {
@@ -699,7 +698,7 @@ pub async fn send_reaction_remove_all(ctx: &Context, data: &ReactionRemoveAllEve
 
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-        let token = split.nth(0).unwrap();
+        let token = split.next().unwrap();
 
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
@@ -895,7 +894,7 @@ pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
 
     let mut split = channel_data.webhook_url.split('/');
     let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-    let token = split.nth(0).unwrap();
+    let token = split.next().unwrap();
 
     match &ctx.http.get_webhook_with_token(id, token).await {
         Ok(hook) => {
@@ -908,7 +907,6 @@ pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
         }
         Err(why) => {
             error!("Error Obtaining Hook: {}", why);
-            return;
         }
     }
 }
@@ -1090,7 +1088,7 @@ pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
 
     let mut split = channel_data.webhook_url.split('/');
     let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-    let token = split.nth(0).unwrap();
+    let token = split.next().unwrap();
 
     match &ctx.http.get_webhook_with_token(id, token).await {
         Ok(hook) => {
@@ -1103,7 +1101,6 @@ pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
         }
         Err(why) => {
             error!("Error Obtaining Hook: {}", why);
-            return;
         }
     }
 }
@@ -1285,7 +1282,7 @@ pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
 
     let mut split = channel_data.webhook_url.split('/');
     let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-    let token = split.nth(0).unwrap();
+    let token = split.next().unwrap();
 
     match &ctx.http.get_webhook_with_token(id, token).await {
         Ok(hook) => {
@@ -1298,7 +1295,6 @@ pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
         }
         Err(why) => {
             error!("Error Obtaining Hook: {}", why);
-            return;
         }
     }
 }
@@ -1334,7 +1330,7 @@ pub async fn send_channel_pins_update(ctx: &Context, data: &ChannelPinsUpdateEve
 
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-        let token = split.nth(0).unwrap();
+        let token = split.next().unwrap();
 
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
@@ -1347,7 +1343,6 @@ pub async fn send_channel_pins_update(ctx: &Context, data: &ChannelPinsUpdateEve
             }
             Err(why) => {
                 error!("Error Obtaining Hook: {}", why);
-                return;
             }
         }
     }
@@ -1384,7 +1379,7 @@ pub async fn send_guild_ban_add(ctx: &Context, data: &GuildBanAddEvent) {
 
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-        let token = split.nth(0).unwrap();
+        let token = split.next().unwrap();
 
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
@@ -1434,7 +1429,7 @@ pub async fn send_guild_ban_remove(ctx: &Context, data: &GuildBanRemoveEvent) {
 
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-        let token = split.nth(0).unwrap();
+        let token = split.next().unwrap();
 
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
@@ -1465,7 +1460,7 @@ pub async fn send_guild_emojis_update(ctx: &Context, data: &GuildEmojisUpdateEve
     {
         let embed = Embed::fake(|e| {
             e.title("Emojis Updated");
-            for (_, emoji) in &data.emojis {
+            for emoji in data.emojis.values() {
                 if emoji.animated {
                     e.field(
                         format!("<a:{}:{}>", emoji.name, emoji.id.0),
@@ -1489,7 +1484,7 @@ pub async fn send_guild_emojis_update(ctx: &Context, data: &GuildEmojisUpdateEve
 
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-        let token = split.nth(0).unwrap();
+        let token = split.next().unwrap();
 
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {
@@ -1529,7 +1524,7 @@ pub async fn send_guild_integrations_update(ctx: &Context, data: &GuildIntegrati
 
         let mut split = channel_data.webhook_url.split('/');
         let id = split.nth(5).unwrap().parse::<u64>().unwrap_or_default();
-        let token = split.nth(0).unwrap();
+        let token = split.next().unwrap();
 
         match &ctx.http.get_webhook_with_token(id, token).await {
             Ok(hook) => {

@@ -70,9 +70,9 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
     for i in data {
         let base_url = i.booru_url;
         let tags = i.tags;
-        let webhooks = i.webhook.unwrap_or(Vec::new());
-        let channels = i.channel_id.unwrap_or(Vec::new());
-        let mut md5s = i.sent_md5.unwrap_or(vec![]);
+        let webhooks = i.webhook.unwrap_or_default();
+        let channels = i.channel_id.unwrap_or_default();
+        let mut md5s = i.sent_md5.unwrap_or_default();
 
         if base_url == "yande.re" {
             let url = Url::parse_with_params(
@@ -127,7 +127,7 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
                         for webhook in &webhooks {
                             let mut split = webhook.split('/');
                             let id = split.nth(5).unwrap().parse::<u64>()?;
-                            let token = split.nth(0).unwrap();
+                            let token = split.next().unwrap();
 
                             let embed = Embed::fake(|e| {
                                 e.title("Original Post");
@@ -142,7 +142,8 @@ async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Er
                         }
                     }
 
-                    &md5s.push(post.md5);
+                    md5s.push(post.md5);
+
                     sqlx::query!(
                         "UPDATE new_posts SET sent_md5 = $1 WHERE booru_url = $2 AND tags = $3",
                         &md5s,
@@ -197,7 +198,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
         )?;
         let mut headers = HeaderMap::new();
         headers.insert(AUTHORIZATION, format!("Bearer {}", token).parse().unwrap());
-        headers.insert("Client-ID", format!("{}", client_id).parse().unwrap());
+        headers.insert("Client-ID", client_id.to_string().parse().unwrap());
 
         let resp = match reqwest
             .get(url)
@@ -252,7 +253,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
                     let game_name = game_resp.data[0]
                         .name
                         .clone()
-                        .unwrap_or("No Game".to_string());
+                        .unwrap_or_else(|| "No Game".to_string());
                     let streamer_name = notification_place.streamer.clone();
 
                     if let Ok(mut message) = ctx
@@ -334,7 +335,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
 
                 let game_data = game_resp.data.get(0);
                 let game_name = if let Some(x) = game_data {
-                    x.name.clone().unwrap_or("No Game".to_string())
+                    x.name.clone().unwrap_or_else(|| "No Game".to_string())
                 } else {
                     "Unknown game".to_string()
                 };
@@ -557,7 +558,7 @@ async fn unmute_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error
                 }
             };
 
-            if let Err(_) = member.remove_role(&ctx, role_id).await {
+            if member.remove_role(&ctx, role_id).await.is_err() {
                 let _ = ChannelId(row.channel_id as u64).say(
                     &ctx,
                     format!("Unable to unmute <@{}> from temporal mute.", row.user_id),

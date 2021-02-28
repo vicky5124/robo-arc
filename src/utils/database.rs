@@ -21,7 +21,7 @@ pub async fn obtain_postgres_pool() -> Result<PgPool, Box<dyn std::error::Error 
 pub async fn obtain_redis_pool() -> Result<ConnectionPool, Box<dyn std::error::Error + Send + Sync>>
 {
     let redis_url = env::var("REDIS_URL")?;
-    let pool = ConnectionPool::create(redis_url.into(), None, num_cpus::get()).await?;
+    let pool = ConnectionPool::create(redis_url, None, num_cpus::get()).await?;
 
     Ok(pool)
 }

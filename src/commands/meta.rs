@@ -223,7 +223,7 @@ async fn prefix(ctx: &Context, msg: &Message) -> CommandResult {
 
         // Just read the value that was stored on the database and return it.
         if let Some(x) = db_prefix {
-            prefix = x.prefix.unwrap().to_string();
+            prefix = x.prefix.unwrap();
         // Else, the guild doesn't have a configured prefix, return the default prefix.
         } else {
             prefix = ".".to_string();

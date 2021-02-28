@@ -25,11 +25,7 @@ pub async fn log_message(ctx: Arc<Context>, data: &MessageCreateEvent) {
     let guild_id = message.guild_id.unwrap().0 as i64;
     let author_id = message.author.id.0 as i64;
 
-    let webhook_id = if let Some(x) = message.webhook_id {
-        Some(x.0 as i64)
-    } else {
-        None
-    };
+    let webhook_id = message.webhook_id.map(|x| x.0 as i64);
 
     let attachments = message
         .attachments
@@ -128,8 +124,8 @@ pub async fn anti_spam_message(
 
                             for msg_chan in messages {
                                 let mut split = msg_chan.split('|');
-                                let message_id = split.nth(0).unwrap().parse::<u64>().unwrap();
-                                let channel_id = split.nth(0).unwrap().parse::<u64>().unwrap();
+                                let message_id = split.next().unwrap().parse::<u64>().unwrap();
+                                let channel_id = split.next().unwrap().parse::<u64>().unwrap();
 
                                 if let Some(x) = bad_messages.get_mut(&channel_id) {
                                     x.push(MessageId(message_id));

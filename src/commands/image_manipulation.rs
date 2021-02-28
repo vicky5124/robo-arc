@@ -104,9 +104,9 @@ async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Erro
         for (_, _, pixel) in imgbuf.enumerate_pixels_mut() {
             // Algorythm to transform RGB into black and white.
             // https://en.wikipedia.org/wiki/YIQ
-            let r = (pixel.0[0] as f32 * 0.299 as f32).abs() as u8;
-            let g = (pixel.0[1] as f32 * 0.587 as f32).abs() as u8;
-            let b = (pixel.0[2] as f32 * 0.114 as f32).abs() as u8;
+            let r = (pixel.0[0] as f32 * 0.299_f32).abs() as u8;
+            let g = (pixel.0[1] as f32 * 0.587_f32).abs() as u8;
+            let b = (pixel.0[2] as f32 * 0.114_f32).abs() as u8;
 
             let gray = r + g + b;
 
@@ -279,8 +279,10 @@ async fn gray(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let arg = args
         .single::<String>()
-        .unwrap_or("gay_gradient".to_string());
-    let algorythm = args.single::<String>().unwrap_or("overlay".to_string());
+        .unwrap_or_else(|_| "gay_gradient".to_string());
+    let algorythm = args
+        .single::<String>()
+        .unwrap_or_else(|_| "overlay".to_string());
 
     let first_attachment = &msg.attachments.get(0);
     let mut filename = "pfp.jpg".to_string();
@@ -385,8 +387,10 @@ async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 async fn pride_pre_grayscaled(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let arg = args
         .single::<String>()
-        .unwrap_or("gay_gradient".to_string());
-    let algorythm = args.single::<String>().unwrap_or("overlay".to_string());
+        .unwrap_or_else(|_| "gay_gradient".to_string());
+    let algorythm = args
+        .single::<String>()
+        .unwrap_or_else(|_| "overlay".to_string());
 
     let first_attachment = &msg.attachments.get(0);
     let mut filename = "pfp.jpg".to_string();
