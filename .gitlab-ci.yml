@@ -1,6 +1,7 @@
 stages:
   - build
-  #- check
+  - clippy
+  - fmt 
 
 variables:
   CARGO_HOME: $CI_PROJECT_DIR/cargo
@@ -22,6 +23,29 @@ build:
   artifacts:
     paths:
       - target/release/arc_bot
-    expire_in: 1 day
-  only:
-  - master
+    expire_in: 5 day
+
+clippy:
+  image: "rustlang/rust:nightly"
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq libssl-dev libsodium-dev libopus-dev pkg-config
+    - cargo --version
+    - rustc --version
+  stage: clippy
+  script:
+    - cargo clippy
+  cache:
+    untracked: true
+    paths:
+      - target/
+      - cargo/
+
+fmt:
+  image: "rustlang/rust:nightly"
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq libssl-dev libsodium-dev libopus-dev pkg-config
+    - cargo --version
+    - rustc --version
+  stage: fmt
+  script:
+    - cargo fmt
