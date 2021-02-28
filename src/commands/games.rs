@@ -1,8 +1,8 @@
 use crate::commands::moderation::parse_member;
 
-use std::time::Duration;
 use std::fmt::Display;
 use std::fs;
+use std::time::Duration;
 
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
