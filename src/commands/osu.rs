@@ -816,11 +816,14 @@ async fn osu_profile(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
         msg.channel_id
             .send_message(ctx, |m| {
                 m.embed(|e| {
-                    e.color(Colour::new(
-                        user.user_id
-                            .parse::<u32>()
-                            .expect("The ID was too large for u32 :thinking:"),
-                    ));
+                    e.color(Colour::new({
+                        let colour = user.user_id.parse().unwrap();
+                        if colour > 16777215 {
+                            15227880
+                        } else {
+                            colour
+                        }
+                    }));
                     e.timestamp(user.join_date.clone());
                     e.author(|a| {
                         a.name(&user.username);
@@ -987,7 +990,9 @@ async fn osu_profile(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
                             ))
                         }
                     })
-                })
+                });
+                dbg!(&m);
+                m
             })
             .await?;
     }
