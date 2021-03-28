@@ -990,9 +990,7 @@ async fn osu_profile(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
                             ))
                         }
                     })
-                });
-                dbg!(&m);
-                m
+                })
             })
             .await?;
     }
@@ -1317,7 +1315,6 @@ async fn recent(ctx: &Context, msg: &Message, arguments: Args) -> CommandResult 
             if let Err(why) =
                 short_recent_builder(ctx.http.clone(), &event_data, bot_msg.clone(), page).await
             {
-                dbg!(&why);
                 break;
             }
             let _ = reaction.as_inner_ref().delete(ctx).await;

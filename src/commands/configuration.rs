@@ -1091,8 +1091,6 @@ async fn mute_role(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
         data_read.get::<DatabasePool>().unwrap().clone()
     };
 
-    dbg!(&role);
-
     sqlx::query!("INSERT INTO muted_roles (guild_id, role_id) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET role_id = $2",
                   msg.guild_id.unwrap().0 as i64,
                   role.0 as i64)
