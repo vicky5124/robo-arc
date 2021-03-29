@@ -59,6 +59,7 @@ pub struct Master;
     terms_of_service,
     issues,
     eval,
+    rust,
     admin_eval
 )]
 pub struct Meta;

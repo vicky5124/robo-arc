@@ -35,11 +35,30 @@ struct Code {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+struct RustCode {
+    backtrace: bool,
+    channel: String,
+    code: String,
+    #[serde(rename = "crateType")]
+    crate_type: String,
+    edition: String,
+    mode: String,
+    tests: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct RanCode {
     ran: bool,
     language: String,
     version: String,
     output: String,
+    stdout: String,
+    stderr: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RustRanCode {
+    success: bool,
     stdout: String,
     stderr: String,
 }
@@ -454,6 +473,7 @@ async fn issues(ctx: &Context, msg: &Message) -> CommandResult {
 /// print("Hello, world!")
 /// \`\`\`
 #[command]
+#[aliases(exec, compile, run)]
 async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     // curl -X POST https://emkc.org/api/v1/piston/execute -H 'content-type: application/json' --data '{"language": "py", "source": "import this; print(\"test\")"}'
     //"```([a-zA-Z].+?(?=\n))"
@@ -514,12 +534,12 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         match create_paste(&response.output).await {
             Err(why) => {
                 error!("Error creating paste: {}", why);
-                let parsed = response.output.replace("`", "\\`");
+                let parsed = response.output.replace("```", "\\`\\`\\`");
                 format!("```\n{}```", &parsed[..1950])
             }
             Ok(x) => {
                 if x.is_empty() {
-                    let parsed = response.output.replace("`", "\\`");
+                    let parsed = response.output.replace("```", "\\`\\`\\`");
                     format!("Output was too long to upload.\n```\n{}```", &parsed[..1950])
                 } else {
                     format!("Output was too long, so it was uploaded here: {}", x)
@@ -527,7 +547,7 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             }
         }
     } else {
-        format!("```\n{}```", &response.output.replace("`", "\\`"))
+        format!("```\n{}```", &response.output.replace("```", "\\`\\`\\`"))
     };
 
     msg.channel_id
@@ -548,6 +568,123 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         })
         .await?;
 
+
+    Ok(())
+}
+
+/// Executes the provided rust code.
+/// - There's a 10 second timeout.
+///
+/// usage:
+/// eval \`\`\`py
+/// print("Hello, world!")
+/// \`\`\`
+#[command]
+#[aliases(rs)]
+async fn rust(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let re = Lazy::new(|| Regex::new("^```(?P<lang>.*)\n(?P<src>(?:.+|\n)*)```$").unwrap());
+    let captures = re.captures(args.message());
+
+    let caps = if let Some(caps) = captures {
+        caps
+    } else {
+        msg.reply(ctx, "No codeblock was provided, please put your code inside a codeblock:\n\n\\`\\`\\`rust\n<your code here>\n\\`\\`\\`").await?;
+        return Ok(());
+    };
+
+    let language = caps.name("lang").unwrap().as_str();
+    let source = caps.name("src").unwrap().as_str().trim().to_string();
+
+    if language != "rs" && language != "rust" && !language.is_empty() {
+        msg.reply(ctx, "The codeblock provided is for a different language, please put `rs` or `rust` in the language field:\n\n\\`\\`\\`rust\n<your code here>\n\\`\\`\\`").await?;
+        return Ok(());
+    }
+
+    if source.is_empty() {
+        msg.reply(ctx, "No code was provided, please put some code inside the codeblock:\n\n\\`\\`\\`rust\n<your code here>\n\\`\\`\\`").await?;
+        return Ok(());
+    }
+
+    let code = RustCode {
+        code: source,
+        channel: "nightly".to_string(),
+        crate_type: "bin".to_string(),
+        edition: "2018".to_string(),
+        mode: "debug".to_string(),
+        backtrace: false,
+        tests: false,
+    };
+
+    let client = reqwest::Client::new();
+
+    let response = match client
+        .post("https://play.rust-lang.org/execute")
+        .json(&code)
+        .send()
+        .await?
+        .json::<RustRanCode>()
+        .await {
+            Ok(x) => x,
+            Err(_) => {
+                msg.reply(ctx, "Timeout error: The code like took more than 12 seconds to compile.").await?;
+                return Ok(());
+            }
+        };
+
+    // println!("{:#?}", &response);
+
+    let stderr = if response.stderr.len() > 950 {
+        match create_paste(&response.stderr).await {
+            Err(why) => {
+                error!("Error creating paste: {}", why);
+                let parsed = response.stderr.replace("```", "\\`\\`\\`");
+                format!("```\n{}```", &parsed[..950])
+            }
+            Ok(x) => {
+                if x.is_empty() {
+                    let parsed = response.stderr.replace("```", "\\`\\`\\`");
+                    format!("Output was too long to upload.\n```\n{}```", &parsed[..950])
+                } else {
+                    format!("Output was too long, so it was uploaded here: {}", x)
+                }
+            }
+        }
+    } else {
+        format!("```\n{}```", &response.stderr.replace("```", "\\`\\`\\`"))
+    };
+
+    let stdout = if response.stdout.len() > 950 {
+        match create_paste(&response.stdout).await {
+            Err(why) => {
+                error!("Error creating paste: {}", why);
+                let parsed = response.stdout.replace("```", "\\`\\`\\`");
+                format!("```\n{}```", &parsed[..950])
+            }
+            Ok(x) => {
+                if x.is_empty() {
+                    let parsed = response.stdout.replace("```", "\\`\\`\\`");
+                    format!("Output was too long to upload.\n```\n{}```", &parsed[..950])
+                } else {
+                    format!("Output was too long, so it was uploaded here: {}", x)
+                }
+            }
+        }
+    } else {
+        format!("```\n{}```", &response.stdout.replace("```", "\\`\\`\\`"))
+    };
+
+    msg.channel_id
+        .send_message(ctx, |m| {
+            m.reference_message(msg);
+            m.allowed_mentions(|f| f.replied_user(false));
+            m.embed(|e| {
+                e.title("Evaluated Rust Nightly!");
+                e.field("stderr", stderr, false);
+                e.field("stdout", stdout, false);
+                e
+            })
+        })
+        .await?;
 
     Ok(())
 }
