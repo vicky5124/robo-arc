@@ -1,3 +1,10 @@
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PasteData {
+    code: String,
+    upload: String,
+    extension: String,
+}
+
 // Capitalizes the first letter of a str.
 pub fn capitalize_first(input: &str) -> String {
     // get an array of all the charactesr on the string
@@ -67,4 +74,26 @@ pub fn string_to_seconds(text: impl ToString) -> u64 {
     }
 
     seconds
+}
+
+pub async fn create_paste(code: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    let client = reqwest::Client::new();
+
+    let upload_data = PasteData {
+        code: code.to_string(),
+        upload: "paste".to_string(),
+        extension: String::new(),
+    };
+
+    let response = client
+        .post("https://5124.16-b.it:8088/paste")
+        .form(&upload_data)
+        .send()
+        .await?;
+
+    if response.status() != 200 {
+        Ok(String::new())
+    } else {
+        Ok(response.url().to_string())
+    }
 }

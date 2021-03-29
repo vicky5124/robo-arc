@@ -1,16 +1,18 @@
 use crate::{
     global_data::{DatabasePool, ShardManagerContainer},
-    utils::basic_functions::seconds_to_days,
+    utils::basic_functions::*,
     Tokens, Uptime,
 };
 use std::{
     fs::{read_to_string, File, OpenOptions},
     io::prelude::*,
+    lazy::Lazy,
     process::id,
     time::Instant,
 };
 
 use num_format::{Locale, ToFormattedString};
+use regex::Regex;
 use serde_json::json;
 use serenity::{
     client::bridge::gateway::ShardId,
@@ -25,6 +27,24 @@ use serenity::{
 use tokio::process::Command;
 use toml::Value;
 use walkdir::WalkDir;
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Code {
+    language: String,
+    source: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RanCode {
+    ran: bool,
+    language: String,
+    version: String,
+    output: String,
+    stdout: String,
+    stderr: String,
+}
+
+
 
 #[command] // Sets up a command
 #[aliases("pong", "latency")] // Sets up aliases to that command.
@@ -126,23 +146,23 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
             e.url(url);
             e.description("Keep in mind, this bot is still in pure developement, so not all of this mentioned features are implemented.\n\n__**Reason for each permission**__");
             e.fields(vec![
-                     ("Attach Files", "For some of the booru commands.\nFor an automatic text file to be sent when a message is too long.", true),
-                     ("Read Messages", "So the bot can read the messages to know when a command was invoked and such.", true),
-                     ("Manage Messages", "Be able to clear reactions of timed out paginations.\nClear moderation command.", true),
-                     ("Manage Channels", "Be able to mute members on the channel without having to create a role for it.", true),
-                     ("Manage Webhooks", "For all the commands that can be ran on a schedule, so it's more efficient.", true),
-                     ("Manage Roles", "Be able to give a stream notification role.\nMute moderation command.", true),
-                     ("Read Message History", "This is a required permission for every paginated command.", true),
-                     ("Use External Emojis", "For all the commands that use emojis for better emphasis.", true),
-                     ("View Audit Log", "To be able to have a more feature rich logging to a channel.", true),
-                     ("Add Reactions", "To be able to add reactions for all the paginated commands.", true),
-                     ("Mention Everyone", "To be able to mention the livestream notification role.", true),
-                     ("Send Messages", "So the bot can send the messages it needs to send.", true),
-                     ("Speak", "To be able to play music on that voice channel.", true),
-                     ("Embed Links", "For the tags to be able to embed images.", true),
-                     ("Connect", "To be able to connect to a voice channel.", true),
-                     ("Kick Members", "Kick/GhostBan moderation command.", true),
-                     ("Ban Members", "Ban moderation command.", true),
+                ("Attach Files", "For some of the booru commands.\nFor an automatic text file to be sent when a message is too long.", true),
+                ("Read Messages", "So the bot can read the messages to know when a command was invoked and such.", true),
+                ("Manage Messages", "Be able to clear reactions of timed out paginations.\nClear moderation command.", true),
+                ("Manage Channels", "Be able to mute members on the channel without having to create a role for it.", true),
+                ("Manage Webhooks", "For all the commands that can be ran on a schedule, so it's more efficient.", true),
+                ("Manage Roles", "Be able to give a stream notification role.\nMute moderation command.", true),
+                ("Read Message History", "This is a required permission for every paginated command.", true),
+                ("Use External Emojis", "For all the commands that use emojis for better emphasis.", true),
+                ("View Audit Log", "To be able to have a more feature rich logging to a channel.", true),
+                ("Add Reactions", "To be able to add reactions for all the paginated commands.", true),
+                ("Mention Everyone", "To be able to mention the livestream notification role.", true),
+                ("Send Messages", "So the bot can send the messages it needs to send.", true),
+                ("Speak", "To be able to play music on that voice channel.", true),
+                ("Embed Links", "For the tags to be able to embed images.", true),
+                ("Connect", "To be able to connect to a voice channel.", true),
+                ("Kick Members", "Kick/GhostBan moderation command.", true),
+                ("Ban Members", "Ban moderation command.", true),
             ]);
             e
         });
@@ -224,7 +244,7 @@ async fn prefix(ctx: &Context, msg: &Message) -> CommandResult {
         // Just read the value that was stored on the database and return it.
         if let Some(x) = db_prefix {
             prefix = x.prefix.unwrap();
-        // Else, the guild doesn't have a configured prefix, return the default prefix.
+            // Else, the guild doesn't have a configured prefix, return the default prefix.
         } else {
             prefix = ".".to_string();
         }
@@ -366,9 +386,9 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
             e.field("Currently owned by:", format!("Team: {}\nTag: {}\nID: {}", hoster_team, hoster_tag, hoster_id), true);
             e.field("Latency:", format!("Gateway:\n`{}`\nREST:\n`{}ms`", shard_latency, rest_latency), true);
             e.field("Memory usage:", format!("Complete:\n`{} KB`\nBase:\n`{} KB`",
-                                            &full_mem.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en),
-                                            &reasonable_mem.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en)
-                                            ), true);
+                    &full_mem.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en),
+                    &reasonable_mem.parse::<u32>().expect("NaN").to_formatted_string(&Locale::en)
+            ), true);
             e.field("Somewhat Static Stats:", format!("Command Count:\n`{}`\nUptime:\n`{}`", command_count, uptime), true);
 
             if let Some(x) = bot_icon {
@@ -398,15 +418,15 @@ async fn changelog(ctx: &Context, msg: &Message) -> CommandResult {
 #[aliases(tos, terms)]
 async fn terms_of_service(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(ctx, "
-I know you likely don't care much about this, so i'll keep them short.
+        I know you likely don't care much about this, so i'll keep them short.
 
-By agreeing with this terms of service you agree that the application should be able to store all your messages and discord user data; This user data includes your account ID, Username, Discriminator and Avatar, along with a history of each; No personal information is ever stored.
-The application is completely open source, so you always are able to see what data is exactly being stored.
+        By agreeing with this terms of service you agree that the application should be able to store all your messages and discord user data; This user data includes your account ID, Username, Discriminator and Avatar, along with a history of each; No personal information is ever stored.
+        The application is completely open source, so you always are able to see what data is exactly being stored.
 
-All of this data is completely encrypted and will NEVER be used for any other purpose than logging inside discord itself.
+        All of this data is completely encrypted and will NEVER be used for any other purpose than logging inside discord itself.
 
-If you still don't want to have this data stored, contact nitsuga5124#2207, and all your data will be deleted and stopped from being logged.
-").await?;
+        If you still don't want to have this data stored, contact nitsuga5124#2207, and all your data will be deleted and stopped from being logged.
+        ").await?;
 
     Ok(())
 }
@@ -418,17 +438,123 @@ async fn issues(ctx: &Context, msg: &Message) -> CommandResult {
         .say(
             ctx,
             "
-You are free to submit issues, bug reports and new features to the issues page:
-<https://gitlab.com/nitsuga5124/robo-arc/-/issues>
-",
+            You are free to submit issues, bug reports and new features to the issues page:
+            <https://gitlab.com/nitsuga5124/robo-arc/-/issues>
+            ",
         )
         .await?;
     Ok(())
 }
 
+/// Executes the provided code.
+/// - There's a 10 second timeout.
+///
+/// usage:
+/// eval \`\`\`py
+/// print("Hello, world!")
+/// \`\`\`
+#[command]
+async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    // curl -X POST https://emkc.org/api/v1/piston/execute -H 'content-type: application/json' --data '{"language": "py", "source": "import this; print(\"test\")"}'
+    //"```([a-zA-Z].+?(?=\n))"
+    //"([`]+)$|```([a-zA-Z].+?(?=\n))"
+    //"(^```)(.*?(?=\n))([\s\S]*)(```$)"
+    //"^```(?P<syntax>.*)\n(?P<code>(?:.+|\n)*)```$"
+
+    let re = Lazy::new(|| Regex::new("^```(?P<lang>.*)\n(?P<src>(?:.+|\n)*)```$").unwrap());
+    let captures = re.captures(args.message());
+
+    let caps = if let Some(caps) = captures {
+        caps
+    } else {
+        msg.reply(ctx, "No codeblock was provided, please put your code inside a codeblock:\n\n\\`\\`\\`lang\n<your code here>\n\\`\\`\\`").await?;
+        return Ok(());
+    };
+
+    let language = caps.name("lang").unwrap().as_str().to_string();
+    let source = caps.name("src").unwrap().as_str().trim().to_string();
+
+    if language.is_empty() {
+        msg.reply(ctx, "No codeblock with language was provided, please put the programming language inside the codeblock:\n\n\\`\\`\\`lang\n<your code here>\n\\`\\`\\`").await?;
+        return Ok(());
+    }
+
+    if source.is_empty() {
+        msg.reply(ctx, "No code was provided, please put some code inside the codeblock:\n\n\\`\\`\\`lang\n<your code here>\n\\`\\`\\`").await?;
+        return Ok(());
+    }
+
+    let code = Code { language, source };
+
+    let client = reqwest::Client::new();
+
+    let response = match client
+        .post("https://emkc.org/api/v1/piston/execute")
+        .json(&code)
+        .send()
+        .await?
+        .json::<RanCode>()
+        .await {
+            Ok(x) => x,
+            Err(_) => {
+                msg.reply(ctx, "The programming language specified is not supported.").await?;
+                return Ok(());
+            }
+        };
+
+    // println!("{:#?}", &response);
+
+    if !response.ran {
+        msg.reply(ctx, "The code was unable to be ran.").await?;
+        warn!("Code didn't run:\n{:#?}", response);
+        return Ok(());
+    }
+
+    let description = if response.output.len() > 1950 {
+        match create_paste(&response.output).await {
+            Err(why) => {
+                error!("Error creating paste: {}", why);
+                let parsed = response.output.replace("`", "\\`");
+                format!("```\n{}```", &parsed[..1950])
+            }
+            Ok(x) => {
+                if x.is_empty() {
+                    let parsed = response.output.replace("`", "\\`");
+                    format!("Output was too long to upload.\n```\n{}```", &parsed[..1950])
+                } else {
+                    format!("Output was too long, so it was uploaded here: {}", x)
+                }
+            }
+        }
+    } else {
+        format!("```\n{}```", &response.output.replace("`", "\\`"))
+    };
+
+    msg.channel_id
+        .send_message(ctx, |m| {
+            if response.language == "rust" {
+                m.content("For rust, it's better to use the `rust` command instead.");
+            }
+            m.reference_message(msg);
+            m.allowed_mentions(|f| f.replied_user(false));
+            m.embed(|e| {
+                e.title(format!(
+                    "Evaluated \"{}\" v{}",
+                    &response.language, &response.version
+                ));
+                e.description(description);
+                e
+            })
+        })
+        .await?;
+
+
+    Ok(())
+}
+
 #[command]
 #[owners_only]
-async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+async fn admin_eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let token = {
         let read_data = ctx.data.read().await;
         let config = read_data.get::<Tokens>().unwrap();
@@ -457,23 +583,23 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         r#####"
 #![allow(unused_variables)]
 #![allow(redundant_semicolons)]
-use std::error::Error;
+        use std::error::Error;
 
-use twilight_http::Client;
-use twilight_model::channel::message::Message;
+        use twilight_http::Client;
+        use twilight_model::channel::message::Message;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {{
-    let client = Client::new("{}");
-    let ctx = &client;
+        async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {{
+            let client = Client::new("{}");
+            let ctx = &client;
 
-    let msg: Message = serde_json::from_str(r####"{}"####)?;
+            let msg: Message = serde_json::from_str(r####"{}"####)?;
 
-{}
+            {}
 
-    Ok(())
-}}
-"#####,
+            Ok(())
+        }}
+        "#####,
         token, message, eval_code
     );
 

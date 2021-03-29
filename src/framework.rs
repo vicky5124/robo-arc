@@ -58,7 +58,8 @@ pub struct Master;
     changelog,
     terms_of_service,
     issues,
-    eval
+    eval,
+    admin_eval
 )]
 pub struct Meta;
 

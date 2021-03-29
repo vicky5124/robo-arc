@@ -1312,8 +1312,9 @@ async fn recent(ctx: &Context, msg: &Message, arguments: Args) -> CommandResult 
                 _ => (),
             }
 
-            if let Err(why) =
-                short_recent_builder(ctx.http.clone(), &event_data, bot_msg.clone(), page).await
+            if short_recent_builder(ctx.http.clone(), &event_data, bot_msg.clone(), page)
+                .await
+                .is_err()
             {
                 break;
             }

@@ -1,5 +1,6 @@
 #![feature(core_intrinsics)]
 #![feature(async_closure)]
+#![feature(once_cell)]
 #![type_length_limit = "1331829"]
 #![allow(clippy::unusual_byte_groupings)]
 //! This is a discord bot made with `serenity.rs` as a Rust learning project.
