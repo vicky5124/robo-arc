@@ -576,8 +576,10 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 /// - There's a 10 second timeout.
 ///
 /// usage:
-/// eval \`\`\`py
-/// print("Hello, world!")
+/// rust \`\`\`rs
+/// fn main() { 
+///     println!("Hello, World!");
+/// }
 /// \`\`\`
 #[command]
 async fn rust(ctx: &Context, msg: &Message, args: Args) -> CommandResult {

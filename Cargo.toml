@@ -69,8 +69,10 @@ features = ["full"]
 
 # https://github.com/serenity-rs/serenity
 [dependencies.serenity]
-git = "https://github.com/serenity-rs/serenity"
-branch = "current"
+#git = "https://github.com/serenity-rs/serenity"
+#branch = "current"
+git = "https://github.com/acdenisSK/serenity/"
+branch = "dollar_line_joining"
 #version = "0.10"
 default-features = false
 features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "rustls_backend", "absolute_ratelimits", "collector", "voice"]
@@ -113,8 +115,10 @@ default-features = false
 features = ["serenity-rustls", "gateway"]
 
 [patch.crates-io.serenity]
-git = "https://github.com/serenity-rs/serenity"
-branch = "current"
+#git = "https://github.com/serenity-rs/serenity"
+#branch = "current"
+git = "https://github.com/acdenisSK/serenity/"
+branch = "dollar_line_joining"
 
 
 # used for profiling for flamegraph
