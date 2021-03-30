@@ -580,7 +580,6 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 /// print("Hello, world!")
 /// \`\`\`
 #[command]
-#[aliases(rs)]
 async fn rust(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let re = Lazy::new(|| Regex::new("^```(?P<lang>.*)\n(?P<src>(?:.+|\n)*)```$").unwrap());
     let captures = re.captures(args.message());
