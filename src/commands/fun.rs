@@ -379,7 +379,7 @@ async fn encrypt(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     Ok(())
 }
 
-/// Decrypts and encrypted message.
+/// Decrypts an encrypted message.
 ///
 /// Usage: `decrypt 36991e919634f4dc933787de47e9cb37`
 #[command]
