@@ -379,7 +379,7 @@ checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
 [[package]]
 name = "command_attr"
 version = "0.3.4"
-source = "git+https://github.com/serenity-rs/serenity?branch=current#a04291f7d43ac78a27483ec54773044272fbd278"
+source = "git+https://github.com/serenity-rs/serenity?branch=current#feda47ca0b4b61061d8c02623c0fcdafe1e17c8b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1237,9 +1237,9 @@ dependencies = [
 
 [[package]]
 name = "lock_api"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd96ffd135b2fd7b973ac026d28085defbe8983df057ced3eb4f2130b0831312"
+checksum = "5a3c91c24eae6777794bb1997ad98bbb87daf92890acab859f7eaa4320333176"
 dependencies = [
  "scopeguard",
 ]
@@ -2277,7 +2277,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.10.4"
-source = "git+https://github.com/serenity-rs/serenity?branch=current#a04291f7d43ac78a27483ec54773044272fbd278"
+source = "git+https://github.com/serenity-rs/serenity?branch=current#feda47ca0b4b61061d8c02623c0fcdafe1e17c8b"
 dependencies = [
  "async-trait",
  "async-tungstenite 0.11.0",
