@@ -107,6 +107,7 @@ async fn qr(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     urban_define,
     define_urban
 )]
+#[min_args(1)]
 async fn urban(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let term = args.message();
     let url = Url::parse_with_params(
