@@ -31,8 +31,7 @@ futures = "0.3" # https://github.com/rust-lang/futures-rs
 http = "0.2" # https://github.com/hyperium/http
 rust-crypto = "0.2" # https://github.com/dagenix/rust-crypto
 hex = "0.4" # https://github.com/KokaKiwi/rust-hex
-#photon-rs = "0.2" # https://github.com/silvia-odwyer/photon
-photon-rs = { git = "https://github.com/silvia-odwyer/photon" }
+photon-rs = "0.3" # https://github.com/silvia-odwyer/photon
 dotenv = "0.15" # https://github.com/dotenv-rs/dotenv
 walkdir = "2" # https://github.com/BurntSushi/walkdir
 
