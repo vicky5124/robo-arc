@@ -8,6 +8,7 @@ use serenity::{
     prelude::Context,
 };
 
+use lavalink_rs::model::Band;
 use tokio::process::Command;
 
 use regex::Regex;
@@ -724,6 +725,103 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
     if let Some(m) = m {
         tokio::time::sleep(Duration::from_secs(2)).await;
         let _ = m.delete(ctx).await;
+    }
+
+    Ok(())
+}
+
+/// Equalizes the audio to a preset
+///
+/// Note: It may take a while for the EQ to take effect after the command is ran successfully.
+///
+/// Choose from: Metal, Piano or Boost, anything else will default the values.
+#[command]
+#[aliases(eq, equalizer)]
+#[min_args(1)]
+async fn equalize(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let lava_client = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<Lavalink>().unwrap().clone()
+    };
+
+    let eq = match args.single::<String>()?.to_lowercase().as_str() {
+        "metal" => lavalink_rs::EQ_METAL,
+        "piano" => lavalink_rs::EQ_PIANO,
+        "boost" => lavalink_rs::EQ_BOOST,
+        _ => lavalink_rs::EQ_BASE,
+    };
+
+    lava_client.equalize_all(msg.guild_id.unwrap(), eq).await?;
+    msg.react(ctx, '✅').await?;
+
+    Ok(())
+}
+
+/// Equalizes specific bands to the desired gains.
+///
+/// Note: It may take a while for the EQ to take effect after the command is ran successfully.
+///
+/// - There are 15 bands (0-14) that can be changed.
+/// - The decimal value is the multiplier for the given band.
+/// - The default value is 0.
+/// - Valid values range from -0.25 to 1.0, where -0.25 means the given band is completely muted, and 0.25 means it is doubled.
+/// - Modifying the gain could also change the volume of the output.
+/// - Bands that are not provided will not be modified.
+///
+/// Examples:
+/// `eqb 0 0.0 14 1.0`
+/// `eqb 0 -0.25 14 0.0`
+/// `eqb 0 0 1 0 2 0 3 0 4 0 5 0 6 0 7 0 8 0 9 0 10 0 11 0 12 0 13 0 14 0`
+/// `eqb 0 1 1 1 2 1 3 1 4 1 5 1 6 1 7 1 8 1 9 1 10 1 11 1 12 1 13 1 14 1`
+/// `eqb 0 -1 1 -1 2 -1 3 -1 4 -1 5 -1 6 -1 7 -1 8 -1 9 -1 10 -1 11 -1 12 -1 13 -1 14 -1`
+/// `eqb 1 0.1 2 0.1 3 0.15 4 0.13 5 0.1 7 0.125 8 0.175 9 0.175 10 0.125 11 0.125 12 0.1 13 0.075`
+/// `eqb 0 -0.25 1 0.0 2 -0.25 3 0.0 4 -0.25 5 0.0 6 -0.25 7 0.0 8 -0.25 9 0.0 10 -0.25 11 0.0 12 -0.25 13 0.0 14 -0.25`
+#[command]
+#[aliases(eqb, equalizeband, eqband, eq_band, eq_b, equalize_b)]
+#[min_args(2)]
+async fn equalize_band(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let lava_client = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<Lavalink>().unwrap().clone()
+    };
+
+    let arguments = args.message();
+
+    let bands = arguments
+        .split(' ')
+        .step_by(2)
+        .filter_map(|i| i.parse::<u8>().ok())
+        .filter(|i| *i <= 14)
+        .zip(
+            arguments
+                .split(' ')
+                .skip(1)
+                .step_by(2)
+                .filter_map(|i| i.parse::<f64>().ok())
+                .map(|i| i.min(1.0).max(-0.25)),
+        )
+        .map(|i| Band {
+            band: i.0,
+            gain: i.1,
+        })
+        .collect::<Vec<Band>>();
+
+    if bands.is_empty() {
+        msg.reply(ctx, "Invalid arguments provided.").await?;
+    } else {
+        let mut text = "```\nband | gain\n".to_string();
+
+        for i in &bands {
+            text.push_str(&format!(" {:02}  |  {}\n", i.band, i.gain))
+        }
+
+        text.push_str("```");
+
+        lava_client
+            .equalize_dynamic(msg.guild_id.unwrap(), bands)
+            .await?;
+
+        msg.reply(ctx, text).await?;
     }
 
     Ok(())

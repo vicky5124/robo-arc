@@ -217,9 +217,9 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
 name = "backtrace"
-version = "0.3.56"
+version = "0.3.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d117600f438b1707d4e4ae15d3595657288f8235a0eb593e80ecc98ab34e1bc"
+checksum = "78ed203b9ba68b242c62b3fb7480f589dd49829be1edb3fe8fc8b4ffda2dcb8d"
 dependencies = [
  "addr2line",
  "cfg-if 1.0.0",
@@ -396,7 +396,7 @@ checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
 [[package]]
 name = "command_attr"
 version = "0.3.5"
-source = "git+https://github.com/serenity-rs/serenity?branch=current#fa0bdd8a2978af2e757a55077f55f1b8c6df938b"
+source = "git+https://github.com/serenity-rs/serenity?branch=current#b2565da364dc7c50b10d9991968cb286d17a4f6d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1182,9 +1182,8 @@ dependencies = [
 
 [[package]]
 name = "lavalink-rs"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ceca8f10bed87a89dac00f2322a5ed73c6ef29198634201ef3e1eda65f22ebf7"
+version = "0.7.1"
+source = "git+https://gitlab.com/nitsuga5124/lavalink-rs/?branch=master#78b7228f0a1bb8d3da90c64ea82365540e4d37db"
 dependencies = [
  "async-trait",
  "async-tungstenite 0.13.1",
@@ -1203,6 +1202,7 @@ dependencies = [
  "tracing",
  "tracing-log",
  "typemap_rev",
+ "version_check",
 ]
 
 [[package]]
@@ -1213,9 +1213,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "lexical-core"
-version = "0.7.5"
+version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21f866863575d0e1d654fbeeabdc927292fdf862873dc3c96c6f753357e13374"
+checksum = "6607c62aa161d23d17a9072cc5da0be67cdfc89d3afb1e8d9c842bebc2525ffe"
 dependencies = [
  "arrayvec 0.5.2",
  "bitflags",
@@ -2350,7 +2350,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.10.5"
-source = "git+https://github.com/serenity-rs/serenity?branch=current#fa0bdd8a2978af2e757a55077f55f1b8c6df938b"
+source = "git+https://github.com/serenity-rs/serenity?branch=current#b2565da364dc7c50b10d9991968cb286d17a4f6d"
 dependencies = [
  "async-trait",
  "async-tungstenite 0.11.0",
@@ -2431,9 +2431,9 @@ checksum = "cbce6d4507c7e4a3962091436e56e95290cb71fa302d0d270e32130b75fbff27"
 
 [[package]]
 name = "slab"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
+checksum = "f173ac3d1a7e3b28003f40de0b5ce7fe2710f9b9dc3fc38664cebee46b3b6527"
 
 [[package]]
 name = "smallvec"

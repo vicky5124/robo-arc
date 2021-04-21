@@ -19,6 +19,7 @@ use serenity::{
         guild::Member,
         id::{ChannelId, GuildId},
         user::OnlineStatus,
+        //event::VoiceServerUpdateEvent,
     },
     prelude::{Context, EventHandler},
 };
@@ -320,4 +321,12 @@ impl EventHandler for Handler {
             };
         }
     }
+    
+    //async fn voice_server_update(&self, ctx: Context, vsu: VoiceServerUpdateEvent) {
+    //    dbg!(&vsu);
+
+    //        // let data = ctx.data.read().await;
+    //        // let lava_client = data.get::<Lavalink>().unwrap();
+    //        // lava_client.create_session(&connection_info).await?;
+    //}
 }

@@ -99,10 +99,10 @@ version = "0.21"
 features = ["serialize"]
 
 [dependencies.lavalink-rs]
-#git = "https://gitlab.com/nitsuga5124/lavalink-rs/"
-#branch = "songbird"
-version = "0.6.0-rc"
-features = ["rustls", "andesite"]
+git = "https://gitlab.com/nitsuga5124/lavalink-rs/"
+branch = "master"
+#version = "0.6.0-rc"
+features = ["rustls", "andesite", "serenity"]
 
 [dependencies.songbird]
 #git = "https://github.com/serenity-rs/songbird/"
