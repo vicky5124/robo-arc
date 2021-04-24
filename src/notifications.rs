@@ -528,6 +528,10 @@ async fn unmute_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error
 
     for row in muted_members {
         if row.date < chrono::offset::Utc::now() {
+            sqlx::query!("DELETE FROM muted_members WHERE id = $1", row.id)
+                .execute(&pool)
+                .await?;
+
             let mut member = if let Ok(x) = ctx
                 .http
                 .get_member(row.guild_id as u64, row.user_id as u64)
@@ -535,11 +539,13 @@ async fn unmute_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error
             {
                 x
             } else {
-                let _ = ChannelId(row.channel_id as u64).say(
+                if let Err(why) = ChannelId(row.channel_id as u64).say(
                     &ctx,
                     format!("Unable to unmute <@{}> from temporal mute.", row.user_id),
-                );
-                return Ok(());
+                ).await {
+                    error!("Unable to send message A: {}", why);
+                }
+                continue;
             };
 
             let role_id = {
@@ -553,20 +559,24 @@ async fn unmute_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error
                 if let Some(role_row) = role_row {
                     role_row.role_id as u64
                 } else {
-                    let _ = ChannelId(row.channel_id as u64).say(&ctx, format!("Unable to unmute <@{}> from temporal mute because there's no configured role.", row.user_id));
-                    return Ok(());
+                    if let Err(why) = ChannelId(row.channel_id as u64).say(&ctx, format!("Unable to unmute <@{}> from temporal mute because there's no configured role.", row.user_id)).await {
+                        error!("Unable to send message B: {}", why);
+                    }
+                    continue;
                 }
             };
 
             if member.remove_role(&ctx, role_id).await.is_err() {
-                let _ = ChannelId(row.channel_id as u64).say(
+                if let Err(why) = ChannelId(row.channel_id as u64).say(
                     &ctx,
                     format!("Unable to unmute <@{}> from temporal mute.", row.user_id),
-                );
-                return Ok(());
+                ).await {
+                    error!("Unable to send message C: {}", why);
+                }
+                continue;
             }
 
-            let _ = ChannelId(row.channel_id as u64)
+            if let Err(why) = ChannelId(row.channel_id as u64)
                 .send_message(&ctx, |m| {
                     m.content(format!("<@!{}> has been unmuted.", row.user_id));
                     m.embed(|e| {
@@ -591,11 +601,9 @@ async fn unmute_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error
                         )
                     })
                 })
-                .await;
-
-            sqlx::query!("DELETE FROM muted_members WHERE id = $1", row.id)
-                .execute(&pool)
-                .await?;
+                .await {
+                    error!("Unable to send message D: {}", why);
+                }
         }
     }
 
@@ -613,7 +621,7 @@ pub async fn notification_loop(ctx: Arc<Context>) {
             tokio::spawn(async move {
                 if let Err(why) = check_new_posts(Arc::clone(&ctx1)).await {
                     error!("check_new_posts :: {}", why);
-                    eprintln!(
+                    error!(
                         "An error occurred while running check_new_posts() >>> {}",
                         why
                     );
@@ -624,7 +632,7 @@ pub async fn notification_loop(ctx: Arc<Context>) {
             tokio::spawn(async move {
                 if let Err(why) = check_twitch_livestreams(Arc::clone(&ctx2)).await {
                     error!("check_twitch_livestreams :: {}", why);
-                    eprintln!(
+                    error!(
                         "An error occurred while running check_twitch_livestreams() >>> {}",
                         why
                     );
@@ -650,7 +658,7 @@ pub async fn notification_loop(ctx: Arc<Context>) {
             tokio::spawn(async move {
                 if let Err(why) = reminder_check(Arc::clone(&ctx1)).await {
                     error!("remider_check :: {}", why);
-                    eprintln!(
+                    error!(
                         "An error occurred while running reminder_check() >>> {}",
                         why
                     );
@@ -661,7 +669,7 @@ pub async fn notification_loop(ctx: Arc<Context>) {
             tokio::spawn(async move {
                 if let Err(why) = unmute_check(Arc::clone(&ctx2)).await {
                     error!("unmute_check :: {}", why);
-                    eprintln!("An error occurred while running unmute_check() >>> {}", why);
+                    error!("An error occurred while running unmute_check() >>> {}", why);
                 }
             });
             tokio::time::sleep(Duration::from_secs(15)).await;
