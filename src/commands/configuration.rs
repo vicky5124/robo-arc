@@ -563,7 +563,8 @@ async fn configure_yandere(
                 if let Some(webhook) = config.hook {
                     let hook_url = format!(
                         "https://discord.com/api/webhooks/{}/{}",
-                        webhook.id, webhook.token.unwrap()
+                        webhook.id,
+                        webhook.token.unwrap()
                     );
 
                     let query = sqlx::query!(
@@ -747,7 +748,8 @@ async fn configure_twitch(
                     if let Some(webhook) = &config.hook {
                         let hook_url = format!(
                             "https://discord.com/api/webhooks/{}/{}",
-                            webhook.id, webhook.token.as_ref().unwrap()
+                            webhook.id,
+                            webhook.token.as_ref().unwrap()
                         );
 
                         sqlx::query!("INSERT INTO streamer_notification_webhook (streamer, role_id, use_default, webhook) VALUES ($1, $2, $3, $4)", &config.streamer, config.role_id, use_default, hook_url)

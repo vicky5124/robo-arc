@@ -63,8 +63,6 @@ pub struct RustRanCode {
     stderr: String,
 }
 
-
-
 #[command] // Sets up a command
 #[aliases("pong", "latency")] // Sets up aliases to that command.
 #[description = "Sends the latency of the bot to the shards."] // Sets a description to be used for the help command. You can also use docstrings.
@@ -514,13 +512,15 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .send()
         .await?
         .json::<RanCode>()
-        .await {
-            Ok(x) => x,
-            Err(_) => {
-                msg.reply(ctx, "The programming language specified is not supported.").await?;
-                return Ok(());
-            }
-        };
+        .await
+    {
+        Ok(x) => x,
+        Err(_) => {
+            msg.reply(ctx, "The programming language specified is not supported.")
+                .await?;
+            return Ok(());
+        }
+    };
 
     // println!("{:#?}", &response);
 
@@ -540,7 +540,10 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             Ok(x) => {
                 if x.is_empty() {
                     let parsed = response.output.replace("```", "\\`\\`\\`");
-                    format!("Output was too long to upload.\n```\n{}```", &parsed[..1950])
+                    format!(
+                        "Output was too long to upload.\n```\n{}```",
+                        &parsed[..1950]
+                    )
                 } else {
                     format!("Output was too long, so it was uploaded here: {}", x)
                 }
@@ -568,7 +571,6 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         })
         .await?;
 
-
     Ok(())
 }
 
@@ -577,7 +579,7 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 ///
 /// usage:
 /// rust \`\`\`rs
-/// fn main() { 
+/// fn main() {
 ///     println!("Hello, World!");
 /// }
 /// \`\`\`
@@ -624,13 +626,18 @@ async fn rust(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .send()
         .await?
         .json::<RustRanCode>()
-        .await {
-            Ok(x) => x,
-            Err(_) => {
-                msg.reply(ctx, "Timeout error: The code like took more than 12 seconds to compile.").await?;
-                return Ok(());
-            }
-        };
+        .await
+    {
+        Ok(x) => x,
+        Err(_) => {
+            msg.reply(
+                ctx,
+                "Timeout error: The code like took more than 12 seconds to compile.",
+            )
+            .await?;
+            return Ok(());
+        }
+    };
 
     // println!("{:#?}", &response);
 

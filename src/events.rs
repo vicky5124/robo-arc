@@ -321,7 +321,7 @@ impl EventHandler for Handler {
             };
         }
     }
-    
+
     //async fn voice_server_update(&self, ctx: Context, vsu: VoiceServerUpdateEvent) {
     //    dbg!(&vsu);
 

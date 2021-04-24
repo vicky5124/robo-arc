@@ -539,10 +539,13 @@ async fn unmute_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error
             {
                 x
             } else {
-                if let Err(why) = ChannelId(row.channel_id as u64).say(
-                    &ctx,
-                    format!("Unable to unmute <@{}> from temporal mute.", row.user_id),
-                ).await {
+                if let Err(why) = ChannelId(row.channel_id as u64)
+                    .say(
+                        &ctx,
+                        format!("Unable to unmute <@{}> from temporal mute.", row.user_id),
+                    )
+                    .await
+                {
                     error!("Unable to send message A: {}", why);
                 }
                 continue;
@@ -567,10 +570,13 @@ async fn unmute_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error
             };
 
             if member.remove_role(&ctx, role_id).await.is_err() {
-                if let Err(why) = ChannelId(row.channel_id as u64).say(
-                    &ctx,
-                    format!("Unable to unmute <@{}> from temporal mute.", row.user_id),
-                ).await {
+                if let Err(why) = ChannelId(row.channel_id as u64)
+                    .say(
+                        &ctx,
+                        format!("Unable to unmute <@{}> from temporal mute.", row.user_id),
+                    )
+                    .await
+                {
                     error!("Unable to send message C: {}", why);
                 }
                 continue;
@@ -601,9 +607,10 @@ async fn unmute_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error
                         )
                     })
                 })
-                .await {
-                    error!("Unable to send message D: {}", why);
-                }
+                .await
+            {
+                error!("Unable to send message D: {}", why);
+            }
         }
     }
 

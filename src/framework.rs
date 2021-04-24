@@ -162,7 +162,7 @@ pub struct Mod;
     clear_queue,
     now_playing,
     equalize,
-    equalize_band,
+    equalize_band
 )]
 pub struct Music;
 
