@@ -181,7 +181,7 @@ async fn urban(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 /// Translate from spanish to english:
 /// `translate es-en Hola!`
 #[command]
-#[aliases(trans)]
+#[aliases(trans, tr, tl)]
 #[min_args(2)]
 async fn translate(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let (token, url) = {
