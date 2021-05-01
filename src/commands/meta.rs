@@ -574,8 +574,12 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     Ok(())
 }
 
-/// Executes the provided rust code.
+/// Executes the provided rust code using https://play.rust-lang.org/
+///
 /// - There's a 10 second timeout.
+/// - Default build is debug unless `// release` is used somewhere in the code.
+/// - If `#![feature(...)]` is used, the build will be nightly rather than stable.
+/// - If `fn main` is used, the code will be ran.
 ///
 /// usage:
 /// rust \`\`\`rs
@@ -609,11 +613,29 @@ async fn rust(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     }
 
     let code = RustCode {
+        channel: {
+            if source.contains("#![feature(") {
+                "nightly".to_string()
+            } else {
+                "stable".to_string()
+            }
+        },
+        crate_type: {
+            if source.contains("fn main") {
+                "bin".to_string()
+            } else {
+                "lib".to_string()
+            }
+        },
+        mode: {
+            if source.contains("// release") {
+                "release".to_string()
+            } else {
+                "debug".to_string()
+            }
+        },
         code: source,
-        channel: "nightly".to_string(),
-        crate_type: "bin".to_string(),
         edition: "2018".to_string(),
-        mode: "debug".to_string(),
         backtrace: false,
         tests: false,
     };
