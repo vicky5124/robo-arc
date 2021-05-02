@@ -465,6 +465,7 @@ async fn issues(ctx: &Context, msg: &Message) -> CommandResult {
 
 /// Executes the provided code.
 /// - There's a 10 second timeout.
+/// - For rust, it is better to use the `rust` command!
 ///
 /// usage:
 /// eval \`\`\`py
@@ -523,11 +524,12 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     };
 
     // println!("{:#?}", &response);
+    //
+    let mut did_run = true;
 
     if !response.ran {
-        msg.reply(ctx, "The code was unable to be ran.").await?;
+        did_run = false;
         warn!("Code didn't run:\n{:#?}", response);
-        return Ok(());
     }
 
     let description = if response.output.len() > 1950 {
@@ -566,7 +568,13 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     &response.language, &response.version
                 ));
                 e.description(description);
-                e
+                e.footer(|f| {
+                    if did_run {
+                        f.text("Code ran successfully")
+                    } else {
+                        f.text("Code didn't run successfully")
+                    }
+                })
             })
         })
         .await?;
