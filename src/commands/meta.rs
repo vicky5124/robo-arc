@@ -464,6 +464,8 @@ async fn issues(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 /// Executes the provided code.
+///
+/// - A file can be attached rather than using a codeblock.
 /// - There's a 10 second timeout.
 /// - For rust, it is better to use the `rust` command!
 ///
@@ -480,30 +482,70 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     //"(^```)(.*?(?=\n))([\s\S]*)(```$)"
     //"^```(?P<syntax>.*)\n(?P<code>(?:.+|\n)*)```$"
 
-    let re = Lazy::new(|| Regex::new("^```(?P<lang>.*)\n(?P<src>(?:.+|\n)*)```$").unwrap());
-    let captures = re.captures(args.message());
+    let code = if let Some(attachment) = msg.attachments.get(0) {
+        let filename_split = attachment.filename.split('.');
 
-    let caps = if let Some(caps) = captures {
-        caps
+        if filename_split.clone().count() < 2 {
+            msg.reply(
+                ctx,
+                "Please, provide a file with a valid file extension with the language used.",
+            )
+            .await?;
+            return Ok(());
+        }
+
+        let language = match filename_split.last() {
+            Some(x) => x.to_string(),
+            None => {
+                msg.reply(
+                    ctx,
+                    "Please, provide a file with a valid file extension with the language used.",
+                )
+                .await?;
+                return Ok(());
+            }
+        };
+
+        let raw_code = attachment.download().await?;
+        let source = if raw_code.len() > 8000000 {
+            msg.reply(ctx, "Please, don't upload a file over 8MB.")
+                .await?;
+            return Ok(());
+        } else if raw_code.len() > 1 {
+            String::from_utf8(raw_code)?
+        } else {
+            msg.reply(ctx, "Please, don't upload an empty file.")
+                .await?;
+            return Ok(());
+        };
+
+        Code { language, source }
     } else {
-        msg.reply(ctx, "No codeblock was provided, please put your code inside a codeblock:\n\n\\`\\`\\`lang\n<your code here>\n\\`\\`\\`").await?;
-        return Ok(());
+        let re = Lazy::new(|| Regex::new("^```(?P<lang>.*)\n(?P<src>(?:.+|\n)*)```$").unwrap());
+        let captures = re.captures(args.message());
+
+        let caps = if let Some(caps) = captures {
+            caps
+        } else {
+            msg.reply(ctx, "No codeblock was provided, please put your code inside a codeblock:\n\n\\`\\`\\`lang\n<your code here>\n\\`\\`\\`").await?;
+            return Ok(());
+        };
+
+        let language = caps.name("lang").unwrap().as_str().to_string();
+        let source = caps.name("src").unwrap().as_str().trim().to_string();
+
+        if language.is_empty() {
+            msg.reply(ctx, "No codeblock with language was provided, please put the programming language inside the codeblock:\n\n\\`\\`\\`lang\n<your code here>\n\\`\\`\\`").await?;
+            return Ok(());
+        }
+
+        if source.is_empty() {
+            msg.reply(ctx, "No code was provided, please put some code inside the codeblock:\n\n\\`\\`\\`lang\n<your code here>\n\\`\\`\\`").await?;
+            return Ok(());
+        }
+
+        Code { language, source }
     };
-
-    let language = caps.name("lang").unwrap().as_str().to_string();
-    let source = caps.name("src").unwrap().as_str().trim().to_string();
-
-    if language.is_empty() {
-        msg.reply(ctx, "No codeblock with language was provided, please put the programming language inside the codeblock:\n\n\\`\\`\\`lang\n<your code here>\n\\`\\`\\`").await?;
-        return Ok(());
-    }
-
-    if source.is_empty() {
-        msg.reply(ctx, "No code was provided, please put some code inside the codeblock:\n\n\\`\\`\\`lang\n<your code here>\n\\`\\`\\`").await?;
-        return Ok(());
-    }
-
-    let code = Code { language, source };
 
     let client = reqwest::Client::new();
 
@@ -524,7 +566,7 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     };
 
     // println!("{:#?}", &response);
-    //
+
     let mut did_run = true;
 
     if !response.ran {
@@ -584,6 +626,7 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
 /// Executes the provided rust code using https://play.rust-lang.org/
 ///
+/// - A file can be attached rather than using a codeblock.
 /// - There's a 10 second timeout.
 /// - Default build is debug unless `// release` is used somewhere in the code.
 /// - If `#![feature(...)]` is used, the build will be nightly rather than stable.
@@ -597,28 +640,48 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 /// \`\`\`
 #[command]
 async fn rust(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let re = Lazy::new(|| Regex::new("^```(?P<lang>.*)\n(?P<src>(?:.+|\n)*)```$").unwrap());
-    let captures = re.captures(args.message());
+    let source = if let Some(attachment) = msg.attachments.get(0) {
+        let raw_code = attachment.download().await?;
 
-    let caps = if let Some(caps) = captures {
-        caps
+        let source = if raw_code.len() > 8000000 {
+            msg.reply(ctx, "Please, don't upload a file over 8MB.")
+                .await?;
+            return Ok(());
+        } else if raw_code.len() > 1 {
+            String::from_utf8(raw_code)?
+        } else {
+            msg.reply(ctx, "Please, don't upload an empty file.")
+                .await?;
+            return Ok(());
+        };
+
+        source
     } else {
-        msg.reply(ctx, "No codeblock was provided, please put your code inside a codeblock:\n\n\\`\\`\\`rust\n<your code here>\n\\`\\`\\`").await?;
-        return Ok(());
+        let re = Lazy::new(|| Regex::new("^```(?P<lang>.*)\n(?P<src>(?:.+|\n)*)```$").unwrap());
+        let captures = re.captures(args.message());
+
+        let caps = if let Some(caps) = captures {
+            caps
+        } else {
+            msg.reply(ctx, "No codeblock was provided, please put your code inside a codeblock:\n\n\\`\\`\\`rust\n<your code here>\n\\`\\`\\`").await?;
+            return Ok(());
+        };
+
+        let language = caps.name("lang").unwrap().as_str();
+        let source = caps.name("src").unwrap().as_str().trim().to_string();
+
+        if language != "rs" && language != "rust" && !language.is_empty() {
+            msg.reply(ctx, "The codeblock provided is for a different language, please put `rs` or `rust` in the language field:\n\n\\`\\`\\`rust\n<your code here>\n\\`\\`\\`").await?;
+            return Ok(());
+        }
+
+        if source.is_empty() {
+            msg.reply(ctx, "No code was provided, please put some code inside the codeblock:\n\n\\`\\`\\`rust\n<your code here>\n\\`\\`\\`").await?;
+            return Ok(());
+        }
+
+        source
     };
-
-    let language = caps.name("lang").unwrap().as_str();
-    let source = caps.name("src").unwrap().as_str().trim().to_string();
-
-    if language != "rs" && language != "rust" && !language.is_empty() {
-        msg.reply(ctx, "The codeblock provided is for a different language, please put `rs` or `rust` in the language field:\n\n\\`\\`\\`rust\n<your code here>\n\\`\\`\\`").await?;
-        return Ok(());
-    }
-
-    if source.is_empty() {
-        msg.reply(ctx, "No code was provided, please put some code inside the codeblock:\n\n\\`\\`\\`rust\n<your code here>\n\\`\\`\\`").await?;
-        return Ok(());
-    }
 
     let code = RustCode {
         channel: {
@@ -716,7 +779,7 @@ async fn rust(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             m.reference_message(msg);
             m.allowed_mentions(|f| f.replied_user(false));
             m.embed(|e| {
-                e.title("Evaluated Rust Nightly!");
+                e.title("Evaluated Rust Playground!");
                 e.field("stderr", stderr, false);
                 e.field("stdout", stdout, false);
                 e

@@ -31,7 +31,7 @@ pub async fn send_message_update(ctx: &Context, data: &MessageUpdateEvent) {
         if let Ok(Some(old_message)) = old_message {
             if let Some(old_message) = old_message.content_history {
                 let old_message_content = old_message.get(old_message.len().saturating_sub(1));
-                if old_message_content.clone().unwrap_or(&String::new())
+                if old_message_content.unwrap_or(&String::new())
                     == &data.content.clone().unwrap_or_default()
                 {
                     return;
