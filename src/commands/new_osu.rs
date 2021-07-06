@@ -132,7 +132,7 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                 .text()
                 .await?;
 
-            let map = Map::parse(beatmap_file.as_bytes())?; // TODO: Self::from_str()
+            let map = if let Ok(x) = Map::parse(beatmap_file.as_bytes()) { x } else { continue }; // TODO: Self::from_str()
             let mods = Mods::from_strs(&data.mods);
             let difficulty = Difficulty::calc(&map, mods);
 
