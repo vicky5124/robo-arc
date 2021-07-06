@@ -23,9 +23,7 @@ use serenity::{
 
 /// The new recent command, currently WIP.
 ///
-/// Note: if you are not getting your recent scores, it's because your nick or username in discord
-/// doesn't match the osu! username, if that's the case, call the command with the username
-/// afterwards.
+/// Note: if you are not getting your recent scores, it's because your nick or username in discord doesn't match the osu! username, if that's the case, call the command with the username afterwards.
 ///
 /// `new_recent vicky5124`
 #[command]
