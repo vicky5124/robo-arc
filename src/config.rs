@@ -1,6 +1,6 @@
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ConfigurationData {
-    pub osu: String,
+    pub old_osu: String,
     pub discord: String,
     pub twitch: String,
     pub twitch_client_id: String,
@@ -13,6 +13,7 @@ pub struct ConfigurationData {
     pub lavalink: LavalinkConfig,
     pub web_server: WebServerConfig,
     pub ibm: IBMConfig,
+    pub osu: OsuConfig,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -44,4 +45,10 @@ pub struct WebServerConfig {
 pub struct IBMConfig {
     pub token: String,
     pub url: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct OsuConfig {
+    pub client_id: u16,
+    pub client_secret: String,
 }

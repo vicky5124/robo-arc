@@ -12,8 +12,8 @@ This bot is made using [serenity.rs](https://github.com/serenity-rs/serenity/) (
 ### __**Get the source and prepare it**__:
 
 ```bash
-git clone git@gitlab.com:nitsuga5124/robo-arc.git # Over SSH
-git clone https://gitlab.com/nitsuga5124/robo-arc.git # Over HTTPS
+git clone git@gitlab.com:vicky5124/robo-arc.git # Over SSH
+git clone https://gitlab.com/vicky5124/robo-arc.git # Over HTTPS
 
 cd robo-arc
 mv config.toml.example config.toml
@@ -74,7 +74,7 @@ sqlx database create
 
 # Apply the migrations
 # Run this every time you update the bot.
-cargo sqxl mirgate run
+cargo sqlx migrate run
 ```
 
 ### __**Redis Database**__:

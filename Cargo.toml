@@ -1,13 +1,13 @@
 [package]
 name = "arc_bot"
 version = "0.3.2-alpha"
-authors = ["nitsuga5124 <nitsuga5124@gmail.com>"]
+authors = ["vicky5124 <vickyf5124@gmail.com>"]
 edition = "2018"
 license = "MPL-v2"
 readme = "README.md"
 description = "A Highly General-Purpose, Multi-Guild Discord bot"
 keywords = ["discord", "bot", "serenity"]
-repository = "https://gitlab.com/nitsuga5124/robo-arc/"
+repository = "https://gitlab.com/vicky5124/robo-arc/"
 #bot_invite = "https://discordapp.com/api/oauth2/authorize?client_id=551759974905151548&scope=bot&permissions=825748694"
 #bot_owner = 182891574139682816
 #prefixes = [".", "mention", "configurable"]
@@ -34,6 +34,8 @@ hex = "0.4" # https://github.com/KokaKiwi/rust-hex
 photon-rs = "0.3" # https://github.com/silvia-odwyer/photon
 dotenv = "0.15" # https://github.com/dotenv-rs/dotenv
 walkdir = "2" # https://github.com/BurntSushi/walkdir
+indexmap = "=1.6.2" # https://github.com/tkaitchuck/aHash/issues/95
+itertools = "0.7" # https://github.com/bluss/rust-itertools
 
 # TODO: replace with tokei
 loc = "0.5" # https://github.com/cgag/loc
@@ -72,7 +74,7 @@ git = "https://github.com/serenity-rs/serenity"
 branch = "current"
 #version = "0.10"
 default-features = false
-features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "rustls_backend", "absolute_ratelimits", "collector", "voice"]
+features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "rustls_backend", "absolute_ratelimits", "collector", "voice", "unstable_discord_api"]
 
 # https://github.com/seanmonstar/reqwest
 [dependencies.reqwest]
@@ -95,11 +97,21 @@ features = ["macros", "postgres", "uuid", "offline", "chrono", "runtime-tokio-ru
 
 # https://github.com/tafia/quick-xml
 [dependencies.quick-xml]
-version = "0.21"
+version = "0.22"
 features = ["serialize"]
 
+[dependencies.osu_perf]
+#git = "https://gitlab.com/JackRedstonia/osu-perf"
+git = "https://gitlab.com/vicky5124/osu-perf"
+branch = "types_redo"
+
+# https://github.com/uuid-rs/uuid
+[dependencies.uuid]
+version = "0.8"
+features = ["v4"]
+
 [dependencies.lavalink-rs]
-git = "https://gitlab.com/nitsuga5124/lavalink-rs/"
+git = "https://gitlab.com/vicky5124/lavalink-rs/"
 branch = "master"
 #version = "0.6.0-rc"
 features = ["rustls", "andesite", "serenity"]

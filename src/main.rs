@@ -54,6 +54,7 @@ use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 use lavalink_rs::LavalinkClient;
 use songbird::SerenityInit;
+use reqwest::header;
 
 // Serenity! what make's the bot function. Discord API wrapper.
 use serenity::{
@@ -72,6 +73,22 @@ use serenity::{
 struct BooruRaw {
     boorus: Vec<Booru>,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct OsuTokenSend {
+    pub client_id: u16,
+    pub client_secret: String,
+    pub grant_type: String,
+    pub scope: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct OsuTokenRecv {
+    pub token_type: String,
+    pub expires_in: u32,
+    pub access_token: String,
+}
+
 // The main function!
 // Here's where everything starts.
 // This main function is a little special, as it returns Result
@@ -161,6 +178,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .group(&MUSIC_GROUP) // Load `music` command group
         .group(&MOD_GROUP) // Load `moderation` command group
         .group(&OSU_GROUP) // Load `osu!` command group
+        .group(&NEWOSU_GROUP) // Load `new osu!` command group
         .group(&SANKAKU_GROUP) // Load `SankakuComplex` command group
         .group(&ALLBOORUS_GROUP) // Load `Boorus` command group
         .group(&IMAGEMANIPULATION_GROUP) // Load `image manipulaiton` command group
@@ -176,6 +194,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .raw_event_handler(logging::events::RawHandler)
         .framework(std_framework)
         .register_songbird()
+        .application_id(bot_id.0)
         .intents({
             let mut intents = GatewayIntents::all();
             //intents.remove(GatewayIntents::GUILD_PRESENCES);
@@ -267,6 +286,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
             // Insert the HashSet of annoyed channels to the data.
             data.insert::<AnnoyedChannels>(Arc::new(RwLock::new(annoyed_channels)));
+        }
+
+        {
+            let base_client = reqwest::Client::new();
+
+            let send_data = OsuTokenSend {
+                client_id: configuration.osu.client_id,
+                client_secret: configuration.osu.client_secret,
+                grant_type: "client_credentials".to_string(),
+                scope: "public".to_string(),
+            };
+
+            let res = base_client.post("https://osu.ppy.sh/oauth/token")
+                .json(&send_data)
+                .send()
+                .await?
+                .json::<OsuTokenRecv>()
+                .await?;
+
+            let mut headers = header::HeaderMap::new();
+            headers.insert(header::AUTHORIZATION, format!("{} {}", res.token_type, res.access_token).parse().unwrap());
+
+            let client = reqwest::Client::builder()
+                .default_headers(headers)
+                .build()?;
+            
+            data.insert::<OsuHttpClient>(Arc::new(RwLock::new(client)));
         }
     }
 

@@ -4,3 +4,4 @@ pub mod checks;
 pub mod database;
 pub mod logging;
 pub mod osu;
+pub mod osu_model;

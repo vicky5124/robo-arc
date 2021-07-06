@@ -577,7 +577,7 @@ async fn calculator(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 Error::Expected(x) => format!("The expected input data was not found:\n{}", x),
                 Error::WrongArgs(x) => format!("A function was called with the wrong arguments:\n{}", x),
                 Error::Undefined(x) => format!("The expression tried to use an undefined variable or function, or it didn't provide any required arguments.:\n{}", x),
-                Error::Unreachable => "This error should never happen, if it did, contact nitsuga5124#2207 immediately!".to_string(),
+                Error::Unreachable => "This error should never happen, if it did, contact vicky5124#2207 immediately!".to_string(),
                 _ => format!("An unhandled error occurred:\n{:#?}", &why),
             };
 

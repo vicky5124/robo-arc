@@ -1,6 +1,7 @@
 use crate::utils::booru::{SAFE_BANLIST, UNSAFE_BANLIST};
 
 use crate::global_data::*;
+use crate::{OsuTokenRecv, OsuTokenSend};
 
 use std::{
     sync::Arc,
@@ -55,6 +56,50 @@ struct TwitchStreams {
 #[derive(Deserialize, Debug)]
 struct TwitchUserData {
     data: Vec<TwitchUser>,
+}
+
+async fn update_osu_token(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
+    let configuration = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<Tokens>().unwrap().clone()
+    };
+
+    let old_client = {
+        let data_read = ctx.data.read().await;
+        let client_lock = data_read.get::<OsuHttpClient>().unwrap().clone();
+        let client_read = client_lock.read().await;
+        client_read.clone()
+    };
+
+    let send_data = OsuTokenSend {
+        client_id: configuration.osu.client_id,
+        client_secret: configuration.osu.client_secret.to_string(),
+        grant_type: "client_credentials".to_string(),
+        scope: "public".to_string(),
+    };
+
+    let res = old_client.post("https://osu.ppy.sh/oauth/token")
+        .json(&send_data)
+        .send()
+        .await?
+        .json::<OsuTokenRecv>()
+        .await?;
+
+    let mut headers = HeaderMap::new();
+    headers.insert(AUTHORIZATION, format!("{} {}", res.token_type, res.access_token).parse().unwrap());
+
+    let client = reqwest::Client::builder()
+        .default_headers(headers)
+        .build()?;
+    
+    {
+        let data_read = ctx.data.read().await;
+        let client_lock = data_read.get::<OsuHttpClient>().unwrap().clone();
+        let mut client_write = client_lock.write().await;
+        *client_write = client;
+    }
+    
+    Ok(())
 }
 
 async fn check_new_posts(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
@@ -620,6 +665,7 @@ async fn unmute_check(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error
 pub async fn notification_loop(ctx: Arc<Context>) {
     let ctx = Arc::clone(&ctx);
     let ctx_clone = Arc::clone(&ctx);
+    let ctx_clone_clone = Arc::clone(&ctx);
 
     tokio::spawn(async move {
         loop {
@@ -680,6 +726,19 @@ pub async fn notification_loop(ctx: Arc<Context>) {
                 }
             });
             tokio::time::sleep(Duration::from_secs(15)).await;
+        }
+    });
+
+    tokio::spawn(async move {
+        loop {
+            let ctx = Arc::clone(&ctx_clone_clone);
+
+            if let Err(why) = update_osu_token(ctx.clone()).await {
+                error!("An error occurred while running osu! token update >>> {}", why);
+            }
+
+            // 4 times a day
+            tokio::time::sleep(Duration::from_secs(21600)).await;
         }
     });
 }

@@ -13,6 +13,7 @@ use crate::commands::meta::*; // Import everything from the meta module.
 use crate::commands::moderation::*; // Import everything from the moderation module.
 use crate::commands::music::*; // Import everything from the configuration module.
 use crate::commands::osu::*; // Import everything from the osu module.
+use crate::commands::new_osu::*; // Import everything from the new osu module.
 use crate::commands::sankaku::*; // Import everything from the sankaku booru module.
 use crate::commands::serenity_docs::*; // Import everything from the serenity_docs module.
 
@@ -78,6 +79,11 @@ pub struct Sankaku;
 #[description = "All the osu! related commands"]
 #[commands(configure_osu, recent, score, osu_profile, osu_top, beatmap_pp)]
 pub struct Osu;
+
+#[group("new osu!")]
+#[description = "All the osu! related commands"]
+#[commands(new_recent)]
+pub struct NewOsu;
 
 // The Booru command group.
 // This group will contain every single command from every booru that gets implemented.

@@ -225,7 +225,7 @@ async fn test(_ctx: &Context, _msg: &Message, _args: Args) -> CommandResult {
 #[command]
 async fn source(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id
-        .say(ctx, "<https://gitlab.com/nitsuga5124/robo-arc/>")
+        .say(ctx, "<https://gitlab.com/vicky5124/robo-arc/>")
         .await?;
     Ok(())
 }
@@ -234,7 +234,7 @@ async fn source(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases(todo_list, issues, bugs, bug)]
 async fn todo(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(ctx, "The TODO List and all the open Issues can be found here:\n<https://gitlab.com/nitsuga5124/robo-arc/-/boards>").await?;
+    msg.channel_id.say(ctx, "The TODO List and all the open Issues can be found here:\n<https://gitlab.com/vicky5124/robo-arc/-/boards>").await?;
     Ok(())
 }
 
@@ -394,10 +394,10 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
         m.content("");
         m.embed(|e| {
             e.title(format!("**{}** - v{}", bot_name, version));
-            e.url("https://gitlab.com/nitsuga5124/robo-arc");
+            e.url("https://gitlab.com/vicky5124/robo-arc");
             e.description("General Purpose Discord Bot made in [Rust](https://www.rust-lang.org/) using [serenity.rs](https://github.com/serenity-rs/serenity)\n\nHaving any issues? join the [Support Server](https://discord.gg/kH7z85n)\nBe sure to `invite` me to your server if you like what i can do!");
 
-            //e.field("Creator", "Tag: nitsuga5124#2207\nID: 182891574139682816", true);
+            //e.field("Creator", "Tag: vicky5124#2207\nID: 182891574139682816", true);
             e.field("Statistics:", format!("Shards: {}\nGuilds: {}\nChannels: {}\nUsers: {}", num_shards, num_guilds, num_channels, num_users), true);
             e.field("Lines of code:", format!("Blank: {}\nComment: {}\nCode: {}\nTotal Lines: {}", c_blank, c_comment, c_code, c_lines), true);
             e.field("Currently owned by:", format!("Team: {}\nTag: {}\nID: {}", hoster_team, hoster_tag, hoster_id), true);
@@ -425,7 +425,7 @@ async fn changelog(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id
         .say(
             ctx,
-            "<https://gitlab.com/nitsuga5124/robo-arc/-/blob/master/CHANGELOG.md>",
+            "<https://gitlab.com/vicky5124/robo-arc/-/blob/master/CHANGELOG.md>",
         )
         .await?;
     Ok(())
@@ -442,7 +442,7 @@ async fn terms_of_service(ctx: &Context, msg: &Message) -> CommandResult {
 
         All of this data is completely encrypted and will NEVER be used for any other purpose than logging inside discord itself.
 
-        If you still don't want to have this data stored, contact nitsuga5124#2207, and all your data will be deleted and stopped from being logged.
+        If you still don't want to have this data stored, contact vicky5124#2207, and all your data will be deleted and stopped from being logged.
         ").await?;
 
     Ok(())
@@ -456,7 +456,7 @@ async fn issues(ctx: &Context, msg: &Message) -> CommandResult {
             ctx,
             "
             You are free to submit issues, bug reports and new features to the issues page:
-            <https://gitlab.com/nitsuga5124/robo-arc/-/issues>
+            <https://gitlab.com/vicky5124/robo-arc/-/issues>
             ",
         )
         .await?;

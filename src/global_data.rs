@@ -9,6 +9,7 @@ use serenity::{client::bridge::gateway::ShardManager, prelude::TypeMapKey};
 use darkredis::ConnectionPool as RedisPool;
 use lavalink_rs::LavalinkClient;
 use sqlx::PgPool; // PostgreSQL Pool Structure
+use reqwest::Client as ReqwestClient;
 
 // Defining the structures to be used for "global" data
 // this data is not really global, it's just shared with Context.data
@@ -22,6 +23,7 @@ pub struct BooruCommands; // This is a HashSet of all the commands/aliases found
 pub struct Lavalink; //  This is the struct for the lavalink client.
 pub struct SentTwitchStreams; //  This is the struct for the stream data that has already been sent.
 pub struct Uptime; //  This is for the startup time of the bot.
+pub struct OsuHttpClient; // This is the HTTP client to comunicate with osu! API v2.
 
 impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
@@ -61,4 +63,8 @@ impl TypeMapKey for SentTwitchStreams {
 
 impl TypeMapKey for Uptime {
     type Value = Arc<Instant>;
+}
+
+impl TypeMapKey for OsuHttpClient {
+    type Value = Arc<RwLock<ReqwestClient>>;
 }

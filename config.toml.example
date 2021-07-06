@@ -1,4 +1,4 @@
-osu = "" # https://osu.ppy.sh/p/api/
+old_osu = "" # https://osu.ppy.sh/p/api/
 discord = "" 
 
 # This needs to be an oauth token
@@ -34,3 +34,7 @@ server_port = 54424
 [ibm]
 token = ""
 url = ""
+
+[osu]
+client_id = 1234
+client_secret = "jsf98df67s8JKASHDFYLU676ASADsadsdsa32sAS"

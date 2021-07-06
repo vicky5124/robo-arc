@@ -7,6 +7,7 @@ pub mod image_manipulation;
 pub mod meta;
 pub mod moderation;
 pub mod music;
+pub mod new_osu;
 pub mod osu;
 pub mod sankaku;
 pub mod serenity_docs;

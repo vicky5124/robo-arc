@@ -211,7 +211,7 @@ async fn acc_math(score_300: f32, score_100: f32, score_50: f32, _miss: f32) -> 
 }
 
 // Calculates the progress on the map with the number of notes hit over the number of notes the map has.
-async fn progress_math(
+pub fn progress_math(
     count_normal: f32,
     count_slider: f32,
     count_spinner: f32,
@@ -403,8 +403,7 @@ async fn short_recent_builder(
         user_recent.count100.parse()?,
         user_recent.count50.parse()?,
         user_recent.countmiss.parse()?,
-    )
-    .await;
+    );
 
     let attempts = index;
     let mods: String = get_mods_short(user_recent.enabled_mods.parse()?).await;
@@ -513,7 +512,7 @@ async fn short_recent_builder(
 ///
 /// Example usages:
 /// `osuc Majorowsky`
-/// `osuc nitsuga5124 pp=false short_recent=yes`
+/// `osuc vicky5124 pp=false short_recent=yes`
 /// `osuc [ Frost ] mode=mania pp=yes recent=false`
 #[command]
 #[aliases(
@@ -531,7 +530,7 @@ async fn configure_osu(ctx: &Context, msg: &Message, arguments: Args) -> Command
     let osu_key = {
         let data = ctx.data.read().await; // set inmutable global data.
         let tokens = data.get::<Tokens>().unwrap().clone(); // get the tokens from the global data.
-        tokens.osu.to_string()
+        tokens.old_osu.to_string()
     };
 
     let pool = {
@@ -734,7 +733,7 @@ async fn osu_profile(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
     let osu_key = {
         let data = ctx.data.read().await; // set inmutable global data.
         let tokens = data.get::<Tokens>().unwrap().clone(); // get the tokens from the global data.
-        tokens.osu.to_string()
+        tokens.old_osu.to_string()
     };
 
     let pool = {
@@ -1023,7 +1022,7 @@ async fn score(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let osu_key = {
         let data = ctx.data.read().await; // set inmutable global data.
         let tokens = data.get::<Tokens>().unwrap().clone(); // get the tokens from the global data.
-        tokens.osu.to_string()
+        tokens.old_osu.to_string()
     };
 
     let pool = {
@@ -1169,7 +1168,7 @@ async fn score(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 /// Usage:
 /// `recent`
 /// `recent [ Frost ]`
-/// `recent nitsuga5124`
+/// `recent vicky5124`
 #[command]
 #[aliases("rs", "rc")]
 async fn recent(ctx: &Context, msg: &Message, arguments: Args) -> CommandResult {
@@ -1186,7 +1185,7 @@ async fn recent(ctx: &Context, msg: &Message, arguments: Args) -> CommandResult 
     let osu_key = {
         let data = ctx.data.read().await; // set inmutable global data.
         let tokens = data.get::<Tokens>().unwrap().clone(); // get the tokens from the global data.
-        tokens.osu.to_string()
+        tokens.old_osu.to_string()
     };
 
     let pool = {
@@ -1406,7 +1405,7 @@ async fn top_play_embed_builder(
 /// Usage:
 /// `osu_top`
 /// `osu!top [ Frost ]`
-/// `otop nitsuga5124`
+/// `otop vicky5124`
 #[command]
 #[aliases("osutop", "otop", "top_plays", "topplays", "toplays", "top", "osu!top")]
 async fn osu_top(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
@@ -1424,7 +1423,7 @@ async fn osu_top(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         let data_read = ctx.data.read().await;
         let tokens = data_read.get::<Tokens>().unwrap().clone();
 
-        tokens.osu.to_string()
+        tokens.old_osu.to_string()
     };
 
     let mut config = OsuData::default();
