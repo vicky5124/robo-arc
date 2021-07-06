@@ -199,7 +199,7 @@ pub struct Configuration;
 If you would like to get more information about a specific command or group, you can just pass it as a command argument; like so: `help configuration`
 
 NOTE: All the command examples through out the help will be shown without prefix, add whatever command prefix is configured on the server.
-By default it's a mention or `.`, but it can be configured using `configure guild prefix n!` replacing `n!` with the prefix of coice.
+By default it's a mention or `.`, but it can be configured using `configure guild prefix n!` replacing `n!` with the prefix of choice.
 
 You can react with 🚫 on *any* message sent by the bot to delete it.
 Exceptions to this rule include logging messages, some notifications and webhook messages.\n"]
