@@ -12,8 +12,8 @@ use crate::commands::image_manipulation::*; // Import everything from the image 
 use crate::commands::meta::*; // Import everything from the meta module.
 use crate::commands::moderation::*; // Import everything from the moderation module.
 use crate::commands::music::*; // Import everything from the configuration module.
-use crate::commands::osu::*; // Import everything from the osu module.
 use crate::commands::new_osu::*; // Import everything from the new osu module.
+use crate::commands::osu::*; // Import everything from the osu module.
 use crate::commands::sankaku::*; // Import everything from the sankaku booru module.
 use crate::commands::serenity_docs::*; // Import everything from the serenity_docs module.
 

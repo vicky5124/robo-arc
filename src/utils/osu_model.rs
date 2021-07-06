@@ -49,7 +49,7 @@ pub struct Beatmap {
     pub count_sliders: u64,
     pub count_spinners: u64,
     pub cs: f64,
-    pub deleted_at: Option<DateTime<Utc>,>,
+    pub deleted_at: Option<DateTime<Utc>>,
     pub drain: f64,
     pub hit_length: u64, // playtime seconds
     pub is_scoreable: bool,

@@ -8,8 +8,8 @@ use serenity::{client::bridge::gateway::ShardManager, prelude::TypeMapKey};
 
 use darkredis::ConnectionPool as RedisPool;
 use lavalink_rs::LavalinkClient;
-use sqlx::PgPool; // PostgreSQL Pool Structure
 use reqwest::Client as ReqwestClient;
+use sqlx::PgPool; // PostgreSQL Pool Structure
 
 // Defining the structures to be used for "global" data
 // this data is not really global, it's just shared with Context.data

@@ -53,8 +53,8 @@ use tracing_subscriber::{EnvFilter, FmtSubscriber};
 //use tracing_futures::Instrument;
 
 use lavalink_rs::LavalinkClient;
-use songbird::SerenityInit;
 use reqwest::header;
+use songbird::SerenityInit;
 
 // Serenity! what make's the bot function. Discord API wrapper.
 use serenity::{
@@ -298,7 +298,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 scope: "public".to_string(),
             };
 
-            let res = base_client.post("https://osu.ppy.sh/oauth/token")
+            let res = base_client
+                .post("https://osu.ppy.sh/oauth/token")
                 .json(&send_data)
                 .send()
                 .await?
@@ -306,12 +307,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .await?;
 
             let mut headers = header::HeaderMap::new();
-            headers.insert(header::AUTHORIZATION, format!("{} {}", res.token_type, res.access_token).parse().unwrap());
+            headers.insert(
+                header::AUTHORIZATION,
+                format!("{} {}", res.token_type, res.access_token)
+                    .parse()
+                    .unwrap(),
+            );
 
             let client = reqwest::Client::builder()
                 .default_headers(headers)
                 .build()?;
-            
+
             data.insert::<OsuHttpClient>(Arc::new(RwLock::new(client)));
         }
     }

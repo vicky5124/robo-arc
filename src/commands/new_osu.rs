@@ -1,8 +1,8 @@
 use crate::utils::osu_model::*;
 //use crate::utils::osu::*;
 use crate::commands::osu::progress_math;
-use crate::utils::basic_functions::capitalize_first;
 use crate::global_data::OsuHttpClient;
+use crate::utils::basic_functions::capitalize_first;
 
 use std::time::Duration;
 
@@ -54,11 +54,10 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
     };
 
     let user = {
-        let user_data = client_lock.read().await
-            .get(&format!(
-                "https://osu.ppy.sh/api/v2/users/{}",
-                &raw_user
-            ))
+        let user_data = client_lock
+            .read()
+            .await
+            .get(&format!("https://osu.ppy.sh/api/v2/users/{}", &raw_user))
             .send()
             .await?
             .json::<OsuUser>()
@@ -75,7 +74,9 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
         }
     };
 
-    let res_recent_data = client_lock.read().await
+    let res_recent_data = client_lock
+        .read()
+        .await
         .get(&format!(
             "https://osu.ppy.sh/api/v2/users/{}/scores/recent?mode=osu&include_fails=1&limit=50",
             &user
@@ -85,7 +86,9 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
         .json::<Recent>()
         .await;
 
-    let recent_data = if let Ok(x) = res_recent_data { x } else {
+    let recent_data = if let Ok(x) = res_recent_data {
+        x
+    } else {
         message
             .edit(ctx, |m| {
                 m.content(format!("No recent plays for user {}", user))
@@ -120,7 +123,9 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
 
     loop {
         for (idx, data) in chunks[index].iter().enumerate() {
-            let beatmap_file = client_lock.read().await
+            let beatmap_file = client_lock
+                .read()
+                .await
                 .get(&format!("https://osu.ppy.sh/web/maps/{}", &data.beatmap.id))
                 .send()
                 .await?
@@ -255,7 +260,12 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                         data.beatmapset.title_unicode
                     )
                 } else {
-                    format!("{} => {} - {}", idx + 1, data.beatmapset.artist, data.beatmapset.title)
+                    format!(
+                        "{} => {} - {}",
+                        idx + 1,
+                        data.beatmapset.artist,
+                        data.beatmapset.title
+                    )
                 }
             });
 
@@ -497,7 +507,7 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                     })
                     .await?;
 
-                    break
+                    break;
                 }
             } else {
                 to_keep = mci.data.values[0].parse().unwrap();
@@ -514,7 +524,9 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
 
     let data = &chunks[index][to_keep];
 
-    let beatmap_file = client_lock.read().await
+    let beatmap_file = client_lock
+        .read()
+        .await
         .get(&format!("https://osu.ppy.sh/web/maps/{}", &data.beatmap.id))
         .send()
         .await?

@@ -78,7 +78,8 @@ async fn update_osu_token(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::E
         scope: "public".to_string(),
     };
 
-    let res = old_client.post("https://osu.ppy.sh/oauth/token")
+    let res = old_client
+        .post("https://osu.ppy.sh/oauth/token")
         .json(&send_data)
         .send()
         .await?
@@ -86,19 +87,24 @@ async fn update_osu_token(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::E
         .await?;
 
     let mut headers = HeaderMap::new();
-    headers.insert(AUTHORIZATION, format!("{} {}", res.token_type, res.access_token).parse().unwrap());
+    headers.insert(
+        AUTHORIZATION,
+        format!("{} {}", res.token_type, res.access_token)
+            .parse()
+            .unwrap(),
+    );
 
     let client = reqwest::Client::builder()
         .default_headers(headers)
         .build()?;
-    
+
     {
         let data_read = ctx.data.read().await;
         let client_lock = data_read.get::<OsuHttpClient>().unwrap().clone();
         let mut client_write = client_lock.write().await;
         *client_write = client;
     }
-    
+
     Ok(())
 }
 
@@ -734,7 +740,10 @@ pub async fn notification_loop(ctx: Arc<Context>) {
             let ctx = Arc::clone(&ctx_clone_clone);
 
             if let Err(why) = update_osu_token(ctx.clone()).await {
-                error!("An error occurred while running osu! token update >>> {}", why);
+                error!(
+                    "An error occurred while running osu! token update >>> {}",
+                    why
+                );
             }
 
             // 4 times a day
