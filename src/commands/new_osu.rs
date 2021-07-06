@@ -89,7 +89,7 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
     } else {
         message
             .edit(ctx, |m| {
-                m.content(format!("No recent plays for user {}", user))
+                m.content(format!("The user https://osu.ppy.sh/u/{} has not played in the last 24 hours.", user))
             })
             .await?;
         return Ok(());
@@ -100,7 +100,7 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
     if recent_data.is_empty() {
         message
             .edit(ctx, |m| {
-                m.content(format!("No recent plays for user {}", user))
+                m.content(format!("The user https://osu.ppy.sh/u/{} has not played in the last 24 hours.", user))
             })
             .await?;
         return Ok(());
