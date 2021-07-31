@@ -19,6 +19,7 @@ use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
     model::{
         channel::Message,
+        oauth2::OAuth2Scope,
         Permissions,
         //channel::ReactionType,
     },
@@ -140,13 +141,15 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
     permissions.set(Permissions::MANAGE_WEBHOOKS, true);
     permissions.set(Permissions::MENTION_EVERYONE, true);
 
+    let scopes = vec![OAuth2Scope::Bot, OAuth2Scope::ApplicationsCommands];
+
     // Creates the invite link for the bot with the permissions specified earlier.
     // Error handling in rust i so nice.
     let url = match ctx
         .cache
         .current_user()
         .await
-        .invite_url(ctx, permissions)
+        .invite_url_with_oauth2_scopes(ctx, permissions, &scopes)
         .await
     {
         Ok(v) => v,
