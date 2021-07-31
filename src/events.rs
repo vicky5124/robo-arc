@@ -14,7 +14,7 @@ use warp::{reply::json, reply::Json, Filter};
 use serenity::{
     async_trait,
     model::{
-        channel::{Message, Reaction, ReactionType},
+        channel::{Message, Reaction, ReactionType, GuildChannel},
         gateway::{Activity, Ready},
         guild::Member,
         id::{ChannelId, GuildId},
@@ -321,6 +321,14 @@ impl EventHandler for Handler {
             };
         }
     }
+
+    async fn thread_create(&self, ctx: Context, thread: GuildChannel) {
+        if let Err(e) = thread.id.join_thread(ctx).await {
+            println!("Error in thread join! (ID {}): {}", thread.id, e);
+        }
+    }
+
+
 
     //async fn voice_server_update(&self, ctx: Context, vsu: VoiceServerUpdateEvent) {
     //    dbg!(&vsu);
