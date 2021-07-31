@@ -557,7 +557,7 @@ async fn configure_yandere(
                     let channel_id = msg.channel_id.0;
                     let map = serde_json::json!({"name": "Robo Arc"});
 
-                    config.hook = Some(ctx.http.create_webhook(channel_id, &map).await?);
+                    config.hook = Some(ctx.http.create_webhook(channel_id, &map, None).await?);
                 }
 
                 if let Some(webhook) = config.hook {
@@ -743,7 +743,7 @@ async fn configure_twitch(
                         let channel_id = msg.channel_id.0;
                         let map = serde_json::json!({"name": "Robo Arc"});
 
-                        config.hook = Some(ctx.http.create_webhook(channel_id, &map).await?);
+                        config.hook = Some(ctx.http.create_webhook(channel_id, &map, None).await?);
                     }
                     if let Some(webhook) = &config.hook {
                         let hook_url = format!(

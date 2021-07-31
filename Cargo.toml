@@ -71,7 +71,9 @@ features = ["full"]
 # https://github.com/serenity-rs/serenity
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"
-branch = "current"
+branch = "next"
+#git = "https://github.com/acdenisSK/serenity"
+#branch = "mention_event"
 #version = "0.10"
 default-features = false
 features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "rustls_backend", "absolute_ratelimits", "collector", "voice", "unstable_discord_api"]
@@ -125,7 +127,9 @@ features = ["serenity-rustls", "gateway"]
 
 [patch.crates-io.serenity]
 git = "https://github.com/serenity-rs/serenity"
-branch = "current"
+branch = "next"
+#git = "https://github.com/acdenisSK/serenity"
+#branch = "mention_event"
 
 
 # used for profiling for flamegraph

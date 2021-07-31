@@ -23,7 +23,7 @@ pub struct Booru {
 
 // This is for errors that happen before command execution.
 #[hook]
-pub async fn on_dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
+pub async fn on_dispatch_error(ctx: &Context, msg: &Message, error: DispatchError, _command_name: &str) {
     match error {
         // Notify the user if the reason of the command failing to execute was because of
         // inssufficient arguments.
