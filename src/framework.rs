@@ -82,7 +82,7 @@ pub struct Osu;
 
 #[group("new osu!")]
 #[description = "All the osu! related commands"]
-#[commands(new_recent)]
+#[commands(new_recent, new_configure_osu)]
 pub struct NewOsu;
 
 // The Booru command group.

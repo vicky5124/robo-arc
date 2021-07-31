@@ -73,7 +73,7 @@ features = ["full"]
 git = "https://github.com/serenity-rs/serenity"
 branch = "next"
 #git = "https://github.com/acdenisSK/serenity"
-#branch = "mention_event"
+#branch = "optional_deserialisation"
 #version = "0.10"
 default-features = false
 features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "rustls_backend", "absolute_ratelimits", "collector", "voice", "unstable_discord_api"]
@@ -129,7 +129,7 @@ features = ["serenity-rustls", "gateway"]
 git = "https://github.com/serenity-rs/serenity"
 branch = "next"
 #git = "https://github.com/acdenisSK/serenity"
-#branch = "mention_event"
+#branch = "optional_deserialisation"
 
 
 # used for profiling for flamegraph

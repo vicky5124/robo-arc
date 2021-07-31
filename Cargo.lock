@@ -350,7 +350,7 @@ checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
 [[package]]
 name = "command_attr"
 version = "0.3.7"
-source = "git+https://github.com/serenity-rs/serenity?branch=next#4b45beb2ec62f9a78b7d150cc8afc0c9de884ec8"
+source = "git+https://github.com/serenity-rs/serenity?branch=next#dc2d8053478cd22d169d851e2f09d1df173b580b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2303,7 +2303,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.10.8"
-source = "git+https://github.com/serenity-rs/serenity?branch=next#4b45beb2ec62f9a78b7d150cc8afc0c9de884ec8"
+source = "git+https://github.com/serenity-rs/serenity?branch=next#dc2d8053478cd22d169d851e2f09d1df173b580b"
 dependencies = [
  "async-trait",
  "async-tungstenite",

@@ -1,11 +1,7 @@
 use serenity::{
-    prelude::Context,
+    framework::standard::{macros::command, Args, CommandResult},
     model::channel::Message,
-    framework::standard::{
-        Args,
-        CommandResult,
-        macros::command,
-    },
+    prelude::Context,
 };
 
 #[command]
