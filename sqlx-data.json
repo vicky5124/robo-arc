@@ -507,6 +507,38 @@
       "nullable": []
     }
   },
+  "6a6bbb3736c7af527366d886f5c70193a1c8df77ed0bd2e625afd8a32b6dcaa6": {
+    "query": "SELECT * FROM osu WHERE discord_id = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "discord_id",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 1,
+          "name": "osu_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 2,
+          "name": "instant_recent",
+          "type_info": "Bool"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "6d917b866e2937386d00be8610f36498d821720413b57b364d3bee30928c8b64": {
     "query": "INSERT INTO prefixes (guild_id, prefix) VALUES ($1, $2)",
     "describe": {
@@ -1210,6 +1242,20 @@
           "Int8",
           "Bool",
           "Int8"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "bcc466d42045b2dfecb6ce8037aef4fc4ac6d993c6a5831c08b937a3484ad2ef": {
+    "query": "INSERT INTO osu (discord_id, osu_id, instant_recent) VALUES ($1, $2, $3) ON CONFLICT (discord_id) DO UPDATE SET osu_id = $2, instant_recent = $3",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int4",
+          "Bool"
         ]
       },
       "nullable": []
