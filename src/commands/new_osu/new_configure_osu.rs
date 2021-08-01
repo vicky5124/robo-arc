@@ -141,12 +141,6 @@ async fn new_configure_osu(ctx: &Context, msg: &Message) -> CommandResult {
                         .execute(&pool)
                         .await?;
 
-                    interaction_data
-                        .create_interaction_response(ctx, |ir| {
-                            ir.kind(InteractionResponseType::DeferredUpdateMessage)
-                        })
-                        .await?;
-
                     bot_msg
                         .edit(ctx, |m| {
                             m.content(format!("Current configuration for you: <https://osu.ppy.sh/users/{0}>```md\n- User ID: {0}\n- Instant Recent: {1}```", user_config.osu_id, user_config.instant_recent));
@@ -158,6 +152,12 @@ async fn new_configure_osu(ctx: &Context, msg: &Message) -> CommandResult {
 
                     return Ok(());
                 }
+
+                interaction_data
+                    .create_interaction_response(ctx, |ir| {
+                        ir.kind(InteractionResponseType::DeferredUpdateMessage)
+                    })
+                    .await?;
             }
 
             bot_msg
