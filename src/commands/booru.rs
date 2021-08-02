@@ -95,8 +95,8 @@ struct Tags {
 // defining the Post type to be used for the xml deserialized on the Posts vector.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 struct Post {
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    id: u64,
+    #[serde(deserialize_with = "deserialize_option_number_from_string")]
+    id: Option<u64>,
     score: Option<String>,
     actual_score: Option<String>,
     source: Option<String>,
@@ -206,7 +206,7 @@ pub async fn get_booru(
     );
     headers.insert(
         USER_AGENT,
-        "Mozilla/5.0 (X11; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0"
+        "Mozilla/5.0 (X11; Linux x86_64; rv:90.0) Gecko/20100101 Firefox/90.0"
             .parse()
             .unwrap(),
     );
@@ -266,7 +266,8 @@ pub async fn get_booru(
         new_posts
     } else {
         let posts_result = quick_xml::de::from_str::<Posts>(resp.as_str());
-        if posts_result.is_err() {
+        if let Err(why) = posts_result {
+            error!("Error with booru XML deser: {}", why);
             msg.reply(ctx, "There are no posts containing the requested tags.")
                 .await?;
             return Ok(());
@@ -411,7 +412,7 @@ pub async fn get_booru(
                 m.add_file(attachment);
                 m.embed(|e| {
                     e.title("Original Post");
-                    e.url(format!("{}{}", &booru.post_url, &choice.id));
+                    e.url(format!("{}{}", &booru.post_url, &choice.id.unwrap_or_default()));
                     e.image(format!("attachment://{}", filename));
                     e.fields(fields)
                 });
@@ -427,7 +428,7 @@ pub async fn get_booru(
                 // say method doesn't work for the message builder.
                 m.embed(|e| {
                     e.title("Original Post");
-                    e.url(format!("{}{}", &booru.post_url, &choice.id));
+                    e.url(format!("{}{}", &booru.post_url, &choice.id.unwrap_or_default()));
                     e.description(format!(
                         "[Sample]({}) | [Full Size]({})",
                         &sample_size, &full_size
@@ -463,11 +464,13 @@ pub async fn get_booru(
 /// `Rule34` - If it exist, there's porn of it.
 /// `DanBooru` - Very popular booru, limited to only 2 tags.
 /// `HypnoBooru` - A booru that hosts all sorts of hypno based content.
-/// `FurryBooru` - Second largest Furry booru.
+/// `FurryBooru` - Second largest Furry booru. # broken because cloudfare
 /// `e621` - Largest Furry booru.
 /// `RealBooru` - Very large IRL booru.
 /// `IdolComplex` - Largest IRL booru, very asian based.
 /// `Behoimi` - IRL, Mostly cosplays booru.
+///
+/// FurryBooru issue: <https://furry.booru.org/index.php?page=forum&s=view&id=3719>
 ///
 /// ----------
 ///
