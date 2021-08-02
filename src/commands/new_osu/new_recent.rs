@@ -153,7 +153,6 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
         .collect::<Vec<Vec<&RecentElement>>>();
 
     if !instant_recent {
-
         let max = chunks.len() - 1;
 
         let mut current_embeds = vec![];
@@ -599,6 +598,7 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                 ar
             })
         });
+
         m.embed(|embed| {
             let map = Map::parse(beatmap_file.as_bytes()).unwrap(); // TODO: Self::from_str()
             let mods = Mods::from_strs(&data.mods);
@@ -747,6 +747,7 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                     )
                 })
             });
+
             embed.timestamp(&data.created_at);
             embed.description(
                 format!(

@@ -111,7 +111,7 @@ async fn qr(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 async fn urban(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let term = args.message();
     let url = Url::parse_with_params(
-        "http://api.urbandictionary.com/v0/define",
+        "https://api.urbandictionary.com/v0/define",
         &[("term", term)],
     )?;
 
@@ -170,7 +170,7 @@ async fn urban(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 /// Translates a text to the specified language.
 ///
 /// Available languages can be found here:
-/// http://5124.mywire.org:8088/paste/7WobXTQ?lang=json
+/// https://5124.mywire.org:8088/paste/7WobXTQ?lang=json
 ///
 /// Note: Some lesser used languages may take longer to translate.
 ///
@@ -264,7 +264,7 @@ async fn translate(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
         Ok(x) => x,
         Err(_) => {
             let mut dest = map["model_id"].splitn(2, '-');
-            msg.reply(ctx, format!("Failed to translate, probably because either `{}` or `{}` or both, are invalid languages.\n Please see <http://5124.mywire.org:8088/paste/7WobXTQ?lang=json> for a list of valid languages.", dest.next().unwrap(), dest.next().unwrap())).await?;
+            msg.reply(ctx, format!("Failed to translate, probably because either `{}` or `{}` or both, are invalid languages.\n Please see <https://5124.mywire.org:8088/paste/7WobXTQ?lang=json> for a list of valid languages.", dest.next().unwrap(), dest.next().unwrap())).await?;
             return Ok(());
         }
     };
