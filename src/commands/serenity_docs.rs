@@ -35,36 +35,33 @@ async fn example(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         "5" | "05" | "commands" | "framework" | "command" =>
             msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e05_command_framework>").await?,
 
-        "6" | "06" | "voice" | "music" =>
-            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e06_voice>").await?,
+        "6" | "06" | "basic bot" | "bot structure" | "structure" =>
+            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e06_sample_bot_structure>").await?,
 
-        "7" | "07" | "basic bot" | "bot structure" | "structure" =>
-            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e07_sample_bot_structure>").await?,
+        "7" | "07" | "logging" | "logs" | "log" | "tracing" =>
+            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e07_env_logging>").await?,
 
-        "8" | "08" | "logging" | "logs" | "log" | "tracing" =>
-            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e08_env_logging>").await?,
+        "8" | "08" | "shard manager" =>
+            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e08_shard_manager>").await?,
 
-        "9" | "09" | "shard manager" =>
-            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e09_shard_manager>").await?,
+        "9" | "embeds" | "file" | "files" | "send file" | "send files" | "embed" =>
+            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e9_create_message_builder>").await?,
 
-        "10" | "record" | "record voice" | "recieve voice" | "recieve" =>
-            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e10_voice_receive>").await?,
+        "10" | "collectors" | "await_next for" | "reactions" | "reply" | "wait for" =>
+            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e10_collectors>").await?,
 
-        "11" | "embeds" | "file" | "files" | "send file" | "send files" | "embed" =>
-            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e11_create_message_builder>").await?,
-
-        "12" | "collectors" | "await_next for" | "reactions" | "reply" | "wait for" =>
-            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e12_collectors>").await?,
-
-        "13" | "intets" | "intent" =>
-            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e13_gateway_intents>").await?,
-        "14" | "global data" | "global_data" | "global" | "data" | "client data" | "ctx data" | "context data" =>
-            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e14_global_data>").await?,
-        "15" | "parallel loops" | "parallel_loops" | "task" | "tasks" | "concurrent loop" | "parallel operations" =>
-            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e15_parallel_loops>").await?,
+        "11" | "intets" | "intent" =>
+            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e11_gateway_intents>").await?,
+        "12" | "global data" | "global_data" | "global" | "data" | "client data" | "ctx data" | "context data" =>
+            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e12_global_data>").await?,
+        "13" | "parallel loops" | "parallel_loops" | "task" | "tasks" | "concurrent loop" | "parallel operations" =>
+            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e13_parallel_loops>").await?,
+        "14" | "slash commands" | "slash_commands" | "slash" | "scommands" | "interactions" | "integrations" | "buttons" | "components" | "component" =>
+            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e14_slash_commands>").await?,
 
         _ => msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples>").await?,
     };
+
     Ok(())
 }
 
@@ -105,9 +102,9 @@ async fn rtfm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     msg.channel_id
         .say(
             ctx,
-            "Serenity: <https://serenity-rs.github.io/serenity/current/serenity/>
-Lavalink-rs: <https://docs.rs/lavalink-rs/>
-Songbird: <https://docs.rs/songbird/>",
+            "Serenity: <https://docs.rs/serenity> | <https://serenity-rs.github.io/serenity/current/serenity/>
+Songbird: <https://docs.rs/songbird/>
+Lavalink-rs: <https://docs.rs/lavalink-rs/>",
         )
         .await?;
 
