@@ -53,7 +53,7 @@ pub async fn obtain_tags_unsafe(raw_args: Args) -> Vec<String> {
             // For only SFW content.
             "-s" | "sfw" => tags.push("rating:Safe"),
             // For either NSFW or BSFW content. aka non-safe
-            // > "but nitsu, you can search both tags and you will get results from both"
+            // > "but vicky, you can search both tags and you will get results from both"
             // > Ik, but this will make it so some boorus won't be able to be used with any other
             // additional tags, like danbooru.
             "-n" => {
