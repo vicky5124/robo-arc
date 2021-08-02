@@ -126,7 +126,10 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
     } else {
         message
             .edit(ctx, |m| {
-                m.content(format!("The user https://osu.ppy.sh/u/{} has not played in the last 24 hours.", user))
+                m.content(format!(
+                    "The user https://osu.ppy.sh/u/{} has not played in the last 24 hours.",
+                    user
+                ))
             })
             .await?;
 
@@ -138,7 +141,10 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
     if recent_data.is_empty() {
         message
             .edit(ctx, |m| {
-                m.content(format!("The user https://osu.ppy.sh/u/{} has not played in the last 24 hours.", user))
+                m.content(format!(
+                    "The user https://osu.ppy.sh/u/{} has not played in the last 24 hours.",
+                    user
+                ))
             })
             .await?;
 
@@ -169,7 +175,11 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                     .text()
                     .await?;
 
-                let map = if let Ok(x) = Map::parse(beatmap_file.as_bytes()) { x } else { continue }; // TODO: Self::from_str()
+                let map = if let Ok(x) = Map::parse(beatmap_file.as_bytes()) {
+                    x
+                } else {
+                    continue;
+                }; // TODO: Self::from_str()
                 let mods = Mods::from_strs(&data.mods);
                 let difficulty = Difficulty::calc(&map, mods);
 
@@ -263,7 +273,11 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
 
                 trace!(
                     "{}: {} {} {} {}",
-                    data.id, pp_v1.total, pp_v2.total, pp_v1_fc.total, pp_v2_fc.total
+                    data.id,
+                    pp_v1.total,
+                    pp_v2.total,
+                    pp_v1_fc.total,
+                    pp_v2_fc.total
                 );
 
                 let mut embed = CreateEmbed::default();
@@ -500,22 +514,11 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                 .author_id(msg.author.id.0)
                 .timeout(Duration::from_secs(60))
                 .filter(move |mci| match mci.data.component_type {
-                    ComponentType::SelectMenu => {
-                        if mci.data.custom_id == mov_uuid_keep {
-                            true
-                        } else {
-                            false
-                        }
-                    }
+                    ComponentType::SelectMenu => mci.data.custom_id == mov_uuid_keep,
                     ComponentType::Button => {
-                        if mci.data.custom_id == mov_uuid_prev
+                        mci.data.custom_id == mov_uuid_prev
                             || mci.data.custom_id == mov_uuid_next
                             || mci.data.custom_id == mov_uuid_done
-                        {
-                            true
-                        } else {
-                            false
-                        }
                     }
                     _ => false,
                 })

@@ -22,37 +22,35 @@ async fn parse_username(ctx: &Context, content: &str) -> CommandResult<i32> {
 
     if let Ok(user_id) = content.parse::<i32>() {
         osu_id = user_id;
-    } else {
-        if content.starts_with("http") {
-            let mut initial_split = content.split("ppy.sh/");
+    } else if content.starts_with("http") {
+        let mut initial_split = content.split("ppy.sh/");
 
-            if let Some(second) = initial_split.nth(1) {
-                let mut user_split = second.split('/');
+        if let Some(second) = initial_split.nth(1) {
+            let mut user_split = second.split('/');
 
-                if let Some(user) = user_split.nth(1) {
-                    if let Ok(user_id) = user.parse::<i32>() {
-                        osu_id = user_id;
-                    }
+            if let Some(user) = user_split.nth(1) {
+                if let Ok(user_id) = user.parse::<i32>() {
+                    osu_id = user_id;
                 }
             }
-        } else {
-            let client_lock = {
-                let data_read = ctx.data.read().await;
-                data_read.get::<OsuHttpClient>().unwrap().clone()
-            };
+        }
+    } else {
+        let client_lock = {
+            let data_read = ctx.data.read().await;
+            data_read.get::<OsuHttpClient>().unwrap().clone()
+        };
 
-            let user_data = client_lock
-                .read()
-                .await
-                .get(&format!("https://osu.ppy.sh/api/v2/users/{}", &content))
-                .send()
-                .await?
-                .json::<OsuUser>()
-                .await;
+        let user_data = client_lock
+            .read()
+            .await
+            .get(&format!("https://osu.ppy.sh/api/v2/users/{}", &content))
+            .send()
+            .await?
+            .json::<OsuUser>()
+            .await;
 
-            if let Ok(u) = user_data {
-                osu_id = u.id as i32;
-            }
+        if let Ok(u) = user_data {
+            osu_id = u.id as i32;
         }
     }
 

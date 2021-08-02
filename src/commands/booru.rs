@@ -223,7 +223,7 @@ pub async fn get_booru(
 
     // deserialize the request XML into the Posts struct.
     let xml = if booru.typ == 4 {
-        let mut posts: PostsE621 = serde_json::from_str(&resp.as_str())?;
+        let mut posts: PostsE621 = serde_json::from_str(resp.as_str())?;
         for post in posts.posts.iter_mut() {
             post.actual_score = Some(if let Some(score_data) = post.score.clone() {
                 score_data.total.to_string()
@@ -265,7 +265,7 @@ pub async fn get_booru(
 
         new_posts
     } else {
-        let posts_result = quick_xml::de::from_str::<Posts>(&resp.as_str());
+        let posts_result = quick_xml::de::from_str::<Posts>(resp.as_str());
         if posts_result.is_err() {
             msg.reply(ctx, "There are no posts containing the requested tags.")
                 .await?;
@@ -1302,14 +1302,14 @@ async fn sauce(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             if let Some(ext_urls) = &i.data.ext_urls {
                 for url in ext_urls {
                     if url.starts_with("https") {
-                        urls.push(format!("[{}]({})", match_url(&url), &url));
+                        urls.push(format!("[{}]({})", match_url(url), &url));
                     }
                 }
             }
 
             if let Some(url) = &i.data.source {
                 if url.starts_with("https") {
-                    urls.push(format!("[{}]({})", match_url(&url), &url));
+                    urls.push(format!("[{}]({})", match_url(url), &url));
                 }
             }
         }

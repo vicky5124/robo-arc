@@ -23,7 +23,12 @@ pub struct Booru {
 
 // This is for errors that happen before command execution.
 #[hook]
-pub async fn on_dispatch_error(ctx: &Context, msg: &Message, error: DispatchError, _command_name: &str) {
+pub async fn on_dispatch_error(
+    ctx: &Context,
+    msg: &Message,
+    error: DispatchError,
+    _command_name: &str,
+) {
     match error {
         // Notify the user if the reason of the command failing to execute was because of
         // inssufficient arguments.
@@ -194,9 +199,9 @@ pub async fn unrecognised_command(ctx: &Context, msg: &Message, command_name: &s
 
         let lower_content = msg.content.to_lowercase();
         let parameters = lower_content.split(&command_name).nth(1).unwrap();
-        let params = Args::new(&parameters, &[Delimiter::Single(' ')]);
+        let params = Args::new(parameters, &[Delimiter::Single(' ')]);
 
-        let booru_result = get_booru(ctx, &msg, &booru, params).await;
+        let booru_result = get_booru(ctx, msg, &booru, params).await;
         if let Err(why) = booru_result {
             // Handle any error that may occur.
             let why = why.to_string();

@@ -253,7 +253,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
             // Serialize the json string into a BooruRaw struct.
             let boorus: BooruRaw =
-                serde_json::from_str(&raw_data.as_str()).expect("JSON was not well-formatted");
+                serde_json::from_str(raw_data.as_str()).expect("JSON was not well-formatted");
 
             // Add every command on the data to a HashSet
             let mut all_names = HashSet::new();

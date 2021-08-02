@@ -711,7 +711,7 @@ async fn configure_twitch(
 
                 if let Some(role_id_raw) = content.get(2) {
                     let re = Regex::new("[<@&>]").unwrap();
-                    let role_id = re.replace_all(&role_id_raw, "").into_owned();
+                    let role_id = re.replace_all(role_id_raw, "").into_owned();
 
                     if let Ok(r) = role_id.parse::<i64>() {
                         config.role_id = Some(r)
@@ -993,7 +993,8 @@ async fn timeout(ctx: &Context, msg: &mut Message, og_message: &Message) -> Comm
         )
         .await?;
     msg.delete_reactions(ctx).await?;
-    return Ok(());
+
+    Ok(())
 }
 
 /// Toggles the annoying features on or off.

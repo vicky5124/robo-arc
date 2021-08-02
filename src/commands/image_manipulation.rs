@@ -79,13 +79,13 @@ async fn pride_image(
 
 async fn grayscale(image_vec: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
     // Load the image as a buffer.
-    let mut imgbuf = match image::load_from_memory(&image_vec) {
+    let mut imgbuf = match image::load_from_memory(image_vec) {
         Ok(x) => x.into_rgba8(),
         Err(_) => {
             let mut result = Vec::new();
 
             {
-                let image_buf = libwebp_image::webp_load_from_memory(&image_vec)?.into_rgba8();
+                let image_buf = libwebp_image::webp_load_from_memory(image_vec)?.into_rgba8();
 
                 image::DynamicImage::ImageRgba8(image_buf)
                     .write_to(&mut result, image::ImageOutputFormat::Jpeg(255))?;

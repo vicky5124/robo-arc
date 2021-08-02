@@ -277,7 +277,7 @@ impl Board {
 #[aliases(ttt, tictactoe)]
 #[min_args(1)]
 async fn tic_tac_toe(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let other_player = parse_member(ctx, &msg, args.single_quoted::<String>()?).await?;
+    let other_player = parse_member(ctx, msg, args.single_quoted::<String>()?).await?;
 
     let mut confirmation = msg
         .channel_id

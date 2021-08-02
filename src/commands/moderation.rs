@@ -64,7 +64,7 @@ pub async fn parse_member(
         }
 
         if members.is_empty() {
-            let similar_members = &guild.members_containing(&member_name, false, false).await;
+            let similar_members = &guild.members_containing(member_name, false, false).await;
 
             let mut members_string = stream::iter(similar_members.iter())
                 .map(|m| async move {
@@ -131,7 +131,7 @@ pub async fn parse_member(
 #[only_in("guilds")]
 async fn kick(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let member_arg = args.single_quoted::<String>()?;
-    let member = parse_member(ctx, &msg, member_arg).await;
+    let member = parse_member(ctx, msg, member_arg).await;
 
     let reason = args.remains();
 
@@ -172,7 +172,7 @@ async fn kick(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 #[only_in("guilds")]
 async fn ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let member_arg = args.single_quoted::<String>()?;
-    let member = parse_member(ctx, &msg, member_arg).await;
+    let member = parse_member(ctx, msg, member_arg).await;
 
     let reason = args.remains();
 

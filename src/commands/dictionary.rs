@@ -79,7 +79,7 @@ async fn define(ctx: &Context, msg: &Message, lang: &str, word: String) -> Comma
         for meaning in &definition.meanings {
             if let Some(pos) = &meaning.part_of_speech {
                 if pos != &"".to_string() {
-                    text_definitions += &format!("\n\n**{}**:\n", capitalize_first(&pos));
+                    text_definitions += &format!("\n\n**{}**:\n", capitalize_first(pos));
                 } else {
                     text_definitions += "\n\n**Unknown**:\n"
                 }
@@ -94,7 +94,7 @@ async fn define(ctx: &Context, msg: &Message, lang: &str, word: String) -> Comma
                 if let Some(example) = &definition.example {
                     if example != &"".to_string() {
                         text_definitions += "\n- Example:\n";
-                        text_definitions += &example;
+                        text_definitions += example;
                     }
                 }
             }
