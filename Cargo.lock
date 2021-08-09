@@ -69,7 +69,7 @@ dependencies = [
 
 [[package]]
 name = "arc_bot"
-version = "0.3.2-alpha"
+version = "0.3.3-alpha"
 dependencies = [
  "bitflags",
  "chrono",
