@@ -575,7 +575,7 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
         .await?;
 
     message.edit(ctx, |m| {
-        m.content(format!("`{}`", data.beatmap.id));
+        m.content(format!("Beatmap ID: `{}` - This can be used with the `score` command.", data.beatmap.id));
         m.components(|c| {
             c.create_action_row(|ar| {
                 ar.create_button(|b| {

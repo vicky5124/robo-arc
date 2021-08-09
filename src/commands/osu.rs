@@ -418,7 +418,7 @@ async fn short_recent_builder(
     };
 
     bot_msg.clone().edit(http.clone(), |m| { // say method doesn't work for the message builder.
-        m.content(format!("`{}`", beatmap.beatmap_id));
+        m.content(format!("Beatmap ID: `{}` - BTW, Try out `new_recent`!", beatmap.beatmap_id));
         m.embed( |e| {
             e.color(Colour::new({
                 let colour = user.user_id.parse().unwrap();
