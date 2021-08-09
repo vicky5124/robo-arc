@@ -1,6 +1,6 @@
 use crate::global_data::Lavalink;
 
-use std::{fmt, time::Duration, error::Error};
+use std::{error::Error, fmt, time::Duration};
 
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},

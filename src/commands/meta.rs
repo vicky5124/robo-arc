@@ -11,7 +11,6 @@ use std::{
     time::Instant,
 };
 
-use tokei::{Config, Languages, LanguageType};
 use num_format::{Locale, ToFormattedString};
 use regex::Regex;
 use serde_json::json;
@@ -26,6 +25,7 @@ use serenity::{
     },
     prelude::Context,
 };
+use tokei::{Config, LanguageType, Languages};
 use tokio::process::Command;
 use toml::Value;
 use walkdir::WalkDir;
@@ -389,15 +389,29 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
     }
 
     let paths = &["src", "migrations", "."];
-    let excluded = &["target", "osu_data", "eval", "opus", ".git", "*.png", "*.jpg", "*.lock", "*.example"];
+    let excluded = &[
+        "target",
+        "osu_data",
+        "eval",
+        "opus",
+        ".git",
+        "*.png",
+        "*.jpg",
+        "*.lock",
+        "*.example",
+    ];
     let config = Config {
         treat_doc_strings_as_comments: Some(true),
         ..Config::default()
     };
-    
+
     let mut languages = Languages::new();
     languages.get_statistics(paths, excluded, &config);
-    let count = [&languages[&LanguageType::Rust], &languages[&LanguageType::Python], &languages[&LanguageType::Sql]];
+    let count = [
+        &languages[&LanguageType::Rust],
+        &languages[&LanguageType::Python],
+        &languages[&LanguageType::Sql],
+    ];
 
     for i in count {
         c_blank += i.blanks;

@@ -412,7 +412,11 @@ pub async fn get_booru(
                 m.add_file(attachment);
                 m.embed(|e| {
                     e.title("Original Post");
-                    e.url(format!("{}{}", &booru.post_url, &choice.id.unwrap_or_default()));
+                    e.url(format!(
+                        "{}{}",
+                        &booru.post_url,
+                        &choice.id.unwrap_or_default()
+                    ));
                     e.image(format!("attachment://{}", filename));
                     e.fields(fields)
                 });
@@ -428,7 +432,11 @@ pub async fn get_booru(
                 // say method doesn't work for the message builder.
                 m.embed(|e| {
                     e.title("Original Post");
-                    e.url(format!("{}{}", &booru.post_url, &choice.id.unwrap_or_default()));
+                    e.url(format!(
+                        "{}{}",
+                        &booru.post_url,
+                        &choice.id.unwrap_or_default()
+                    ));
                     e.description(format!(
                         "[Sample]({}) | [Full Size]({})",
                         &sample_size, &full_size
