@@ -8,7 +8,7 @@ readme = "README.md"
 description = "A Highly General-Purpose, Multi-Guild Discord bot"
 keywords = ["discord", "bot", "serenity"]
 repository = "https://gitlab.com/vicky5124/robo-arc/"
-#bot_invite = "https://discordapp.com/api/oauth2/authorize?client_id=551759974905151548&scope=bot&permissions=825748694"
+#bot_invite = "https://discord.com/api/oauth2/authorize?client_id=551759974905151548&scope=bot+applications.commands&permissions=808971478"
 #bot_owner = 182891574139682816
 #prefixes = [".", "mention", "configurable"]
 

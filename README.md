@@ -1,7 +1,7 @@
 # **Robo Arc**
 Learning Rust project. Yes, I'm very original and full of ideas, so I'm remaking what I already did with python, but hopefully better this time.
 
-[Bot invite link!](https://discordapp.com/api/oauth2/authorize?client_id=551759974905151548&scope=bot&permissions=825748694)
+[Bot invite link!](https://discord.com/api/oauth2/authorize?client_id=551759974905151548&scope=bot+applications.commands&permissions=808971478)
 
 ![Bot profile picture](PFP.png "Bot's profile picture")
 
