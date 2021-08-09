@@ -46,7 +46,6 @@ pub async fn is_on_guild(guild_id: u64, ctx: Arc<Context>) -> Result<Json, warp:
     let data = Allow {
         allowed: cache
             .guilds()
-            .await
             .iter()
             .map(|i| i.0)
             .any(|x| x == guild_id),
@@ -209,7 +208,7 @@ impl EventHandler for Handler {
     /// This function triggers every time a reaction gets added to a message.
     async fn reaction_add(&self, ctx: Context, add_reaction: Reaction) {
         // Ignores all reactions that come from the bot itself.
-        if &add_reaction.user_id.unwrap().0 == ctx.cache.current_user().await.id.as_u64() {
+        if &add_reaction.user_id.unwrap().0 == ctx.cache.current_user_id().as_u64() {
             return;
         }
 
@@ -272,7 +271,7 @@ impl EventHandler for Handler {
                 // This makes every message sent by the bot get deleted if 🚫 is on the reactions.
                 // aka If you react with 🚫 on any message sent by the bot, it will get deleted.
                 // This is helpful for antispam and anti illegal content measures.
-                if s == "🚫" && msg.author.id == ctx.cache.current_user().await.id {
+                if s == "🚫" && msg.author.id == ctx.cache.current_user_id() {
                     let _ = msg.delete(&ctx).await;
                 }
             }
@@ -312,7 +311,6 @@ impl EventHandler for Handler {
             {
                 if let Some(channel) = guild_id
                     .to_guild_cached(&ctx)
-                    .await
                     .unwrap()
                     .system_channel_id
                 {

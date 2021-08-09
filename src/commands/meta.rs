@@ -149,7 +149,6 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
     let url = match ctx
         .cache
         .current_user()
-        .await
         .invite_url_with_oauth2_scopes(ctx, permissions, &scopes)
         .await
     {
@@ -363,15 +362,15 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
         }
     };
 
-    let current_user = ctx.cache.current_user().await;
+    let current_user = ctx.cache.current_user();
 
     let bot_name = &current_user.name;
     let bot_icon = &current_user.avatar_url();
 
-    let num_guilds = ctx.cache.guilds().await.len();
-    let num_shards = ctx.cache.shard_count().await;
-    let num_channels = ctx.cache.guild_channel_count().await;
-    let num_users = ctx.cache.user_count().await;
+    let num_guilds = ctx.cache.guilds().len();
+    let num_shards = ctx.cache.shard_count();
+    let num_channels = ctx.cache.guild_channel_count();
+    let num_users = ctx.cache.user_count();
 
     let mut c_blank = 0;
     let mut c_comment = 0;

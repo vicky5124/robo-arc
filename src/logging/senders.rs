@@ -778,7 +778,7 @@ pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
                         }
                     }
                     PermissionOverwriteType::Role(x) => {
-                        let role = x.to_role_cached(ctx).await.unwrap();
+                        let role = x.to_role_cached(ctx).unwrap();
 
                         if !perm.allow.is_empty() {
                             fields.push((
@@ -852,7 +852,7 @@ pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
                         }
                     }
                     PermissionOverwriteType::Role(x) => {
-                        let role = x.to_role_cached(ctx).await.unwrap();
+                        let role = x.to_role_cached(ctx).unwrap();
 
                         if !perm.allow.is_empty() {
                             fields.push((
@@ -972,7 +972,7 @@ pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
                         }
                     }
                     PermissionOverwriteType::Role(x) => {
-                        let role = x.to_role_cached(ctx).await.unwrap();
+                        let role = x.to_role_cached(ctx).unwrap();
 
                         if !perm.allow.is_empty() {
                             fields.push((
@@ -1046,7 +1046,7 @@ pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
                         }
                     }
                     PermissionOverwriteType::Role(x) => {
-                        let role = x.to_role_cached(ctx).await.unwrap();
+                        let role = x.to_role_cached(ctx).unwrap();
 
                         if !perm.allow.is_empty() {
                             fields.push((
@@ -1166,7 +1166,7 @@ pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
                         }
                     }
                     PermissionOverwriteType::Role(x) => {
-                        let role = x.to_role_cached(ctx).await.unwrap();
+                        let role = x.to_role_cached(ctx).unwrap();
 
                         if !perm.allow.is_empty() {
                             fields.push((
@@ -1240,7 +1240,7 @@ pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
                         }
                     }
                     PermissionOverwriteType::Role(x) => {
-                        let role = x.to_role_cached(ctx).await.unwrap();
+                        let role = x.to_role_cached(ctx).unwrap();
 
                         if !perm.allow.is_empty() {
                             fields.push((

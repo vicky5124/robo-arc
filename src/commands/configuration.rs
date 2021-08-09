@@ -199,7 +199,6 @@ async fn streamrole(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                             "Successfully obtained the role `{}`",
                             RoleId(role_id as u64)
                                 .to_role_cached(ctx)
-                                .await
                                 .unwrap()
                                 .name
                         ),
@@ -218,7 +217,6 @@ async fn streamrole(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                         "Successfully removed the role `{}`",
                         RoleId(role_id as u64)
                             .to_role_cached(ctx)
-                            .await
                             .unwrap()
                             .name
                     ),
@@ -479,7 +477,7 @@ async fn check_hook(ctx: &Context, msg: &Message, embed: &mut impl Hook) {
         .await
         .expect("Error obtaining webhooks on channel.");
 
-    let bot_id = ctx.cache.current_user().await.id;
+    let bot_id = ctx.cache.current_user_id();
 
     for (index, hook) in hooks.iter().enumerate() {
         if let Some(u) = &hook.user {
@@ -523,7 +521,7 @@ async fn configure_yandere(
 
             let channel = ctx.http.get_channel(msg.channel_id.0).await?;
 
-            let dm_channel = if let Some(channel) = msg.channel_id.to_channel_cached(ctx).await {
+            let dm_channel = if let Ok(channel) = msg.channel_id.to_channel(ctx).await {
                 channel.guild().is_none()
             } else {
                 true
@@ -1147,7 +1145,7 @@ async fn prefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     let content_safe_options = ContentSafeOptions::default();
     let bad_success_message = format!("Successfully changed your prefix to `{}`", prefix);
-    let success_message = content_safe(ctx, bad_success_message, &content_safe_options).await;
+    let success_message = content_safe(ctx, bad_success_message, &content_safe_options);
     msg.reply(ctx, success_message).await?;
     Ok(())
 }
@@ -1354,7 +1352,7 @@ async fn logging(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
             .create_webhook_with_avatar(
                 ctx,
                 "Robo Arc - Logging",
-                ctx.cache.current_user().await.face().as_str(),
+                ctx.cache.current_user().face().as_str(),
             )
             .await
         {

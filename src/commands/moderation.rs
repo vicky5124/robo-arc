@@ -52,7 +52,7 @@ pub async fn parse_member(
             Err(why) => Err(why.to_string()),
         }
     } else {
-        let guild = &msg.guild(ctx).await.unwrap();
+        let guild = &msg.guild(ctx).unwrap();
         let member_name = member_name.split('#').next().unwrap();
 
         for m in guild.members.values() {

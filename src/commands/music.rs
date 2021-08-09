@@ -28,7 +28,7 @@ impl fmt::Display for JoinError {
 
 #[instrument(skip(ctx))]
 pub async fn _join(ctx: &Context, msg: &Message) -> Result<String, Box<dyn Error + Send + Sync>> {
-    let guild = msg.guild(&ctx.cache).await.unwrap();
+    let guild = msg.guild(&ctx.cache).unwrap();
     let guild_id = guild.id;
 
     let channel_id = guild
@@ -435,7 +435,7 @@ async fn resume(ctx: &Context, msg: &Message) -> CommandResult {
 /// Disconnects me from the voice channel if im in one.
 #[command]
 async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
-    let guild = msg.guild(&ctx.cache).await.unwrap();
+    let guild = msg.guild(&ctx.cache).unwrap();
     let guild_id = guild.id;
 
     let manager = songbird::get(ctx).await.unwrap().clone();
@@ -506,7 +506,7 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         );
     }
 
-    let guild_id = match ctx.cache.guild_channel(msg.channel_id).await {
+    let guild_id = match ctx.cache.guild_channel(msg.channel_id) {
         Some(channel) => channel.guild_id,
         None => {
             msg.channel_id
@@ -673,7 +673,7 @@ async fn play_playlist(ctx: &Context, msg: &Message, args: Args) -> CommandResul
         );
     }
 
-    let guild_id = match ctx.cache.guild_channel(msg.channel_id).await {
+    let guild_id = match ctx.cache.guild_channel(msg.channel_id) {
         Some(channel) => channel.guild_id,
         None => {
             msg.channel_id
