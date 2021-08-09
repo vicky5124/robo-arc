@@ -36,11 +36,7 @@ dotenv = "0.15" # https://github.com/dotenv-rs/dotenv
 walkdir = "2" # https://github.com/BurntSushi/walkdir
 indexmap = "=1.6.2" # https://github.com/tkaitchuck/aHash/issues/95
 itertools = "0.7" # https://github.com/bluss/rust-itertools
-
-# TODO: replace with tokei
-loc = "0.5" # https://github.com/cgag/loc
-
-#racer = "=2.1.40" # https://github.com/racer-rust/racer/
+tokei = "12" # https://github.com/xampprocky/tokei
 warp = "0.3" # https://github.com/seanmonstar/warp/
 chrono = "0.4" # https://github.com/chronotope/chrono
 humantime = "2.0" # https://github.com/tailhook/humantime
@@ -48,6 +44,8 @@ fasteval = "0.2" # https://github.com/likebike/fasteval
 darkredis = "0.8" # https://github.com/bunogi/darkredis
 num_cpus = "1" # https://github.com/seanmonstar/num_cpus 
 clap = "2" # https://github.com/clap-rs/clap
+
+#racer = "=2.1.40" # https://github.com/racer-rust/racer/
  
 #openssl = { version = "*", optional = true }
 #

@@ -11,6 +11,7 @@ use std::{
     time::Instant,
 };
 
+use tokei::{Config, Languages, LanguageType};
 use num_format::{Locale, ToFormattedString};
 use regex::Regex;
 use serde_json::json;
@@ -382,15 +383,27 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
         let entry = entry.unwrap();
         let path = entry.path();
         if path.is_file() {
-            let count = loc::count(path.to_str().unwrap());
             let text = read_to_string(&path)?;
-
             command_count += text.match_indices("#[command]").count();
-            c_blank += count.blank;
-            c_comment += count.comment;
-            c_code += count.code;
-            c_lines += count.lines;
         }
+    }
+
+    let paths = &["src", "migrations", "."];
+    let excluded = &["target", "osu_data", "eval", "opus", ".git", "*.png", "*.jpg", "*.lock", "*.example"];
+    let config = Config {
+        treat_doc_strings_as_comments: Some(true),
+        ..Config::default()
+    };
+    
+    let mut languages = Languages::new();
+    languages.get_statistics(paths, excluded, &config);
+    let count = [&languages[&LanguageType::Rust], &languages[&LanguageType::Python], &languages[&LanguageType::Sql]];
+
+    for i in count {
+        c_blank += i.blanks;
+        c_comment += i.comments;
+        c_code += i.code;
+        c_lines += i.lines();
     }
 
     message.edit(ctx, |m| {

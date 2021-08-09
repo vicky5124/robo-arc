@@ -18,3 +18,4 @@ lol_test_overlay.*
 .vim
 cargo-timing*
 /build
+*_cache
