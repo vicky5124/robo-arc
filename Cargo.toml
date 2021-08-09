@@ -40,10 +40,6 @@ itertools = "0.7" # https://github.com/bluss/rust-itertools
 # TODO: replace with tokei
 loc = "0.5" # https://github.com/cgag/loc
 
-
-# TODO: remove this dep
-failure = "0.1" # https://github.com/rust-lang-nursery/failure
-
 #racer = "=2.1.40" # https://github.com/racer-rust/racer/
 warp = "0.3" # https://github.com/seanmonstar/warp/
 chrono = "0.4" # https://github.com/chronotope/chrono

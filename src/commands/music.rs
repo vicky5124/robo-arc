@@ -1,6 +1,6 @@
 use crate::global_data::Lavalink;
 
-use std::time::Duration;
+use std::{fmt, time::Duration, error::Error};
 
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
@@ -13,18 +13,21 @@ use tokio::process::Command;
 
 use regex::Regex;
 
-use failure::Error;
-use failure::Fail;
-
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 
-#[derive(Debug, Fail)]
-#[fail(display = "Not in a voice channel.")]
+#[derive(Debug)]
 struct JoinError;
 
+impl Error for JoinError {}
+impl fmt::Display for JoinError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "Not in a voice channel.")
+    }
+}
+
 #[instrument(skip(ctx))]
-pub async fn _join(ctx: &Context, msg: &Message) -> Result<String, Error> {
+pub async fn _join(ctx: &Context, msg: &Message) -> Result<String, Box<dyn Error + Send + Sync>> {
     let guild = msg.guild(&ctx.cache).await.unwrap();
     let guild_id = guild.id;
 

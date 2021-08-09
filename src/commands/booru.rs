@@ -821,7 +821,7 @@ pub async fn best_boy(ctx: &Context, msg: &Message, args: Args) -> CommandResult
 #[aliases(nh, nhentai)]
 #[min_args(1)]
 pub async fn n_hentai(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    if let Some(channel) = msg.channel(ctx).await {
+    if let Ok(channel) = msg.channel(ctx).await {
         if !channel.is_nsfw() && !channel.guild().is_none() {
             msg.channel_id
                 .say(
