@@ -571,9 +571,15 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             .queue()
             .await?;
 
+        let mut position = 1;
+
+        if let Some(node) = lava_client.nodes().await.get_mut(&msg.guild_id.unwrap().0) {
+            position = node.queue.len();
+        };
+
         msg.channel_id
             .send_message(ctx, |m| {
-                m.content("Added to queue:");
+                m.content(format!("Added to queue at position {}", position));
                 m.embed(|e| {
                     e.title(&query_information.tracks[0].info.as_ref().unwrap().title);
                     e.thumbnail(format!(
