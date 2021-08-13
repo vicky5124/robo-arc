@@ -95,8 +95,8 @@ struct Tags {
 // defining the Post type to be used for the xml deserialized on the Posts vector.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 struct Post {
-    #[serde(deserialize_with = "deserialize_option_number_from_string")]
-    id: Option<u64>,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    id: u64,
     score: Option<String>,
     actual_score: Option<String>,
     source: Option<String>,
@@ -415,7 +415,7 @@ pub async fn get_booru(
                     e.url(format!(
                         "{}{}",
                         &booru.post_url,
-                        &choice.id.unwrap_or_default()
+                        &choice.id
                     ));
                     e.image(format!("attachment://{}", filename));
                     e.fields(fields)
@@ -435,7 +435,7 @@ pub async fn get_booru(
                     e.url(format!(
                         "{}{}",
                         &booru.post_url,
-                        &choice.id.unwrap_or_default()
+                        &choice.id
                     ));
                     e.description(format!(
                         "[Sample]({}) | [Full Size]({})",
