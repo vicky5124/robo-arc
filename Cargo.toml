@@ -1,3 +1,5 @@
+cargo-features = ["strip"]
+
 [package]
 name = "arc_bot"
 version = "0.3.4-alpha"
@@ -130,3 +132,4 @@ branch = "next"
 # https://github.com/flamegraph-rs/flamegraph
 [profile.release]
 debug = true
+strip = "symbols"
