@@ -52,7 +52,7 @@ In here you create a bot, enable the Server Member Intent, and copy the token. T
 
 You'll need to have a psql server running. If you don't know how, I recommend using docker. [Here's](https://www.youtube.com/watch?v=aHbE3pTyG-Q) a video that will help you with that.
 
-    NOTE: if you are using windows, docker requires the hyper-V module to be enabled, which breaks other virualization software like VirtualBox or VMWare. If you use any of those softwares, consider setting the database on the system natively.
+    NOTE: if you are using windows, docker requires the hyper-V module to be enabled, which breaks other virtualization software like VirtualBox or VMWare. If you use any of those softwares, consider setting the database on the system natively.
 
 With a created database and you connected with a user, you'll need to create different tables, required by the bot.
 \
