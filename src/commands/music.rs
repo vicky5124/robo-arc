@@ -577,7 +577,7 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         let mut position = 1;
 
         if let Some(node) = lava_client.nodes().await.get_mut(&msg.guild_id.unwrap().0) {
-            position = node.queue.len();
+            position = node.queue.len() - 1;
         };
 
         msg.channel_id
