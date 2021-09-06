@@ -1,15 +1,16 @@
-# **Robo Arc**
-Learning Rust project. Yes, I'm very original and full of ideas, so I'm remaking what I already did with python, but hopefully better this time.
+# Robo Arc
+
+Learning Rust project. Yes, I'm very original and full of ideas, so I'm remaking what I already did with python, but hopefully better this time. (I did actually make it better!)
 
 [Bot invite link!](https://discord.com/api/oauth2/authorize?client_id=551759974905151548&scope=bot+applications.commands&permissions=808971478)
 
 ![Bot profile picture](PFP.png "Bot's profile picture")
 
-This bot is made using [serenity.rs](https://github.com/serenity-rs/serenity/) (currently using the development release [serenity.await](https://github.com/Lakelezz/serenity/blob/await/)), an async discord api wrapper for [Rust](https://www.rust-lang.org/).
+This bot is made using [serenity.rs](https://github.com/serenity-rs/serenity/), an asynchronous discord API wrapper for [Rust](https://www.rust-lang.org/).
 
-## __Running the bot for yourself__
+## Running the bot for yourself
 
-### __**Get the source and prepare it**__:
+### Get the source and prepare it
 
 ```bash
 git clone git@gitlab.com:vicky5124/robo-arc.git # Over SSH
@@ -19,7 +20,7 @@ cd robo-arc
 mv config.toml.example config.toml
 ```
 
-### __**Discord token**__:
+### Discord token
 
 First, create an application [Here](https://discordapp.com/developers/applications/).
 \
@@ -29,7 +30,7 @@ In here you create a bot, enable the Server Member Intent, and copy the token. T
 \
 > You can also create the invite link for the bot on the OAuth2 tab; Just select bot, the permissions you want the bot to have and copy the invite link.
 
-### __**Other tokens**__:
+### Other tokens
 
 - __osu!__
 \
@@ -47,27 +48,25 @@ In here you create a bot, enable the Server Member Intent, and copy the token. T
 \
     NOTE: The image shows the Chrome Dev Tools (f12), On firefox the tab is called "Storage", same key.
 
-
-### __**PostgreSQL Database**__:
+### PostgreSQL Database
 
 You'll need to have a psql server running. If you don't know how, I recommend using docker. [Here's](https://www.youtube.com/watch?v=aHbE3pTyG-Q) a video that will help you with that.
-
-    NOTE: if you are using windows, docker requires the hyper-V module to be enabled, which breaks other virualization software like VirtualBox or VMWare. If you use any of those softwares, consider setting the database on the system natively.
 
 With a created database and you connected with a user, you'll need to create different tables, required by the bot.
 \
 You can do this by using sqlx migrations. To install it, run this command:
 \
-`cargo install sqlx-cli --git https://github.com/launchbadge/sqlx.git`
+`cargo install sqlx-cli`
 \
 Then you will need to set a database url to your env_vars. In linux you can run this:
-\
+
 ```bash
 export DATABASE_URL="postgres://`postgres_username`:`postgres_user_password`@`postgres_host`:`postgres_port`/`postgres_database`"
 export DATABASE_URL2=$DATABASE_URL
 ```
-\
+
 Followed with the creation of the database:
+
 ```bash
 # Only run this the first time.
 sqlx database create
@@ -77,35 +76,38 @@ sqlx database create
 cargo sqlx migrate run
 ```
 
-### __**Redis Database**__:
+### Redis Database
+
 So logging works, redis is also necessary. It is also recommended that you use docker for this.
 [Here's](https://hub.docker.com/_/redis) the docker hub link. The readme has the commands you need to run the container.
 
-    NOTE: This is currently only tested without a configuration, if any configuration options that you feel like you may need make stuff not work, feel free to open an issue.
+NOTE: This is currently only being used without a configuration, if any configuration options that you feel like you may need makes stuff not work, feel free to open an issue about it.
 
 Then you will need to set a database url to your env_vars. In linux you can run this:
-\
+
 ```bash
 export REDIS_URL="`redis_host`:`redis_port`"
 ```
 
-### __**Eval command**__:
-If you'd like to have an eval command, to evaluate python code within discord, you will need to use the `basic_python_bot_for_eval.py` file.
+### Python Hikari eval command
+
+If you'd like to have an eval command that's quick, to evaluate critical python code within discord, you will need to use the `basic_python_bot_for_eval.py` file.
 
 To run it, run the following commands:
-```
-# only once
-Install python 3.8.5 or newer.
-Install pipenv with `python3 -m pip install pipenv -U --user`
 
-# run every update
-`python3 -m pipenv sync`
+```bash
+# Only once:
+# Install python 3.8 or newer with pip.
+# Install pipenv with `python3 -m pip install pipenv -U --user`
 
-# run to run the eval bot
+# Run every update:
+python3 -m pipenv sync
+
+# Run to run the eval bot:
 python3 -m pipenv run python basic_python_bot_for_eval.py
 ```
 
-### __**Running the bot**__:
+### Running the bot
 
 It's as simple as just running:
 
