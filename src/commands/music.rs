@@ -135,14 +135,19 @@ async fn skip(ctx: &Context, msg: &Message) -> CommandResult {
                     e.field("Uploader", &track_info.author, true);
                     e.field(
                         "Length",
-                        format!("{}:{}", track_info.length / 1000 % 3600 / 60, {
-                            let x = track_info.length / 1000 % 3600 % 60;
-                            if x < 10 {
-                                format!("0{}", x)
+                        {
+                            let length = track_info.length / 1000;
+
+                            let minutes = length % 3600 / 60;
+                            let seconds = length % 3600 % 60;
+
+                            if length >= 3600 {
+                                let hours = length / 3600;
+                                format!("{}:{:02}:{:02}", hours, minutes, seconds)
                             } else {
-                                x.to_string()
+                                format!("{:02}:{:02}", minutes, seconds)
                             }
-                        }),
+                        },
                         true,
                     );
                     e
@@ -237,14 +242,19 @@ async fn remove(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                         e.field("Uploader", &track_info.author, true);
                         e.field(
                             "Length",
-                            format!("{}:{}", track_info.length / 1000 % 3600 / 60, {
-                                let x = track_info.length / 1000 % 3600 % 60;
-                                if x < 10 {
-                                    format!("0{}", x)
+                            {
+                                let length = track_info.length / 1000;
+
+                                let minutes = length % 3600 / 60;
+                                let seconds = length % 3600 % 60;
+
+                                if length >= 3600 {
+                                    let hours = length / 3600;
+                                    format!("{}:{:02}:{:02}", hours, minutes, seconds)
                                 } else {
-                                    x.to_string()
+                                    format!("{:02}:{:02}", minutes, seconds)
                                 }
-                            }),
+                            },
                             true,
                         );
                         e
@@ -318,27 +328,35 @@ async fn now_playing(ctx: &Context, msg: &Message) -> CommandResult {
                         e.field("Uploader", &track_info.author, true);
                         e.field(
                             "Length",
-                            format!(
-                                "{}:{} - {}:{}",
-                                track_info.position / 1000 % 3600 / 60,
-                                {
-                                    let x = track_info.position / 1000 % 3600 % 60;
-                                    if x < 10 {
-                                        format!("0{}", x)
-                                    } else {
-                                        x.to_string()
-                                    }
-                                },
-                                track_info.length / 1000 % 3600 / 60,
-                                {
-                                    let x = track_info.length / 1000 % 3600 % 60;
-                                    if x < 10 {
-                                        format!("0{}", x)
-                                    } else {
-                                        x.to_string()
-                                    }
+                            {
+                                let current = track_info.position / 1000;
+                                let length = track_info.length / 1000;
+
+                                let current_minutes = current % 3600 / 60;
+                                let current_seconds = current % 3600 % 60;
+
+                                let minutes = length % 3600 / 60;
+                                let seconds = length % 3600 % 60;
+
+                                if length >= 3600 {
+                                    let current_hours = current / 3600;
+                                    let hours = length / 3600;
+                                    format!(
+                                        "{}:{:02}:{:02} - {}:{:02}:{:02}",
+                                        current_hours,
+                                        current_minutes,
+                                        current_seconds,
+                                        hours,
+                                        minutes,
+                                        seconds
+                                    )
+                                } else {
+                                    format!(
+                                        "{:02}:{:02} - {:02}:{:02}",
+                                        current_minutes, current_seconds, minutes, seconds
+                                    )
                                 }
-                            ),
+                            },
                             true,
                         );
                         e
@@ -577,7 +595,7 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         let mut position = 1;
 
         if let Some(node) = lava_client.nodes().await.get_mut(&msg.guild_id.unwrap().0) {
-            position = node.queue.len() - 1;
+            position = node.queue.len();
         };
 
         msg.channel_id
@@ -602,22 +620,20 @@ async fn play(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     );
                     e.field(
                         "Length",
-                        format!(
-                            "{}:{}",
-                            query_information.tracks[0].info.as_ref().unwrap().length / 1000 % 3600
-                                / 60,
-                            {
-                                let x = query_information.tracks[0].info.as_ref().unwrap().length
-                                    / 1000
-                                    % 3600
-                                    % 60;
-                                if x < 10 {
-                                    format!("0{}", x)
-                                } else {
-                                    x.to_string()
-                                }
+                        {
+                            let length =
+                                query_information.tracks[0].info.as_ref().unwrap().length / 1000;
+
+                            let minutes = length % 3600 / 60;
+                            let seconds = length % 3600 % 60;
+
+                            if length >= 3600 {
+                                let hours = length / 3600;
+                                format!("{}:{:02}:{:02}", hours, minutes, seconds)
+                            } else {
+                                format!("{:02}:{:02}", minutes, seconds)
                             }
-                        ),
+                        },
                         true,
                     );
                     e
