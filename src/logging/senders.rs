@@ -748,7 +748,7 @@ pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
 
     let embed = match &data.channel {
         Channel::Guild(channel) => {
-            let category_name = if let Some(category) = channel.category_id {
+            let category_name = if let Some(category) = channel.parent_id {
                 category.name(ctx).await
             } else {
                 None
@@ -942,7 +942,7 @@ pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
 
     let embed = match &data.channel {
         Channel::Guild(channel) => {
-            let category_name = if let Some(category) = channel.category_id {
+            let category_name = if let Some(category) = channel.parent_id {
                 category.name(ctx).await
             } else {
                 None
@@ -1136,7 +1136,7 @@ pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
 
     let embed = match &data.channel {
         Channel::Guild(channel) => {
-            let category_name = if let Some(category) = channel.category_id {
+            let category_name = if let Some(category) = channel.parent_id {
                 category.name(ctx).await
             } else {
                 None
