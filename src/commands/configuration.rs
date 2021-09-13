@@ -459,7 +459,7 @@ impl Hook for YandeRe {
 struct Twitch {
     streamer: String,
     allow_user: Option<bool>,
-    role: Option<String>,
+    //role: Option<String>,
     role_id: Option<i64>,
     hook: Option<Webhook>,
 }

@@ -1222,45 +1222,13 @@ struct SauceNaoResult {
 #[derive(Debug, Deserialize)]
 struct SauceNaoData {
     ext_urls: Option<Vec<String>>,
-    title: Option<String>,
-    nijie_id: Option<i64>,
-    member_name: Option<String>,
-    member_id: Option<i64>,
-    gelbooru_id: Option<i64>,
-    sankaku_id: Option<i64>,
-    material: Option<String>,
-    characters: Option<String>,
     source: Option<String>,
-    pixiv_id: Option<i64>,
-    seiga_id: Option<i64>,
-    drawr_id: Option<i64>,
-    danbooru_id: Option<i64>,
-    yandere_id: Option<i64>,
-    da_id: Option<i64>,
-    author_name: Option<String>,
-    author_url: Option<String>,
-    anidb_aid: Option<i64>,
-    part: Option<String>,
-    year: Option<String>,
-    est_time: Option<String>,
-    bcy_id: Option<i64>,
-    member_link_id: Option<i64>,
-    bcy_type: Option<String>,
-    e621_id: Option<i64>,
-    md_id: Option<i64>,
-    mu_id: Option<i64>,
-    artist: Option<String>,
-    author: Option<String>,
-    eng_name: Option<String>,
-    jp_name: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 struct SauceNaoResultHeader {
     similarity: String,
     thumbnail: String,
-    index_id: i64,
-    index_name: String,
 }
 
 fn match_url(url: &str) -> String {

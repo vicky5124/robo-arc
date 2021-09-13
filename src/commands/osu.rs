@@ -57,7 +57,6 @@ struct OsuUserData {
     count_rank_ssh: Option<String>,
     count_rank_s: Option<String>,
     count_rank_sh: Option<String>,
-    count_rank_a: Option<String>,
     total_seconds_played: Option<String>,
     pp_country_rank: Option<String>,
 }
@@ -65,23 +64,16 @@ struct OsuUserData {
 // JSON Structure of the osu! scores API request.
 #[derive(Deserialize, Debug)]
 struct OsuScores {
-    score_id: String,
     score: String,
-    username: String,
     maxcombo: String,
     count50: String,
     count100: String,
     count300: String,
     countmiss: String,
-    countkatu: String,
-    countgeki: String,
-    perfect: String,
     enabled_mods: String,
-    user_id: String,
     date: String,
     rank: String,
     pp: Option<String>,
-    replay_available: String,
 }
 
 // JSON Structure of the osu! user recent plays API request.
@@ -94,11 +86,7 @@ struct OsuUserRecentData {
     count100: String,
     count300: String,
     countmiss: String,
-    countkatu: String,
-    countgeki: String,
-    perfect: String,
     enabled_mods: String,
-    user_id: String,
     date: String,
     rank: String,
 }
@@ -106,64 +94,36 @@ struct OsuUserRecentData {
 // JSON Structure of the osu! beatmap API request.
 #[derive(Deserialize, Debug)]
 struct OsuBeatmapData {
-    approved: String,
-    submit_date: String,
-    approved_date: Option<String>,
-    last_update: String,
     artist: String,
     beatmap_id: String,
     beatmapset_id: String,
-    bpm: String,
     creator: String,
-    creator_id: String,
     difficultyrating: String,
     diff_aim: String,
     diff_speed: String,
-    diff_size: String,
     diff_overall: String,
     diff_approach: String,
-    diff_drain: String,
-    hit_length: String,
-    source: String,
-    genre_id: String,
-    language_id: String,
     title: String,
-    total_length: String,
     version: String,
-    file_md5: String,
-    mode: String,
-    tags: String,
-    favourite_count: String,
-    rating: String,
-    playcount: String,
-    passcount: String,
     count_normal: String,
     count_slider: String,
     count_spinner: String,
     max_combo: String,
-    download_unavailable: String,
-    audio_unavailable: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct OsuUserBest {
     beatmap_id: String,
-    score_id: String,
     score: String,
     maxcombo: String,
     count50: String,
     count100: String,
     count300: String,
     countmiss: String,
-    countkatu: String,
-    countgeki: String,
-    perfect: String,
     enabled_mods: String,
-    user_id: String,
     date: String,
     rank: String,
     pp: String,
-    replay_available: String,
 }
 
 // Data Structure of the data obtained on the database.
