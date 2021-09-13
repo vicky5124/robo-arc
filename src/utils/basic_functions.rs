@@ -57,19 +57,19 @@ pub fn string_to_seconds(text: impl ToString) -> u64 {
 
     for i in words {
         if let Some(num) = i.strip_suffix('s') {
-            seconds += num.parse::<u64>().unwrap_or(0);
+            seconds += num.parse::<u64>().unwrap_or(0); // 1 second
         } else if let Some(num) = i.strip_suffix('m') {
-            seconds += num.parse::<u64>().unwrap_or(0) * 60;
+            seconds += num.parse::<u64>().unwrap_or(0) * 60; // 1 minute
         } else if let Some(num) = i.strip_suffix('h') {
-            seconds += num.parse::<u64>().unwrap_or(0) * 3600;
+            seconds += num.parse::<u64>().unwrap_or(0) * 3600; // 1 hour
         } else if let Some(num) = i.strip_suffix('D') {
-            seconds += num.parse::<u64>().unwrap_or(0) * 86_400;
+            seconds += num.parse::<u64>().unwrap_or(0) * 86_400; // 1 day
         } else if let Some(num) = i.strip_suffix('W') {
-            seconds += num.parse::<u64>().unwrap_or(0) * 604_800;
+            seconds += num.parse::<u64>().unwrap_or(0) * 604_800; // 7 days
         } else if let Some(num) = i.strip_suffix('M') {
-            seconds += num.parse::<u64>().unwrap_or(0) * 2_628_288;
+            seconds += num.parse::<u64>().unwrap_or(0) * 2_592_000; // 30 days
         } else if let Some(num) = i.strip_suffix('Y') {
-            seconds += num.parse::<u64>().unwrap_or(0) * 31_536_000;
+            seconds += num.parse::<u64>().unwrap_or(0) * 31_536_000; // 365 days
         }
     }
 
