@@ -282,7 +282,11 @@ async fn clear_queue(ctx: &Context, msg: &Message) -> CommandResult {
 
     if let Some(mut node) = lava_client.nodes().await.get_mut(&msg.guild_id.unwrap().0) {
         if !node.queue.is_empty() {
-            node.queue = vec![];
+            if node.now_playing.is_some() {
+                node.queue = vec![node.queue[0].clone()];
+            } else {
+                node.queue = vec![];
+            }
 
             msg.react(ctx, '✅').await?;
         } else {
