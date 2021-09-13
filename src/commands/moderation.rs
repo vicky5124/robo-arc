@@ -133,15 +133,13 @@ async fn kick(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let member_arg = args.single_quoted::<String>()?;
     let member = parse_member(ctx, msg, member_arg).await;
 
-    let reason = args.remains();
+    let raw_reason = args.remains().unwrap_or_default();
+    let reason = format!("{}#{}: {}", msg.author.name, msg.author.discriminator, raw_reason);
 
     match member {
         Ok(m) => {
-            if let Some(r) = reason {
-                m.kick_with_reason(ctx, r).await?;
-            } else {
-                m.kick(ctx).await?;
-            }
+            m.kick_with_reason(ctx, &reason).await?;
+
             msg.reply(
                 ctx,
                 format!(
@@ -161,6 +159,8 @@ async fn kick(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
 /// Bans the specified member with an optional reason.
 ///
+/// Will clear the entire day of messages if the wordl "spam" is in the reason.
+///
 /// Usage:
 /// `ban @user`
 /// `ban "user name"`
@@ -174,15 +174,17 @@ async fn ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let member_arg = args.single_quoted::<String>()?;
     let member = parse_member(ctx, msg, member_arg).await;
 
-    let reason = args.remains();
+    let raw_reason = args.remains().unwrap_or_default();
+    let reason = format!("{}#{}: {}", msg.author.name, msg.author.discriminator, raw_reason);
 
     match member {
         Ok(m) => {
-            if let Some(r) = reason {
-                m.ban_with_reason(ctx, 1, &r).await?;
+            if raw_reason.contains("spam") {
+                m.ban_with_reason(ctx, 1, &reason).await?;
             } else {
-                m.ban(ctx, 1).await?;
+                m.ban_with_reason(ctx, 0, &reason).await?;
             }
+
             msg.reply(
                 ctx,
                 format!(
