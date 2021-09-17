@@ -164,7 +164,7 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
         m.embed( |e| {
             e.title("Invite Link");
             e.url(url);
-            e.description("Keep in mind, this bot is still in pure developement, so not all of this mentioned features are implemented.\n\n__**Reason for each permission**__");
+            e.description("Keep in mind, this bot is still in pure developement, so not all of these mentioned features are implemented.\n\n__**Reason for each permission**__");
             e.fields(vec![
                 ("Attach Files", "For some of the booru commands.\nFor an automatic text file to be sent when a message is too long.", true),
                 ("Read Messages", "So the bot can read the messages to know when a command was invoked and such.", true),
