@@ -396,6 +396,7 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
         ".git",
         "*.png",
         "*.jpg",
+        "*.jpeg",
         "*.lock",
         "*.example",
     ];
