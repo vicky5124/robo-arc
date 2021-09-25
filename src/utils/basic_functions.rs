@@ -1,3 +1,6 @@
+use regex::Regex;
+use std::lazy::Lazy;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PasteData {
     code: String,
@@ -51,25 +54,35 @@ pub fn seconds_to_days(seconds: u64) -> String {
 }
 
 pub fn string_to_seconds(text: impl ToString) -> u64 {
-    let s = text.to_string();
-    let words = s.split(' ');
-    let mut seconds = 0;
+    let re = Lazy::new(|| {
+        Regex::new(r"((?P<years>\d+?)Y|years)?((?P<months>\d+?)M|months)?((?P<weeks>\d+?)W|weeks)?((?P<days>\d+?)D|days)?((?P<hours>\d+?)h|hr|hours)?((?P<minutes>\d+?)m|min|minutes)?((?P<seconds>\d+?)s|sec|seconds)?").unwrap()
+    });
+    let text = &text.to_string();
+    let captures = re.captures(text);
+    let caps = if let Some(caps) = captures {
+        caps
+    } else {
+        return 0;
+    };
 
-    for i in words {
-        if let Some(num) = i.strip_suffix('s') {
-            seconds += num.parse::<u64>().unwrap_or(0); // 1 second
-        } else if let Some(num) = i.strip_suffix('m') {
-            seconds += num.parse::<u64>().unwrap_or(0) * 60; // 1 minute
-        } else if let Some(num) = i.strip_suffix('h') {
-            seconds += num.parse::<u64>().unwrap_or(0) * 3600; // 1 hour
-        } else if let Some(num) = i.strip_suffix('D') {
-            seconds += num.parse::<u64>().unwrap_or(0) * 86_400; // 1 day
-        } else if let Some(num) = i.strip_suffix('W') {
-            seconds += num.parse::<u64>().unwrap_or(0) * 604_800; // 7 days
-        } else if let Some(num) = i.strip_suffix('M') {
-            seconds += num.parse::<u64>().unwrap_or(0) * 2_592_000; // 30 days
-        } else if let Some(num) = i.strip_suffix('Y') {
-            seconds += num.parse::<u64>().unwrap_or(0) * 31_536_000; // 365 days
+    let mut seconds = 0;
+    for name in [
+        "years", "months", "weeks", "days", "hours", "minutes", "seconds",
+    ] {
+        if let Some(time) = caps.name(name) {
+            let time: u64 = time.as_str().parse().unwrap();
+            seconds += match name {
+                "years" => time * 31_557_600, // 365.25 days (.25 to take leap years into account)
+                "months" => time * 2_592_000, // 30 days
+                "weeks" => time * 604_800,
+                "days" => time * 86_400,
+                "hours" => time * 3_600,
+                "minutes" => time * 60,
+                "seconds" => time,
+                _ => 0,
+            };
+        } else {
+            continue;
         }
     }
 

@@ -86,7 +86,7 @@ pub async fn anti_spam_message(
     .await
     {
         Err(why) => {
-            error!("Error quering database for anti_spam: {}", why);
+            error!("Error querying database for anti_spam: {}", why);
             return;
         }
         Ok(x) => x,
