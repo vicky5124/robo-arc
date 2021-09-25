@@ -1,3 +1,4 @@
+use crate::global_data::{Lavalink, SongbirdCalls};
 use crate::notifications::notification_loop;
 use crate::AnnoyedChannels;
 use crate::DatabasePool;
@@ -8,18 +9,18 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use lavalink_rs::gateway::LavalinkEventHandler;
-use tokio::sync::Mutex;
+use tokio::{time::{sleep, Duration}, sync::Mutex};
 use warp::{reply::json, reply::Json, Filter};
 
 use serenity::{
     async_trait,
     model::{
         channel::{GuildChannel, Message, Reaction, ReactionType},
+        event::VoiceServerUpdateEvent,
         gateway::{Activity, Ready},
         guild::Member,
         id::{ChannelId, GuildId},
         user::OnlineStatus,
-        //event::VoiceServerUpdateEvent,
     },
     prelude::{Context, EventHandler},
 };
@@ -44,11 +45,7 @@ pub async fn is_on_guild(guild_id: u64, ctx: Arc<Context>) -> Result<Json, warp:
     let cache = &ctx.cache;
 
     let data = Allow {
-        allowed: cache
-            .guilds()
-            .iter()
-            .map(|i| i.0)
-            .any(|x| x == guild_id),
+        allowed: cache.guilds().iter().map(|i| i.0).any(|x| x == guild_id),
     };
 
     Ok(json(&data))
@@ -309,11 +306,7 @@ impl EventHandler for Handler {
                 .await
                 .is_err()
             {
-                if let Some(channel) = guild_id
-                    .to_guild_cached(&ctx)
-                    .unwrap()
-                    .system_channel_id
-                {
+                if let Some(channel) = guild_id.to_guild_cached(&ctx).unwrap().system_channel_id {
                     let _ = channel.say(&ctx, format!("I was unable to reban the permanently banned user <@{}>, originally banned by <@{}>", member.user.id.0, row.banner_user_id)).await;
                 }
             };
@@ -326,11 +319,53 @@ impl EventHandler for Handler {
         }
     }
 
-    //async fn voice_server_update(&self, ctx: Context, vsu: VoiceServerUpdateEvent) {
-    //    dbg!(&vsu);
+    async fn voice_server_update(&self, ctx: Context, vsu: VoiceServerUpdateEvent) {
+        let guild_id = vsu.guild_id.unwrap();
+        let call = ctx
+            .data
+            .read()
+            .await
+            .get::<SongbirdCalls>()
+            .unwrap()
+            .clone()
+            .read()
+            .await
+            .get(&guild_id)
+            .cloned();
 
-    //        // let data = ctx.data.read().await;
-    //        // let lava_client = data.get::<Lavalink>().unwrap();
-    //        // lava_client.create_session(&connection_info).await?;
-    //}
+        if let Some(call) = call {
+            let connection_info = call.lock().await.current_connection().unwrap().clone();
+            let lavalink = ctx.data.read().await.get::<Lavalink>().unwrap().clone();
+
+            tokio::spawn(async move {
+                trace!("(Voice Server Update) Call pause");
+                if let Err(why) = lavalink.pause(guild_id).await {
+                    error!(
+                        "Error when pausing on voice_server_update: {}",
+                        why
+                    );
+                }
+
+                sleep(Duration::from_millis(100)).await;
+
+                trace!("(Voice Server Update) Call create_session");
+                if let Err(why) = lavalink.create_session_with_songbird(&connection_info).await {
+                    error!(
+                        "Error when creating a session on voice_server_update: {}",
+                        why
+                    );
+                }
+
+                sleep(Duration::from_millis(1000)).await;
+
+                trace!("(Voice Server Update) Call resume");
+                if let Err(why) = lavalink.resume(guild_id).await {
+                    error!(
+                        "Error when resuming on voice_server_update: {}",
+                        why
+                    );
+                }
+            });
+        }
+    }
 }
