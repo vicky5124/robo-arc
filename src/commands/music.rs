@@ -1,4 +1,4 @@
-use crate::global_data::{Lavalink, SongbirdCalls};
+use crate::global_data::Lavalink;
 
 use std::{error::Error, fmt, time::Duration};
 
@@ -48,18 +48,15 @@ pub async fn _join(ctx: &Context, msg: &Message) -> Result<String, Box<dyn Error
 
     let manager = songbird::get(ctx).await.unwrap().clone();
 
-    let (call, handler) = manager.join_gateway(guild_id, connect_to).await;
-    {
-        let data = ctx.data.read().await;
-        let songbird_calls = data.get::<SongbirdCalls>().unwrap().clone();
-        songbird_calls.write().await.insert(guild_id, call.clone());
-    }
+    let (_, handler) = manager.join_gateway(guild_id, connect_to).await;
 
     match handler {
         Ok(connection_info) => {
             let data = ctx.data.read().await;
             let lava_client = data.get::<Lavalink>().unwrap();
-            lava_client.create_session_with_songbird(&connection_info).await?;
+            lava_client
+                .create_session_with_songbird(&connection_info)
+                .await?;
 
             Ok(connect_to.mention().to_string())
         }

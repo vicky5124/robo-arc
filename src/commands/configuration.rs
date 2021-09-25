@@ -197,10 +197,7 @@ async fn streamrole(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                         ctx,
                         format!(
                             "Successfully obtained the role `{}`",
-                            RoleId(role_id as u64)
-                                .to_role_cached(ctx)
-                                .unwrap()
-                                .name
+                            RoleId(role_id as u64).to_role_cached(ctx).unwrap().name
                         ),
                     )
                     .await?;
@@ -215,10 +212,7 @@ async fn streamrole(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                     ctx,
                     format!(
                         "Successfully removed the role `{}`",
-                        RoleId(role_id as u64)
-                            .to_role_cached(ctx)
-                            .unwrap()
-                            .name
+                        RoleId(role_id as u64).to_role_cached(ctx).unwrap().name
                     ),
                 )
                 .await?;

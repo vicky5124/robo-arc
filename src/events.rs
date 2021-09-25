@@ -1,4 +1,4 @@
-use crate::global_data::{Lavalink, SongbirdCalls};
+use crate::global_data::Lavalink;
 use crate::notifications::notification_loop;
 use crate::AnnoyedChannels;
 use crate::DatabasePool;
@@ -9,7 +9,10 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use lavalink_rs::gateway::LavalinkEventHandler;
-use tokio::{time::{sleep, Duration}, sync::Mutex};
+use tokio::{
+    sync::Mutex,
+    time::{sleep, Duration},
+};
 use warp::{reply::json, reply::Json, Filter};
 
 use serenity::{
@@ -21,6 +24,7 @@ use serenity::{
         guild::Member,
         id::{ChannelId, GuildId},
         user::OnlineStatus,
+        voice::VoiceState,
     },
     prelude::{Context, EventHandler},
 };
@@ -321,35 +325,27 @@ impl EventHandler for Handler {
 
     async fn voice_server_update(&self, ctx: Context, vsu: VoiceServerUpdateEvent) {
         let guild_id = vsu.guild_id.unwrap();
-        let call = ctx
-            .data
-            .read()
-            .await
-            .get::<SongbirdCalls>()
-            .unwrap()
-            .clone()
-            .read()
-            .await
-            .get(&guild_id)
-            .cloned();
 
-        if let Some(call) = call {
+        let manager = songbird::get(&ctx).await.unwrap().clone();
+        let opt_call = manager.get(guild_id);
+
+        if let Some(call) = opt_call {
             let connection_info = call.lock().await.current_connection().unwrap().clone();
             let lavalink = ctx.data.read().await.get::<Lavalink>().unwrap().clone();
 
             tokio::spawn(async move {
                 trace!("(Voice Server Update) Call pause");
                 if let Err(why) = lavalink.pause(guild_id).await {
-                    error!(
-                        "Error when pausing on voice_server_update: {}",
-                        why
-                    );
+                    error!("Error when pausing on voice_server_update: {}", why);
                 }
 
                 sleep(Duration::from_millis(100)).await;
 
                 trace!("(Voice Server Update) Call create_session");
-                if let Err(why) = lavalink.create_session_with_songbird(&connection_info).await {
+                if let Err(why) = lavalink
+                    .create_session_with_songbird(&connection_info)
+                    .await
+                {
                     error!(
                         "Error when creating a session on voice_server_update: {}",
                         why
@@ -360,12 +356,53 @@ impl EventHandler for Handler {
 
                 trace!("(Voice Server Update) Call resume");
                 if let Err(why) = lavalink.resume(guild_id).await {
+                    error!("Error when resuming on voice_server_update: {}", why);
+                }
+            });
+        }
+    }
+
+    async fn voice_state_update(
+        &self,
+        ctx: Context,
+        _: Option<GuildId>,
+        _: Option<VoiceState>,
+        voice_state: VoiceState,
+    ) {
+        let current_user_id = ctx.cache.current_user_id();
+
+        if voice_state.user_id != current_user_id {
+            return;
+        }
+
+        if voice_state.channel_id.is_none() {
+            let guild_id = voice_state.guild_id.unwrap();
+
+            let manager = songbird::get(&ctx).await.unwrap().clone();
+            let has_handler = manager.get(guild_id).is_some();
+
+            if has_handler {
+                if let Err(why) = manager.remove(guild_id).await {
+                    error!("Error when removing a call on voice_state_update: {}", why);
+                }
+
+                let lava_client = {
+                    let data_read = ctx.data.read().await;
+                    data_read.get::<Lavalink>().unwrap().clone()
+                };
+
+                if let Err(why) = lava_client.destroy(guild_id).await {
                     error!(
-                        "Error when resuming on voice_server_update: {}",
+                        "Error when destroying session on voice_state_update: {}",
                         why
                     );
                 }
-            });
+                lava_client.nodes().await.remove(&guild_id.0);
+
+                let loops = lava_client.loops().await;
+
+                loops.remove(&guild_id.0);
+            }
         }
     }
 }

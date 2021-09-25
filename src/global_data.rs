@@ -1,11 +1,10 @@
 use crate::{notifications::TwitchStreamData, Booru, ConfigurationData};
 
-use std::{collections::{HashSet, HashMap}, sync::Arc, time::Instant};
+use std::{collections::HashSet, sync::Arc, time::Instant};
 
 use tokio::sync::{Mutex, RwLock};
 
-use serenity::{client::bridge::gateway::ShardManager, prelude::TypeMapKey, model::id::GuildId};
-use songbird::Call;
+use serenity::{client::bridge::gateway::ShardManager, prelude::TypeMapKey};
 
 use darkredis::ConnectionPool as RedisPool;
 use lavalink_rs::LavalinkClient;
@@ -22,7 +21,6 @@ pub struct AnnoyedChannels; // This is a HashSet of all the channels the bot is 
 pub struct BooruList; // This is a HashSet of all the boorus found on "boorus.json"
 pub struct BooruCommands; // This is a HashSet of all the commands/aliases found on "boorus.json"
 pub struct Lavalink; //  This is the struct for the lavalink client.
-pub struct SongbirdCalls; //  This is the struct to store the current songbird connections.
 pub struct SentTwitchStreams; //  This is the struct for the stream data that has already been sent.
 pub struct Uptime; //  This is for the startup time of the bot.
 pub struct OsuHttpClient; // This is the HTTP client to comunicate with osu! API v2.
@@ -58,11 +56,6 @@ impl TypeMapKey for BooruCommands {
 impl TypeMapKey for Lavalink {
     type Value = LavalinkClient;
 }
-
-impl TypeMapKey for SongbirdCalls {
-    type Value = Arc<RwLock<HashMap<GuildId, Arc<Mutex<Call>>>>>;
-}
-
 
 impl TypeMapKey for SentTwitchStreams {
     type Value = Arc<RwLock<Vec<TwitchStreamData>>>;

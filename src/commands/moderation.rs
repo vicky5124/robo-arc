@@ -134,7 +134,10 @@ async fn kick(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let member = parse_member(ctx, msg, member_arg).await;
 
     let raw_reason = args.remains().unwrap_or_default();
-    let reason = format!("{}#{}: {}", msg.author.name, msg.author.discriminator, raw_reason);
+    let reason = format!(
+        "{}#{}: {}",
+        msg.author.name, msg.author.discriminator, raw_reason
+    );
 
     match member {
         Ok(m) => {
@@ -175,7 +178,10 @@ async fn ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let member = parse_member(ctx, msg, member_arg).await;
 
     let raw_reason = args.remains().unwrap_or_default();
-    let reason = format!("{}#{}: {}", msg.author.name, msg.author.discriminator, raw_reason);
+    let reason = format!(
+        "{}#{}: {}",
+        msg.author.name, msg.author.discriminator, raw_reason
+    );
 
     match member {
         Ok(m) => {

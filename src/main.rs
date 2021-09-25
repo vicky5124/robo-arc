@@ -34,7 +34,7 @@ use crate::global_data::*;
 use utils::database::*; // Obtain the get_database function from the utilities. // Obtain the capitalize_first function from the utilities.
 
 use std::{
-    collections::{HashSet, HashMap}, // O(1) Maps and Sets.
+    collections::HashSet, // Low cost indexable lists.
     // For saving / reading files
     fs::File,
     io::prelude::*,
@@ -242,7 +242,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .await?;
 
             data.insert::<Lavalink>(lava_client);
-            data.insert::<SongbirdCalls>(Arc::new(RwLock::new(HashMap::new())));
         }
 
         {
