@@ -25,8 +25,8 @@ struct Tag {
 #[derive(Deserialize, PartialEq)]
 struct SankakuData {
     rating: String,
-    sample_url: String,
-    file_url: String,
+    sample_url: Option<String>,
+    file_url: Option<String>,
     source: Option<String>,
     md5: String,
     file_size: i32,
@@ -116,6 +116,11 @@ pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             let r = rand::thread_rng().gen_range(0..resp.len());
             let x = &resp[r];
             y += 1;
+
+            if x.sample_url.is_none() || x.file_url.is_none() {
+                continue;
+            }
+
             // 8MB
             if x.file_size < 8_000_000 {
                 let mut is_unsafe = false;
@@ -149,8 +154,8 @@ pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         }
     };
 
-    let sample_url = &format!("https:{}", &choice.sample_url).to_owned()[..];
-    let file_url = &format!("https:{}", &choice.file_url).to_owned()[..];
+    let sample_url = &format!("https:{}", &choice.sample_url.as_ref().unwrap()).to_owned()[..];
+    let file_url = &format!("https:{}", &choice.file_url.as_ref().unwrap()).to_owned()[..];
     let buf = reqwest
         .get(sample_url)
         .headers(headers.clone())
@@ -161,7 +166,7 @@ pub async fn idol(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .into_iter()
         .collect::<Vec<u8>>();
 
-    let fullsize_tagless = &choice.file_url.split('?').next().unwrap();
+    let fullsize_tagless = &choice.file_url.as_ref().unwrap().split('?').next().unwrap();
     let fullsize_split = fullsize_tagless.split('/').collect::<Vec<&str>>();
     let filename = fullsize_split.get(6).unwrap();
 
@@ -299,6 +304,11 @@ pub async fn chan(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             let r = rand::thread_rng().gen_range(0..resp.len());
             let x = &resp[r];
             y += 1;
+
+            if x.sample_url.is_none() || x.file_url.is_none() {
+                continue;
+            }
+
             // 8MB
             if x.file_size < 8_000_000 {
                 let mut is_unsafe = false;
@@ -332,11 +342,11 @@ pub async fn chan(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         }
     };
 
-    let sample_url = &choice.sample_url;
-    let file_url = &choice.file_url;
+    let sample_url = &choice.sample_url.as_ref().unwrap();
+    let file_url = &choice.file_url.as_ref().unwrap();
 
     let buf = reqwest
-        .get(sample_url)
+        .get(*sample_url)
         .headers(headers.clone())
         .send()
         .await?
@@ -345,7 +355,7 @@ pub async fn chan(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .into_iter()
         .collect::<Vec<u8>>();
 
-    let fullsize_tagless = &choice.file_url.split('?').next().unwrap();
+    let fullsize_tagless = &choice.file_url.as_ref().unwrap().split('?').next().unwrap();
     let fullsize_split = fullsize_tagless.split('/').collect::<Vec<&str>>();
     let filename = fullsize_split.get(6).unwrap();
 
