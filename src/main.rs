@@ -150,7 +150,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 owners.insert(info.owner.id);
             }
 
-            (owners, info.id)
+            let current_user = http.get_current_user().await?;
+
+            (owners, current_user.id)
         }
         Err(why) => panic!("Could not access application info: {:?}", why),
     };
