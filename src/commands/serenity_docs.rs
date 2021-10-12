@@ -45,19 +45,23 @@ async fn example(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e08_shard_manager>").await?,
 
         "9" | "embeds" | "file" | "files" | "send file" | "send files" | "embed" =>
-            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e9_create_message_builder>").await?,
+            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e09_create_message_builder>").await?,
 
-        "10" | "collectors" | "await_next for" | "reactions" | "reply" | "wait for" =>
+        "10" | "collectors" | "await_next for" | "reactions" | "reply" | "wait for" | "collector" | "wait_for" =>
             msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e10_collectors>").await?,
 
-        "11" | "intets" | "intent" =>
+        "11" | "intents" | "intent" =>
             msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e11_gateway_intents>").await?,
         "12" | "global data" | "global_data" | "global" | "data" | "client data" | "ctx data" | "context data" =>
             msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e12_global_data>").await?,
-        "13" | "parallel loops" | "parallel_loops" | "task" | "tasks" | "concurrent loop" | "parallel operations" =>
+        "13" | "parallel loops" | "parallel_loops" | "task" | "tasks" | "concurrent loop" | "parallel operations" | "loops" | "loop" =>
             msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e13_parallel_loops>").await?,
         "14" | "slash commands" | "slash_commands" | "slash" | "scommands" | "interactions" | "integrations" | "buttons" | "components" | "component" =>
             msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e14_slash_commands>").await?,
+        "15" | "rillrate" | "dashboard" =>
+            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e15_simple_dashboard>").await?,
+        "16" | "sqlite" | "sql" | "sqlx" | "database" =>
+            msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples/e16_sqlite_database>").await?,
 
         _ => msg.channel_id.say(ctx, "<https://github.com/serenity-rs/serenity/tree/current/examples>").await?,
     };
