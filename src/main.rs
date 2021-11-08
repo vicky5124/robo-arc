@@ -240,6 +240,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .set_host(host.to_string())
                 .set_password(password.to_string())
                 .set_port(port)
+                //.set_start_gateway(false)
                 .build(LavalinkHandler)
                 .await?;
 

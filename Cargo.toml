@@ -115,9 +115,9 @@ branch = "master"
 features = ["serenity"]
 
 [dependencies.songbird]
-#git = "https://github.com/serenity-rs/songbird/"
-#branch = "current"
-version = "0.2"
+git = "https://github.com/serenity-rs/songbird/"
+branch = "next"
+#version = "0.2"
 default-features = false
 features = ["serenity-rustls", "gateway"]
 
@@ -127,6 +127,9 @@ branch = "next"
 #git = "https://github.com/acdenisSK/serenity"
 #branch = "optional_deserialisation"
 
+[patch.crates-io.songbird]
+git = "https://github.com/serenity-rs/songbird"
+branch = "next"
 
 # used for profiling for flamegraph
 # https://github.com/flamegraph-rs/flamegraph
