@@ -19,3 +19,4 @@ lol_test_overlay.*
 cargo-timing*
 /build
 *_cache
+.cargo
