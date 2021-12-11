@@ -218,7 +218,7 @@ pub async fn send_guild_member_add(ctx: &Context, data: &GuildMemberAddEvent) {
     };
 
     if let Some(channel_data) =
-        guild_has_logging(&pool, LoggingEvents::GuildMemberAdd, data.guild_id).await
+        guild_has_logging(&pool, LoggingEvents::GuildMemberAdd, data.member.guild_id).await
     {
         let embed = Embed::fake(|e| {
             e.title("Member Joined");
@@ -354,7 +354,7 @@ pub async fn send_guild_role_create(ctx: &Context, data: &GuildRoleCreateEvent) 
     };
 
     if let Some(channel_data) =
-        guild_has_logging(&pool, LoggingEvents::GuildRoleCreate, data.guild_id).await
+        guild_has_logging(&pool, LoggingEvents::GuildRoleCreate, data.role.guild_id).await
     {
         let embed = Embed::fake(|e| {
             e.title("Role Created");

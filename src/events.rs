@@ -282,7 +282,7 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn guild_member_addition(&self, ctx: Context, guild_id: GuildId, member: Member) {
+    async fn guild_member_addition(&self, ctx: Context, member: Member) {
         let pool = {
             let data_read = &ctx.data.read().await;
             data_read.get::<DatabasePool>().unwrap().clone()
@@ -290,7 +290,7 @@ impl EventHandler for Handler {
 
         let data = sqlx::query!(
             "SELECT banner_user_id FROM permanent_bans WHERE guild_id = $1 AND user_id = $2",
-            guild_id.0 as i64,
+            member.guild_id.0 as i64,
             member.user.id.0 as i64
         )
         .fetch_optional(&pool)
@@ -310,7 +310,7 @@ impl EventHandler for Handler {
                 .await
                 .is_err()
             {
-                if let Some(channel) = guild_id.to_guild_cached(&ctx).unwrap().system_channel_id {
+                if let Some(channel) = member.guild_id.to_guild_cached(&ctx).unwrap().system_channel_id {
                     let _ = channel.say(&ctx, format!("I was unable to reban the permanently banned user <@{}>, originally banned by <@{}>", member.user.id.0, row.banner_user_id)).await;
                 }
             };
@@ -365,7 +365,6 @@ impl EventHandler for Handler {
     async fn voice_state_update(
         &self,
         ctx: Context,
-        _: Option<GuildId>,
         _: Option<VoiceState>,
         voice_state: VoiceState,
     ) {
