@@ -2,6 +2,7 @@ use crate::commands::moderation::parse_member;
 
 use std::fmt::Display;
 use std::fs;
+use std::ops::Deref;
 use std::time::Duration;
 
 use rand::rngs::StdRng;
@@ -12,7 +13,7 @@ use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
     model::channel::{Message, ReactionType},
     model::id::UserId,
-    model::misc::Mentionable,
+    model::mention::Mentionable,
     prelude::Context,
 };
 
@@ -340,7 +341,7 @@ async fn tic_tac_toe(ctx: &Context, msg: &Message, mut args: Args) -> CommandRes
     ]
     .repeat(5);
 
-    if msg.timestamp.timestamp() % 2 == 0 {
+    if msg.timestamp.deref().timestamp() % 2 == 0 {
         players.reverse();
     }
     players.pop();

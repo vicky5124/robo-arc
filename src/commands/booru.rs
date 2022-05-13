@@ -20,8 +20,7 @@ use futures::TryStreamExt;
 
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult, Delimiter},
-    http::AttachmentType,
-    model::channel::{Message, ReactionType},
+    model::channel::{AttachmentType, Message, ReactionType},
     prelude::Context,
 };
 // rand crate, used to select a random post from the request data.

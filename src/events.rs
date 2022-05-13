@@ -310,7 +310,12 @@ impl EventHandler for Handler {
                 .await
                 .is_err()
             {
-                if let Some(channel) = member.guild_id.to_guild_cached(&ctx).unwrap().system_channel_id {
+                if let Some(channel) = member
+                    .guild_id
+                    .to_guild_cached(&ctx)
+                    .unwrap()
+                    .system_channel_id
+                {
                     let _ = channel.say(&ctx, format!("I was unable to reban the permanently banned user <@{}>, originally banned by <@{}>", member.user.id.0, row.banner_user_id)).await;
                 }
             };

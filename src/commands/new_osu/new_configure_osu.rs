@@ -5,9 +5,9 @@ use std::time::Duration;
 
 use serenity::{
     framework::standard::{macros::command, CommandResult},
+    model::application::component::ButtonStyle,
+    model::application::interaction::InteractionResponseType,
     model::channel::*,
-    model::interactions::message_component::*,
-    model::interactions::InteractionResponseType,
     prelude::Context,
 };
 

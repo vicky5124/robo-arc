@@ -15,9 +15,9 @@ use uuid::Uuid;
 use serenity::{
     builder::CreateEmbed,
     framework::standard::{macros::command, Args, CommandResult},
+    model::application::component::{ButtonStyle, ComponentType},
+    model::application::interaction::InteractionResponseType,
     model::channel::*,
-    model::interactions::message_component::*,
-    model::interactions::InteractionResponseType,
     prelude::Context,
 };
 
@@ -356,7 +356,7 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                         )
                     })
                 });
-                embed.timestamp(&data.created_at);
+                embed.timestamp(data.created_at);
                 embed.description(
                     format!(
                         "__Mapped by **[{}](https://osu.ppy.sh/users/{})**__ | Difficulty **{}** {}\n**{:.2}\\*** ({:.2}\\* Aim | {:.2}\\* Speed)** {}**\nAR {:.1} | OD {:.1} | CS {:.1} | HP {:.1}\n**{}** ┇ **x{}** / {} {}\n**{:.2}%** ┇ {} - {} - {} - ~~{}~~",
@@ -751,7 +751,7 @@ async fn new_recent(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                 })
             });
 
-            embed.timestamp(&data.created_at);
+            embed.timestamp(data.created_at);
             embed.description(
                 format!(
                     "__Mapped by **[{}](https://osu.ppy.sh/users/{})**__ | Difficulty **{}** {}\n**{:.2}\\*** ({:.2}\\* Aim | {:.2}\\* Speed)** {}**\nAR {:.1} | OD {:.1} | CS {:.1} | HP {:.1}\n**{}** ┇ **x{}** / {} {}\n**{:.2}%** ┇ {} - {} - {} - ~~{}~~\nScoreable: {} ┇ {} ❤️\nLast updated: <t:{}:F>",

@@ -11,8 +11,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use reqwest::Client as ReqwestClient;
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
-    http::AttachmentType,
-    model::channel::Message,
+    model::channel::{AttachmentType, Message},
     prelude::Context,
 };
 use tokio::task::spawn_blocking;

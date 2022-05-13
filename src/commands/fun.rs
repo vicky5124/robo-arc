@@ -3,7 +3,7 @@ use crate::{
     utils::basic_functions::string_to_seconds,
 };
 
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, ops::Deref, time::Duration};
 
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
@@ -437,7 +437,7 @@ async fn profile(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
                     "Created at:",
                     format!(
                         "{}UTC\n({} ago)",
-                        user.created_at().to_rfc2822().replace("+0000", ""),
+                        user.created_at().deref().to_rfc2822().replace("+0000", ""),
                         {
                             let date = chrono::Utc::now();
                             let time = date.timestamp() - user.created_at().timestamp();

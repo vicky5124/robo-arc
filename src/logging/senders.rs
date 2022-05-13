@@ -1,6 +1,8 @@
 use crate::global_data::DatabasePool;
 use crate::utils::logging::{guild_has_logging, LoggingEvents};
 
+use std::ops::Deref;
+
 use serenity::{
     model::{
         channel::{Channel, Embed, PermissionOverwriteType, ReactionType},
@@ -79,7 +81,7 @@ pub async fn send_message_update(ctx: &Context, data: &MessageUpdateEvent) {
                         });
                     }
 
-                    e.timestamp(&chrono::offset::Utc::now());
+                    e.timestamp(chrono::offset::Utc::now());
                     e.footer(|f| f.text("Updated"));
 
                     e
@@ -168,7 +170,7 @@ pub async fn send_message_delete(ctx: &Context, data: &MessageDeleteEvent) {
                 }
 
                 if let Some(x) = &msg.edited_timestamp {
-                    e.timestamp(x);
+                    e.timestamp(*x);
                 }
 
                 e.footer(|f| {
@@ -228,11 +230,11 @@ pub async fn send_guild_member_add(ctx: &Context, data: &GuildMemberAddEvent) {
             });
             e.field(
                 "Created at",
-                &data.member.user.created_at().to_rfc2822(),
+                &data.member.user.created_at().deref().to_rfc2822(),
                 false,
             );
             if let Some(x) = &data.member.joined_at {
-                e.field("Joined at", x.to_rfc2822(), false);
+                e.field("Joined at", x.deref().to_rfc2822(), false);
             }
             e.field("ID", &data.member.user.id.0, false);
 
@@ -276,7 +278,11 @@ pub async fn send_guild_member_remove(ctx: &Context, data: &GuildMemberRemoveEve
                 a.icon_url(data.user.face());
                 a.name(data.user.tag())
             });
-            e.field("Created at", &data.user.created_at().to_rfc2822(), false);
+            e.field(
+                "Created at",
+                &data.user.created_at().deref().to_rfc2822(),
+                false,
+            );
             e.field("ID", &data.user.id.0, false);
 
             e
@@ -367,7 +373,7 @@ pub async fn send_guild_role_create(ctx: &Context, data: &GuildRoleCreateEvent) 
                 false,
             );
             e.colour(data.role.colour);
-            e.timestamp(&chrono::offset::Utc::now());
+            e.timestamp(chrono::offset::Utc::now());
             e.footer(|f| f.text("Created"));
 
             e
@@ -407,7 +413,7 @@ pub async fn send_guild_role_delete(ctx: &Context, data: &GuildRoleDeleteEvent) 
         let embed = Embed::fake(|e| {
             e.title("Role Deleted");
             e.field("ID", &data.role_id.0, false);
-            e.timestamp(&chrono::offset::Utc::now());
+            e.timestamp(chrono::offset::Utc::now());
             e.footer(|f| f.text("Deleted"));
 
             e
@@ -504,7 +510,7 @@ pub async fn send_guild_member_update(ctx: &Context, data: &GuildMemberUpdateEve
                     false,
                 );
             }
-            e.timestamp(&chrono::offset::Utc::now());
+            e.timestamp(chrono::offset::Utc::now());
             e.footer(|f| f.text("Updated"));
 
             e
@@ -571,7 +577,7 @@ pub async fn send_reaction_add(ctx: &Context, data: &ReactionAddEvent) {
                     e.image(format!("https://cdn.discordapp.com/emojis/{}.png", id));
                 }
 
-                e.timestamp(&chrono::offset::Utc::now());
+                e.timestamp(chrono::offset::Utc::now());
                 e.footer(|f| f.text("Added"));
 
                 e
@@ -639,7 +645,7 @@ pub async fn send_reaction_remove(ctx: &Context, data: &ReactionRemoveEvent) {
                     e.image(format!("https://cdn.discordapp.com/emojis/{}.png", id));
                 }
 
-                e.timestamp(&chrono::offset::Utc::now());
+                e.timestamp(chrono::offset::Utc::now());
                 e.footer(|f| f.text("Removed"));
 
                 e
@@ -690,7 +696,7 @@ pub async fn send_reaction_remove_all(ctx: &Context, data: &ReactionRemoveAllEve
                 data.message_id.0
             ));
 
-            e.timestamp(&chrono::offset::Utc::now());
+            e.timestamp(chrono::offset::Utc::now());
             e.footer(|f| f.text("Cleared"));
 
             e
@@ -821,7 +827,7 @@ pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
                     e.field("NSFW?", "Yes", false);
                 }
 
-                e.timestamp(&chrono::offset::Utc::now());
+                e.timestamp(chrono::offset::Utc::now());
                 e.footer(|f| f.text("Created"));
 
                 e
@@ -883,7 +889,7 @@ pub async fn send_channel_create(ctx: &Context, data: &ChannelCreateEvent) {
                 }
                 e.fields(fields);
 
-                e.timestamp(&chrono::offset::Utc::now());
+                e.timestamp(chrono::offset::Utc::now());
                 e.footer(|f| f.text("Created"));
 
                 e
@@ -1015,7 +1021,7 @@ pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
                     e.field("NSFW?", "Yes", false);
                 }
 
-                e.timestamp(&chrono::offset::Utc::now());
+                e.timestamp(chrono::offset::Utc::now());
                 e.footer(|f| f.text("Deleted"));
 
                 e
@@ -1077,7 +1083,7 @@ pub async fn send_channel_delete(ctx: &Context, data: &ChannelDeleteEvent) {
                 }
                 e.fields(fields);
 
-                e.timestamp(&chrono::offset::Utc::now());
+                e.timestamp(chrono::offset::Utc::now());
                 e.footer(|f| f.text("Deleted"));
 
                 e
@@ -1209,7 +1215,7 @@ pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
                     e.field("NSFW?", "Yes", false);
                 }
 
-                e.timestamp(&chrono::offset::Utc::now());
+                e.timestamp(chrono::offset::Utc::now());
                 e.footer(|f| f.text("Updated"));
 
                 e
@@ -1271,7 +1277,7 @@ pub async fn send_channel_update(ctx: &Context, data: &ChannelUpdateEvent) {
                 }
                 e.fields(fields);
 
-                e.timestamp(&chrono::offset::Utc::now());
+                e.timestamp(chrono::offset::Utc::now());
                 e.footer(|f| f.text("Updated"));
 
                 e
@@ -1371,7 +1377,7 @@ pub async fn send_guild_ban_add(ctx: &Context, data: &GuildBanAddEvent) {
                 e.description("User is a BOT account.");
             }
 
-            e.timestamp(&chrono::offset::Utc::now());
+            e.timestamp(chrono::offset::Utc::now());
             e.footer(|f| f.text("Banned"));
 
             e
@@ -1421,7 +1427,7 @@ pub async fn send_guild_ban_remove(ctx: &Context, data: &GuildBanRemoveEvent) {
                 e.description("User is a BOT account.");
             }
 
-            e.timestamp(&chrono::offset::Utc::now());
+            e.timestamp(chrono::offset::Utc::now());
             e.footer(|f| f.text("Unbanned"));
 
             e
@@ -1476,7 +1482,7 @@ pub async fn send_guild_emojis_update(ctx: &Context, data: &GuildEmojisUpdateEve
                 }
             }
 
-            e.timestamp(&chrono::offset::Utc::now());
+            e.timestamp(chrono::offset::Utc::now());
             e.footer(|f| f.text("Updated"));
 
             e
@@ -1516,7 +1522,7 @@ pub async fn send_guild_integrations_update(ctx: &Context, data: &GuildIntegrati
         let embed = Embed::fake(|e| {
             e.title("Integrations have been modified");
 
-            e.timestamp(&chrono::offset::Utc::now());
+            e.timestamp(chrono::offset::Utc::now());
             e.footer(|f| f.text("Modified"));
 
             e

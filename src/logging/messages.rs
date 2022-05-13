@@ -1,6 +1,6 @@
 use crate::global_data::DatabasePool;
 
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use darkredis::Connection;
 
@@ -52,7 +52,7 @@ pub async fn log_message(ctx: Arc<Context>, data: &MessageCreateEvent) {
         ",
             message_id, channel_id, guild_id, author_id,
             &message.content, &attachments, &embeds,
-            message.pinned, message.timestamp, message.tts,
+            message.pinned, *message.timestamp, message.tts,
             webhook_id, //message.kind,
         )
         .execute(&pool)
@@ -262,7 +262,7 @@ pub async fn log_edit(ctx: Arc<Context>, data: &MessageUpdateEvent) {
             content.as_deref(), old_message.content_history.as_deref(),
             attachments.as_deref(), old_message.attachments_history.as_deref(),
             embeds.as_deref(), old_message.embeds_history.as_deref(),
-            pinned, was_pinned, timestamp,
+            pinned, was_pinned, timestamp.map(|i| i.deref().clone()),
         )
         .execute(&pool)
         .await

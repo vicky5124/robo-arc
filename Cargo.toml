@@ -60,6 +60,10 @@ clap = "2" # https://github.com/clap-rs/clap
 version = "0.8"
 features = ["getrandom", "std"]
 
+[dependencies.parking_lot]
+version = "0.12"
+features = ["send_guard"]
+
 [dependencies.tokio]
 version = "1"
 features = ["full"]
@@ -72,7 +76,7 @@ branch = "next"
 #branch = "optional_deserialisation"
 #version = "0.10"
 default-features = false
-features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "rustls_backend", "absolute_ratelimits", "collector", "voice", "unstable_discord_api"]
+features = ["builder", "cache", "client", "framework", "gateway", "http", "model", "standard_framework", "utils", "rustls_backend", "absolute_ratelimits", "collector", "voice", "unstable_discord_api", "chrono"]
 
 # https://github.com/seanmonstar/reqwest
 [dependencies.reqwest]
@@ -110,7 +114,7 @@ features = ["v4"]
 
 [dependencies.lavalink-rs]
 git = "https://gitlab.com/vicky5124/lavalink-rs/"
-branch = "master"
+branch = "next-deps"
 #version = "0.6.0-rc"
 features = ["serenity"]
 

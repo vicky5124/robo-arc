@@ -1139,7 +1139,7 @@ async fn prefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     let content_safe_options = ContentSafeOptions::default();
     let bad_success_message = format!("Successfully changed your prefix to `{}`", prefix);
-    let success_message = content_safe(ctx, bad_success_message, &content_safe_options);
+    let success_message = content_safe(ctx, bad_success_message, &content_safe_options, &[]);
     msg.reply(ctx, success_message).await?;
     Ok(())
 }

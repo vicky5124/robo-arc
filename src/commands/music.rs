@@ -4,7 +4,7 @@ use std::{error::Error, fmt, time::Duration};
 
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
-    model::{channel::Message, misc::Mentionable},
+    model::{channel::Message, mention::Mentionable},
     prelude::Context,
 };
 

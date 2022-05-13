@@ -18,8 +18,8 @@ use serenity::{
     client::bridge::gateway::ShardId,
     framework::standard::{macros::command, Args, CommandResult},
     model::{
+        application::oauth::Scope,
         channel::Message,
-        oauth2::OAuth2Scope,
         Permissions,
         //channel::ReactionType,
     },
@@ -129,7 +129,7 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
     permissions.set(Permissions::MANAGE_CHANNELS, true);
     permissions.set(Permissions::ADD_REACTIONS, true);
     permissions.set(Permissions::VIEW_AUDIT_LOG, true);
-    permissions.set(Permissions::READ_MESSAGES, true);
+    permissions.set(Permissions::VIEW_CHANNEL, true);
     permissions.set(Permissions::SEND_MESSAGES, true);
     permissions.set(Permissions::MANAGE_MESSAGES, true);
     permissions.set(Permissions::EMBED_LINKS, true);
@@ -142,7 +142,7 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
     permissions.set(Permissions::MANAGE_WEBHOOKS, true);
     permissions.set(Permissions::MENTION_EVERYONE, true);
 
-    let scopes = vec![OAuth2Scope::Bot, OAuth2Scope::ApplicationsCommands];
+    let scopes = vec![Scope::Bot, Scope::ApplicationsCommands];
 
     // Creates the invite link for the bot with the permissions specified earlier.
     // Error handling in rust i so nice.

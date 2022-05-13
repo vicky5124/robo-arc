@@ -8,8 +8,7 @@ use std::borrow::Cow;
 
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
-    http::AttachmentType,
-    model::channel::Message,
+    model::channel::{AttachmentType, Message},
     prelude::Context,
 };
 

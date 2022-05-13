@@ -58,13 +58,10 @@ use songbird::SerenityInit;
 
 // Serenity! what make's the bot function. Discord API wrapper.
 use serenity::{
-    client::{
-        bridge::gateway::GatewayIntents,
-        ClientBuilder, // To create a client that runs eveyrthing.
-    },
+    client::ClientBuilder,
     framework::standard::StandardFramework,
     http::Http,
-    model::id::UserId,
+    model::{gateway::GatewayIntents, id::UserId},
     prelude::RwLock,
 };
 
@@ -137,7 +134,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Defines a client with the token obtained from the config.toml file.
     // This also starts up the Event Handler structure defined earlier.
 
-    let http = Http::new_with_token(&bot_token);
+    let http = Http::new(&bot_token);
 
     // Obtains and defines the owner/owners of the Bot Application
     // and the bot id.
@@ -189,22 +186,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .group(&CONFIGURATION_GROUP) // Load `Configuration` command group
         .help(&MY_HELP); // Load the custom help command.
 
-    let mut client = ClientBuilder::new(&bot_token)
-        .event_handler(Handler {
-            run_loops: Mutex::new(true),
-        })
-        .raw_event_handler(logging::events::RawHandler)
-        .framework(std_framework)
-        .register_songbird()
-        .application_id(bot_id.0)
-        .intents({
-            let mut intents = GatewayIntents::all();
-            //intents.remove(GatewayIntents::GUILD_PRESENCES);
-            intents.remove(GatewayIntents::DIRECT_MESSAGE_TYPING);
-            intents.remove(GatewayIntents::GUILD_MESSAGE_TYPING);
-            intents
-        })
-        .await?;
+    let mut client = ClientBuilder::new(&bot_token, {
+        let mut intents = GatewayIntents::all();
+        //intents.remove(GatewayIntents::GUILD_PRESENCES);
+        intents.remove(GatewayIntents::DIRECT_MESSAGE_TYPING);
+        intents.remove(GatewayIntents::GUILD_MESSAGE_TYPING);
+        intents
+    })
+    .event_handler(Handler {
+        run_loops: Mutex::new(true),
+    })
+    .raw_event_handler(logging::events::RawHandler)
+    .framework(std_framework)
+    .register_songbird()
+    .application_id(bot_id.0)
+    .await?;
 
     // Block to define global data.
     // and so the data lock is not kept open in write mode.
