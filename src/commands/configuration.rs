@@ -1374,7 +1374,7 @@ async fn logging(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
         let events = LoggingEvents::from_bits_truncate(digits);
         msg.reply(
             ctx,
-            format!("Successfully added logging for this events:\n{:?}", events),
+            format!("Successfully added logging for these events:\n{:?}", events),
         )
         .await?;
     } else {
