@@ -72,6 +72,7 @@ features = ["full"]
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"
 branch = "next"
+#path = "../serenity"
 #git = "https://github.com/acdenisSK/serenity"
 #branch = "optional_deserialisation"
 #version = "0.10"
@@ -128,6 +129,14 @@ features = ["serenity-rustls", "gateway"]
 [patch.crates-io.serenity]
 git = "https://github.com/serenity-rs/serenity"
 branch = "next"
+#path = "../serenity"
+#git = "https://github.com/acdenisSK/serenity"
+#branch = "optional_deserialisation"
+
+#[patch."https://github.com/serenity-rs/serenity".serenity]
+#git = "https://github.com/serenity-rs/serenity"
+#branch = "next"
+#path = "../serenity"
 #git = "https://github.com/acdenisSK/serenity"
 #branch = "optional_deserialisation"
 

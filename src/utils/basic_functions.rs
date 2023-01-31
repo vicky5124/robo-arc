@@ -1,5 +1,5 @@
 use regex::Regex;
-use std::lazy::Lazy;
+use std::cell::LazyCell;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PasteData {
@@ -54,7 +54,7 @@ pub fn seconds_to_days(seconds: u64) -> String {
 }
 
 pub fn string_to_seconds(text: impl ToString) -> u64 {
-    let re = Lazy::new(|| {
+    let re = LazyCell::new(|| {
         Regex::new(r"((?P<years>\d+?)Y|years)?((?P<months>\d+?)M|months)?((?P<weeks>\d+?)W|weeks)?((?P<days>\d+?)D|days)?((?P<hours>\d+?)h|hr|hours)?((?P<minutes>\d+?)m|min|minutes)?((?P<seconds>\d+?)s|sec|seconds)?").unwrap()
     });
     let text = &text.to_string();

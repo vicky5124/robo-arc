@@ -61,7 +61,8 @@ pub struct Master;
     issues,
     eval,
     rust,
-    admin_eval
+    admin_eval,
+    force_cache_ready,
 )]
 pub struct Meta;
 

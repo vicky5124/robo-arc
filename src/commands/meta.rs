@@ -1,14 +1,19 @@
 use crate::{
     global_data::{DatabasePool, ShardManagerContainer},
+    notifications::notification_loop,
     utils::basic_functions::*,
+    is_on_guild,
     Tokens, Uptime,
 };
 use std::{
+    cell::LazyCell,
     fs::{read_to_string, File, OpenOptions},
     io::prelude::*,
-    lazy::Lazy,
     process::id,
     time::Instant,
+    sync::Arc,
+    net::SocketAddr,
+    str::FromStr,
 };
 
 use num_format::{Locale, ToFormattedString};
@@ -29,6 +34,7 @@ use tokei::{Config, LanguageType, Languages};
 use tokio::process::Command;
 use toml::Value;
 use walkdir::WalkDir;
+use warp::Filter;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Code {
@@ -551,7 +557,7 @@ async fn eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
         Code { language, source }
     } else {
-        let re = Lazy::new(|| Regex::new("^```(?P<lang>.*)\n(?P<src>(?:.+|\n)*)```$").unwrap());
+        let re = LazyCell::new(|| Regex::new("^```(?P<lang>.*)\n(?P<src>(?:.+|\n)*)```$").unwrap());
         let captures = re.captures(args.message());
 
         let caps = if let Some(caps) = captures {
@@ -687,7 +693,7 @@ async fn rust(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
         source
     } else {
-        let re = Lazy::new(|| Regex::new("^```(?P<lang>.*)\n(?P<src>(?:.+|\n)*)```$").unwrap());
+        let re = LazyCell::new(|| Regex::new("^```(?P<lang>.*)\n(?P<src>(?:.+|\n)*)```$").unwrap());
         let captures = re.captures(args.message());
 
         let caps = if let Some(caps) = captures {
@@ -907,6 +913,42 @@ async fn admin_eval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             })
             .await?;
     }
+
+    Ok(())
+}
+
+#[command]
+#[owners_only]
+async fn force_cache_ready(ctx: &Context, msg: &Message) -> CommandResult {
+    msg.reply(ctx, "RUNNING").await?;
+
+    let ctx_arc = Arc::new(ctx.clone());
+    let ctx_clone = Arc::clone(&ctx_arc);
+    let ctx_clone2 = Arc::clone(&ctx_arc);
+
+    let web_server_info = {
+        let read_data = ctx.data.read().await;
+        let config = read_data.get::<Tokens>().unwrap();
+        config.web_server.clone()
+    };
+
+
+    tokio::spawn(async move { notification_loop(ctx_clone).await });
+
+    tokio::spawn(async move {
+        let routes = warp::path::param()
+            .and(warp::any().map(move || ctx_clone2.clone()))
+            .and_then(is_on_guild);
+
+        let ip = web_server_info.server_ip;
+        let port = web_server_info.server_port;
+
+        warp::serve(routes)
+            .run(SocketAddr::from_str(format!("{}:{}", ip, port).as_str()).unwrap())
+            .await;
+    });
+
+    msg.reply(ctx, "OK").await?;
 
     Ok(())
 }
