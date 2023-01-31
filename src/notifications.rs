@@ -261,7 +261,7 @@ async fn check_twitch_livestreams(ctx: Arc<Context>) -> Result<(), Box<dyn std::
         {
             Ok(x) => x,
             Err(why) => {
-                error!("Error quering Helix API: {}", &why);
+                error!("Error quering Helix API: {} | {}", &why, &i.streamer);
                 continue;
             }
         };
