@@ -108,8 +108,8 @@ pub struct Statistics {
     pub count_50: u64,
     pub count_100: u64,
     pub count_300: u64,
-    pub count_geki: u64,
-    pub count_katu: u64,
+    pub count_geki: Option<u64>,
+    pub count_katu: Option<u64>,
     pub count_miss: u64,
 }
 
